@@ -26,6 +26,39 @@ class _AccountListScreenState extends State<AccountListScreen> {
     });
   }
 
+  void _confirmDelete(Account account) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Delete Account'),
+        content: Text('Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () async {
+              await DatabaseService.deleteAccount(account);
+              if (mounted) {
+                Navigator.pop(context);
+                _loadAccounts();
+                if (_accounts.isEmpty) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
+                  );
+                }
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,6 +99,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: InkWell(
+                        onLongPress: () => _confirmDelete(account),
                         onTap: () {
                           Navigator.push(
                             context,
@@ -127,10 +161,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                   ],
                                 ),
                               ),
-                              const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                                color: Colors.black26,
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                onPressed: () => _confirmDelete(account),
                               ),
                             ],
                           ),
@@ -151,7 +184,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
             context,
             MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
           );
-          _loadAccounts(); // Refresh list after returning
+          _loadAccounts();
         },
         backgroundColor: Colors.black,
         icon: const Icon(Icons.add, color: Colors.white),

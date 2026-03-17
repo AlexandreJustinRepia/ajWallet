@@ -22,6 +22,10 @@ class DatabaseService {
     await account.save();
   }
 
+  static Future<void> deleteAccount(Account account) async {
+    await account.delete();
+  }
+
   static List<Account> getAccounts() {
     return _box.values.toList();
   }

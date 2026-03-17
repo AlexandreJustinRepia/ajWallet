@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'services/database_service.dart';
 import 'models/transaction_model.dart';
+import 'models/wallet.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -20,6 +21,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Food & Drinks';
+  int? _selectedWalletKey;
+  int? _selectedToWalletKey; // For Transfers
 
   final Map<String, IconData> _categories = {
     'Food & Drinks': Icons.fastfood,
@@ -34,6 +37,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   void _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedWalletKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
+        return;
+      }
+
+      if (_selectedType == TransactionType.transfer && _selectedToWalletKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a destination wallet')));
+        return;
+      }
+
       final transaction = Transaction(
         title: _titleController.text,
         amount: double.parse(_amountController.text),
@@ -42,11 +55,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         description: _descriptionController.text,
         type: _selectedType,
         accountKey: widget.accountKey,
+        walletKey: _selectedWalletKey,
+        toWalletKey: _selectedToWalletKey,
       );
 
       await DatabaseService.saveTransaction(transaction);
       if (mounted) {
-        Navigator.pop(context, true); // Return true to indicate refresh needed
+        Navigator.pop(context, true);
       }
     }
   }
@@ -62,6 +77,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final wallets = DatabaseService.getWallets(widget.accountKey);
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -87,6 +103,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 ],
               ),
               const SizedBox(height: 32),
+              
+              // Wallet Selector (Source)
+              Text(_selectedType == TransactionType.transfer ? 'From Wallet' : 'Wallet', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              _buildWalletDropdown(wallets, _selectedWalletKey, (val) => setState(() => _selectedWalletKey = val)),
+              const SizedBox(height: 24),
+
+              // Destination Wallet (For Transfers)
+              if (_selectedType == TransactionType.transfer) ...[
+                Text('To Wallet', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _buildWalletDropdown(wallets, _selectedToWalletKey, (val) => setState(() => _selectedToWalletKey = val)),
+                const SizedBox(height: 24),
+              ],
               
               // Amount Field
               Text('Amount', style: theme.textTheme.titleMedium),
@@ -121,40 +151,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Category Picker
-              Text('Category', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.grey),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedCategory,
-                    isExpanded: true,
-                    items: _categories.keys.map((String category) {
-                      return DropdownMenuItem<String>(
-                        value: category,
-                        child: Row(
-                          children: [
-                            Icon(_categories[category], size: 20),
-                            const SizedBox(width: 12),
-                            Text(category),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      if (newValue != null) {
-                        setState(() => _selectedCategory = newValue);
-                      }
-                    },
+              // Category Picker (Hidden for transfers as it's just moving money)
+              if (_selectedType != TransactionType.transfer) ...[
+                Text('Category', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _selectedCategory,
+                      isExpanded: true,
+                      items: _categories.keys.map((String category) {
+                        return DropdownMenuItem<String>(
+                          value: category,
+                          child: Row(
+                            children: [
+                              Icon(_categories[category], size: 20),
+                              const SizedBox(width: 12),
+                              Text(category),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        if (newValue != null) {
+                          setState(() => _selectedCategory = newValue);
+                        }
+                      },
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
+              ],
 
               // Description Field
               Text('Description (Optional)', style: theme.textTheme.titleMedium),
@@ -204,6 +236,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWalletDropdown(List<Wallet> wallets, int? selectedKey, ValueChanged<int?> onChanged) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<int>(
+          value: selectedKey,
+          isExpanded: true,
+          hint: const Text('Select Wallet'),
+          items: wallets.map((wallet) {
+            return DropdownMenuItem<int>(
+              value: wallet.key as int,
+              child: Text('${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})'),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );

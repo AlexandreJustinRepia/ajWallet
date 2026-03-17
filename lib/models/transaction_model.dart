@@ -34,7 +34,13 @@ class Transaction extends HiveObject {
   TransactionType type;
 
   @HiveField(6)
-  int accountKey; // Link to the account
+  int accountKey;
+
+  @HiveField(7)
+  int? walletKey; // For Income and Expense
+
+  @HiveField(8)
+  int? toWalletKey; // Specifically for Transfer
 
   Transaction({
     required this.title,
@@ -44,6 +50,8 @@ class Transaction extends HiveObject {
     required this.description,
     required this.type,
     required this.accountKey,
+    this.walletKey,
+    this.toWalletKey,
   });
 
   Color get typeColor {

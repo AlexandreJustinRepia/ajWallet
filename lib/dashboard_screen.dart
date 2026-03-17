@@ -3,7 +3,9 @@ import 'services/database_service.dart';
 import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
+import 'add_wallet_screen.dart';
 import 'models/transaction_model.dart';
+import 'models/wallet.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -29,6 +31,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _HomeView(onRefresh: _refresh),
       _TransactionsView(onRefresh: _refresh),
       _CalendarView(onRefresh: _refresh),
+      _WalletsView(onRefresh: _refresh),
       const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
       _StatisticsView(onRefresh: _refresh),
     ];
@@ -40,9 +43,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ? 'Transactions' 
             : _selectedIndex == 2 
                 ? 'Calendar' 
-                : _selectedIndex == 4 
-                    ? 'Statistics' 
-                    : 'AJ Wallet'),
+                : _selectedIndex == 3
+                    ? 'Wallets'
+                    : _selectedIndex == 5
+                        ? 'Statistics' 
+                        : 'AJ Wallet'),
         automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
@@ -90,15 +95,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _pages[_selectedIndex],
-      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 2)
+      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 2 || _selectedIndex == 3)
           ? FloatingActionButton(
               onPressed: () async {
                 if (account != null) {
+                  final Widget targetScreen = _selectedIndex == 3 
+                      ? AddWalletScreen(accountKey: account.key as int)
+                      : AddTransactionScreen(accountKey: account.key as int);
+                  
                   final result = await Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => AddTransactionScreen(accountKey: account.key as int),
-                    ),
+                    MaterialPageRoute(builder: (context) => targetScreen),
                   );
                   if (result == true) _refresh();
                 }
@@ -141,6 +148,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icon(Icons.calendar_month_outlined, color: theme.textTheme.bodyMedium?.color),
                 selectedIcon: Icon(Icons.calendar_month, color: theme.primaryColor),
                 label: 'Calendar',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.account_balance_wallet_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.account_balance_wallet, color: theme.primaryColor),
+                label: 'Wallets',
               ),
               NavigationDestination(
                 icon: Icon(Icons.psychology_outlined, color: theme.textTheme.bodyMedium?.color),
@@ -231,14 +243,9 @@ class _HomeView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 40),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Transactions',
-                style: theme.textTheme.titleLarge,
-              ),
-            ],
+          Text(
+            'Recent Transactions',
+            style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -369,6 +376,66 @@ class _CalendarViewState extends State<_CalendarView> {
       onSelected: (val) => setState(() => _filter = val ? type : null),
       selectedColor: color,
     );
+  }
+}
+
+class _WalletsView extends StatelessWidget {
+  final VoidCallback onRefresh;
+  const _WalletsView({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    final account = DatabaseService.getLatestAccount();
+    final theme = Theme.of(context);
+    final wallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
+
+    return wallets.isEmpty
+        ? const Center(child: Text('No wallets added yet', style: TextStyle(color: Colors.grey)))
+        : ListView.builder(
+            padding: const EdgeInsets.all(24),
+            itemCount: wallets.length,
+            itemBuilder: (context, index) {
+              final wallet = wallets[index];
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: theme.primaryColor.withOpacity(0.1),
+                      child: Icon(_getWalletIcon(wallet.type), color: theme.primaryColor),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(wallet.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          Text(wallet.type, style: const TextStyle(color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    Text('₱${wallet.balance.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              );
+            },
+          );
+  }
+
+  IconData _getWalletIcon(String type) {
+    switch (type) {
+      case 'ATM': return Icons.credit_card;
+      case 'Bank': return Icons.account_balance;
+      case 'E-Wallet': return Icons.phone_android;
+      case 'Savings': return Icons.savings;
+      default: return Icons.account_balance_wallet;
+    }
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'models/account.dart';
+import 'account_list_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -17,8 +18,8 @@ class DashboardScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.settings, color: Colors.black),
-            onPressed: () {},
+            icon: const Icon(Icons.logout, color: Colors.black),
+            onPressed: () => _showLogoutDialog(context),
           ),
         ],
       ),
@@ -70,6 +71,34 @@ class DashboardScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.white,
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to log out of this account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const AccountListScreen()),
+                (route) => false, // Remove all previous routes
+              );
+            },
+            child: const Text('Logout', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
   }

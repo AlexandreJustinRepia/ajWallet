@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'create_account_screen.dart';
+import 'account_list_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -8,11 +9,20 @@ void main() async {
   // Initialize Database Service
   await DatabaseService.init();
 
-  runApp(const MyApp());
+  // Determine starting screen:
+  // If no accounts exist, go to Create Account.
+  // If accounts exist, go to the Account Listing.
+  final accounts = DatabaseService.getAccounts();
+  final Widget initialScreen = accounts.isEmpty 
+      ? const CreateAccountScreen() 
+      : const AccountListScreen();
+
+  runApp(MyApp(home: initialScreen));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final Widget home;
+  const MyApp({super.key, required this.home});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +33,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.black),
         useMaterial3: true,
       ),
-      home: const CreateAccountScreen(),
+      home: home,
     );
   }
 }

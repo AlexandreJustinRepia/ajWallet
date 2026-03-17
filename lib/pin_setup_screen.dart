@@ -108,9 +108,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               if (_canCheckBiometrics)
                 Row(
                   children: [
-                    const Text('Enable Biometrics (Face ID / Fingerprint)',
-                        style: TextStyle(fontSize: 14)),
-                    const Spacer(),
+                    const Expanded(
+                      child: Text(
+                        'Enable Biometrics (Face ID / Fingerprint)',
+                        style: TextStyle(fontSize: 14),
+                        overflow: TextOverflow.visible,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
                     Switch(
                       value: _useBiometrics,
                       onChanged: (val) => setState(() => _useBiometrics = val),

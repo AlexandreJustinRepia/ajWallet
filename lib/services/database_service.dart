@@ -18,7 +18,16 @@ class DatabaseService {
     await _box.add(account);
   }
 
+  static Future<void> updateAccount(Account account) async {
+    await account.save();
+  }
+
   static List<Account> getAccounts() {
     return _box.values.toList();
+  }
+
+  static Account? getLatestAccount() {
+    if (_box.isEmpty) return null;
+    return _box.values.last;
   }
 }

@@ -5,6 +5,8 @@ import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
 import 'models/transaction_model.dart';
 import 'package:intl/intl.dart';
+import 'package:table_calendar/table_calendar.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -26,15 +28,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final List<Widget> _pages = [
       _HomeView(onRefresh: _refresh),
       _TransactionsView(onRefresh: _refresh),
-      const _ComingSoonView(title: 'Calendar', icon: Icons.calendar_month),
+      _CalendarView(onRefresh: _refresh),
       const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
-      const _ComingSoonView(title: 'Statistics', icon: Icons.bar_chart),
+      _StatisticsView(onRefresh: _refresh),
     ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(_selectedIndex == 1 ? 'Transactions' : 'AJ Wallet'),
+        title: Text(_selectedIndex == 1 
+            ? 'Transactions' 
+            : _selectedIndex == 2 
+                ? 'Calendar' 
+                : _selectedIndex == 4 
+                    ? 'Statistics' 
+                    : 'AJ Wallet'),
         automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
@@ -82,7 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _pages[_selectedIndex],
-      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1)
+      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 2)
           ? FloatingActionButton(
               onPressed: () async {
                 if (account != null) {
@@ -230,13 +238,6 @@ class _HomeView extends StatelessWidget {
                 'Recent Transactions',
                 style: theme.textTheme.titleLarge,
               ),
-              if (transactions.isNotEmpty)
-                TextButton(
-                  onPressed: () {
-                    // This could change the tab to Transactions tab
-                  },
-                  child: const Text('View All'),
-                ),
             ],
           ),
           const SizedBox(height: 8),
@@ -264,7 +265,6 @@ class _TransactionsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
-    final theme = Theme.of(context);
     final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
 
     return Column(
@@ -285,6 +285,149 @@ class _TransactionsView extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _CalendarView extends StatefulWidget {
+  final VoidCallback onRefresh;
+  const _CalendarView({required this.onRefresh});
+
+  @override
+  State<_CalendarView> createState() => _CalendarViewState();
+}
+
+class _CalendarViewState extends State<_CalendarView> {
+  DateTime _focusedDay = DateTime.now();
+  DateTime? _selectedDay;
+  TransactionType? _filter;
+
+  @override
+  Widget build(BuildContext context) {
+    final account = DatabaseService.getLatestAccount();
+    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final theme = Theme.of(context);
+
+    List<Transaction> filteredTransactions = transactions.where((tx) {
+      bool dateMatch = isSameDay(tx.date, _selectedDay ?? _focusedDay);
+      bool typeMatch = _filter == null || tx.type == _filter;
+      return dateMatch && typeMatch;
+    }).toList();
+
+    return Column(
+      children: [
+        TableCalendar(
+          firstDay: DateTime.utc(2020, 1, 1),
+          lastDay: DateTime.utc(2030, 12, 31),
+          focusedDay: _focusedDay,
+          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+          onDaySelected: (selectedDay, focusedDay) {
+            setState(() {
+              _selectedDay = selectedDay;
+              _focusedDay = focusedDay;
+            });
+          },
+          calendarStyle: CalendarStyle(
+            selectedDecoration: BoxDecoration(color: theme.primaryColor, shape: BoxShape.circle),
+            todayDecoration: BoxDecoration(color: theme.primaryColor.withOpacity(0.3), shape: BoxShape.circle),
+          ),
+          headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _filterChip('All', null, Colors.grey),
+              const SizedBox(width: 8),
+              _filterChip('Income', TransactionType.income, Colors.green),
+              const SizedBox(width: 8),
+              _filterChip('Expense', TransactionType.expense, Colors.red),
+            ],
+          ),
+        ),
+        Expanded(
+          child: filteredTransactions.isEmpty
+              ? const Center(child: Text('No transactions for this day', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  itemCount: filteredTransactions.length,
+                  itemBuilder: (context, index) {
+                    return _TransactionTile(tx: filteredTransactions[index]);
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _filterChip(String label, TransactionType? type, Color color) {
+    bool isSelected = _filter == type;
+    return ChoiceChip(
+      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
+      selected: isSelected,
+      onSelected: (val) => setState(() => _filter = val ? type : null),
+      selectedColor: color,
+    );
+  }
+}
+
+class _StatisticsView extends StatelessWidget {
+  final VoidCallback onRefresh;
+  const _StatisticsView({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    final account = DatabaseService.getLatestAccount();
+    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final theme = Theme.of(context);
+
+    double totalIncome = transactions.where((tx) => tx.type == TransactionType.income).fold(0, (sum, tx) => sum + tx.amount);
+    double totalExpense = transactions.where((tx) => tx.type == TransactionType.expense).fold(0, (sum, tx) => sum + tx.amount);
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 250,
+            child: PieChart(
+              PieChartData(
+                sectionsSpace: 4,
+                centerSpaceRadius: 50,
+                sections: [
+                  PieChartSectionData(value: totalIncome, color: Colors.green, title: 'Income', radius: 60, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  PieChartSectionData(value: totalExpense, color: Colors.red, title: 'Expense', radius: 60, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 32),
+          _statCard('Total Income', totalIncome, Colors.green),
+          const SizedBox(height: 16),
+          _statCard('Total Expense', totalExpense, Colors.red),
+          const SizedBox(height: 16),
+          _statCard('Net Balance', totalIncome - totalExpense, Colors.blue),
+        ],
+      ),
+    );
+  }
+
+  Widget _statCard(String label, double amount, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          Text('₱${amount.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        ],
+      ),
     );
   }
 }

@@ -14,13 +14,40 @@ class DashboardScreen extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: const Text('Dashboard', style: TextStyle(color: Colors.black)),
+        automaticallyImplyLeading: false, // Removes the back arrow
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.black),
-            onPressed: () => _showLogoutDialog(context),
+          PopupMenuButton<String>(
+            icon: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(4.0),
+                child: Icon(Icons.person, color: Colors.black, size: 28),
+              ),
+            ),
+            onSelected: (value) {
+              if (value == 'logout') {
+                _showLogoutDialog(context);
+              }
+            },
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem<String>(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, color: Colors.black, size: 20),
+                    SizedBox(width: 12),
+                    Text('Logout'),
+                  ],
+                ),
+              ),
+            ],
           ),
+          const SizedBox(width: 16),
         ],
       ),
       body: Padding(

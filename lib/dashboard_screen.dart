@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
+import 'add_transaction_screen.dart';
+import 'models/transaction_model.dart';
+import 'package:intl/intl.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -13,17 +16,20 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _pages = [
-    const _HomeView(),
-    const _ComingSoonView(title: 'Transactions', icon: Icons.receipt_long),
-    const _ComingSoonView(title: 'Calendar', icon: Icons.calendar_month),
-    const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
-    const _ComingSoonView(title: 'Statistics', icon: Icons.bar_chart),
-  ];
+  void _refresh() => setState(() {});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final account = DatabaseService.getLatestAccount();
+
+    final List<Widget> _pages = [
+      _HomeView(onRefresh: _refresh),
+      const _ComingSoonView(title: 'Transactions', icon: Icons.receipt_long),
+      const _ComingSoonView(title: 'Calendar', icon: Icons.calendar_month),
+      const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
+      const _ComingSoonView(title: 'Statistics', icon: Icons.bar_chart),
+    ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -76,6 +82,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _pages[_selectedIndex],
+      floatingActionButton: _selectedIndex == 0
+          ? FloatingActionButton(
+              onPressed: () async {
+                if (account != null) {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddTransactionScreen(accountKey: account.key as int),
+                    ),
+                  );
+                  if (result == true) _refresh();
+                }
+              },
+              backgroundColor: theme.primaryColor,
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
@@ -120,12 +143,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
 }
 
 class _HomeView extends StatelessWidget {
-  const _HomeView();
+  final VoidCallback onRefresh;
+  const _HomeView({required this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
     final theme = Theme.of(context);
+    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -168,10 +193,29 @@ class _HomeView extends StatelessWidget {
             'Recent Transactions',
             style: theme.textTheme.titleLarge,
           ),
-          const Expanded(
-            child: Center(
-              child: Text('No transactions yet', style: TextStyle(color: Colors.grey)),
-            ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: transactions.isEmpty
+                ? const Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    itemCount: transactions.length > 5 ? 5 : transactions.length,
+                    itemBuilder: (context, index) {
+                      final tx = transactions[transactions.length - 1 - index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: tx.typeColor.withOpacity(0.1),
+                          child: Icon(tx.type == TransactionType.income ? Icons.arrow_upward : Icons.arrow_downward, color: tx.typeColor),
+                        ),
+                        title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(DateFormat('MMM dd, yyyy').format(tx.date)),
+                        trailing: Text(
+                          '${tx.type == TransactionType.income ? '+' : '-'} \$${tx.amount.toStringAsFixed(2)}',
+                          style: TextStyle(color: tx.typeColor, fontWeight: FontWeight.bold, fontSize: 16),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),

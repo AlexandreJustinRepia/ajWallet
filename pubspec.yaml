@@ -1,5 +1,5 @@
-name: aj_wallet
-description: "A new Flutter project."
+name: AjWallet
+description: "A offline budget application for android"
 publish_to: 'none'
 
 version: 1.0.0+1
@@ -22,6 +22,13 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.6
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/logo/logo.png"
+  min_sdk_android: 21 # should be same as your minSdk in build.gradle

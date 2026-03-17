@@ -25,7 +25,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final List<Widget> _pages = [
       _HomeView(onRefresh: _refresh),
-      const _ComingSoonView(title: 'Transactions', icon: Icons.receipt_long),
+      _TransactionsView(onRefresh: _refresh),
       const _ComingSoonView(title: 'Calendar', icon: Icons.calendar_month),
       const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
       const _ComingSoonView(title: 'Statistics', icon: Icons.bar_chart),
@@ -34,7 +34,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('AJ Wallet'),
+        title: Text(_selectedIndex == 1 ? 'Transactions' : 'AJ Wallet'),
         automaticallyImplyLeading: false,
         actions: [
           PopupMenuButton<String>(
@@ -82,7 +82,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       body: _pages[_selectedIndex],
-      floatingActionButton: _selectedIndex == 0
+      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1)
           ? FloatingActionButton(
               onPressed: () async {
                 if (account != null) {
@@ -96,23 +96,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
               },
               backgroundColor: theme.primaryColor,
-              child: const Icon(Icons.add, color: Colors.white),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              child: Icon(Icons.add, color: theme.scaffoldBackgroundColor),
             )
           : null,
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: theme.cardColor,
-        selectedItemColor: theme.primaryColor,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.receipt_long), label: 'Transactions'),
-          BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'Calendar'),
-          BottomNavigationBarItem(icon: Icon(Icons.psychology), label: 'AI'),
-          BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Stats'),
-        ],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: theme.dividerColor.withOpacity(0.1), width: 1)),
+        ),
+        child: NavigationBarTheme(
+          data: NavigationBarThemeData(
+            indicatorColor: theme.primaryColor.withOpacity(0.1),
+            labelTextStyle: MaterialStateProperty.all(
+              const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+          ),
+          child: NavigationBar(
+            selectedIndex: _selectedIndex,
+            onDestinationSelected: (index) => setState(() => _selectedIndex = index),
+            backgroundColor: theme.cardColor,
+            elevation: 0,
+            height: 65,
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+            destinations: [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.home, color: theme.primaryColor),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.receipt_long_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.receipt_long, color: theme.primaryColor),
+                label: 'Docs',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.calendar_month_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.calendar_month, color: theme.primaryColor),
+                label: 'Calendar',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.psychology_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.psychology, color: theme.primaryColor),
+                label: 'AI',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.bar_chart_outlined, color: theme.textTheme.bodyMedium?.color),
+                selectedIcon: Icon(Icons.bar_chart, color: theme.primaryColor),
+                label: 'Stats',
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -178,7 +212,7 @@ class _HomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '\$${account?.budget.toStringAsFixed(2) ?? "0.00"}',
+                  '₱${account?.budget.toStringAsFixed(2) ?? "0.00"}',
                   style: TextStyle(
                     color: theme.scaffoldBackgroundColor,
                     fontSize: 36,
@@ -189,11 +223,23 @@ class _HomeView extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 40),
-          Text(
-            'Recent Transactions',
-            style: theme.textTheme.titleLarge,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Recent Transactions',
+                style: theme.textTheme.titleLarge,
+              ),
+              if (transactions.isNotEmpty)
+                TextButton(
+                  onPressed: () {
+                    // This could change the tab to Transactions tab
+                  },
+                  child: const Text('View All'),
+                ),
+            ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Expanded(
             child: transactions.isEmpty
                 ? const Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey)))
@@ -201,23 +247,73 @@ class _HomeView extends StatelessWidget {
                     itemCount: transactions.length > 5 ? 5 : transactions.length,
                     itemBuilder: (context, index) {
                       final tx = transactions[transactions.length - 1 - index];
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          backgroundColor: tx.typeColor.withOpacity(0.1),
-                          child: Icon(tx.type == TransactionType.income ? Icons.arrow_upward : Icons.arrow_downward, color: tx.typeColor),
-                        ),
-                        title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(DateFormat('MMM dd, yyyy').format(tx.date)),
-                        trailing: Text(
-                          '${tx.type == TransactionType.income ? '+' : '-'} \$${tx.amount.toStringAsFixed(2)}',
-                          style: TextStyle(color: tx.typeColor, fontWeight: FontWeight.bold, fontSize: 16),
-                        ),
-                      );
+                      return _TransactionTile(tx: tx);
                     },
                   ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _TransactionsView extends StatelessWidget {
+  final VoidCallback onRefresh;
+  const _TransactionsView({required this.onRefresh});
+
+  @override
+  Widget build(BuildContext context) {
+    final account = DatabaseService.getLatestAccount();
+    final theme = Theme.of(context);
+    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+
+    return Column(
+      children: [
+        if (transactions.isEmpty)
+          const Expanded(
+            child: Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey))),
+          )
+        else
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              itemCount: transactions.length,
+              itemBuilder: (context, index) {
+                final tx = transactions[transactions.length - 1 - index];
+                return _TransactionTile(tx: tx);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _TransactionTile extends StatelessWidget {
+  final Transaction tx;
+  const _TransactionTile({required this.tx});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: CircleAvatar(
+        backgroundColor: tx.typeColor.withOpacity(0.1),
+        child: Icon(
+          tx.type == TransactionType.income 
+              ? Icons.arrow_upward 
+              : tx.type == TransactionType.expense 
+                  ? Icons.arrow_downward 
+                  : Icons.sync, 
+          color: tx.typeColor,
+          size: 20,
+        ),
+      ),
+      title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      subtitle: Text('${tx.category} • ${DateFormat('MMM dd, yyyy').format(tx.date)}'),
+      trailing: Text(
+        '${tx.type == TransactionType.income ? '+' : tx.type == TransactionType.expense ? '-' : ''} ₱${tx.amount.toStringAsFixed(2)}',
+        style: TextStyle(color: tx.typeColor, fontWeight: FontWeight.bold, fontSize: 16),
       ),
     );
   }

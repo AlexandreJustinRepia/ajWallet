@@ -205,6 +205,9 @@ class _HomeView extends StatelessWidget {
     final account = DatabaseService.getLatestAccount();
     final theme = Theme.of(context);
     final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final wallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
+    
+    double totalBalance = wallets.fold(0, (sum, wallet) => sum + wallet.balance);
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -232,7 +235,7 @@ class _HomeView extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  '₱${account?.budget.toStringAsFixed(2) ?? "0.00"}',
+                  '₱${totalBalance.toStringAsFixed(2)}',
                   style: TextStyle(
                     color: theme.scaffoldBackgroundColor,
                     fontSize: 36,

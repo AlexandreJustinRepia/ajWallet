@@ -15,6 +15,7 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
   final _nameController = TextEditingController();
   final _balanceController = TextEditingController();
   String _selectedType = 'Wallet';
+  bool _isExcluded = false;
 
   final List<String> _walletTypes = ['Wallet', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
 
@@ -25,6 +26,7 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
         balance: double.parse(_balanceController.text),
         type: _selectedType,
         accountKey: widget.accountKey,
+        isExcluded: _isExcluded,
       );
 
       await DatabaseService.saveWallet(wallet);
@@ -87,6 +89,15 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
                 ),
                 items: _walletTypes.map((type) => DropdownMenuItem(value: type, child: Text(type))).toList(),
                 onChanged: (val) => setState(() => _selectedType = val!),
+              ),
+              const SizedBox(height: 24),
+              SwitchListTile(
+                title: const Text('Exclude from Total Balance'),
+                subtitle: const Text('This wallet\'s money will not be counted in your dashboard total.'),
+                value: _isExcluded,
+                onChanged: (val) => setState(() => _isExcluded = val),
+                activeColor: theme.primaryColor,
+                contentPadding: EdgeInsets.zero,
               ),
               const SizedBox(height: 40),
               SizedBox(

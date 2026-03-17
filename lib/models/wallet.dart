@@ -16,10 +16,14 @@ class Wallet extends HiveObject {
   @HiveField(3)
   int accountKey; // Link to the user account
 
+  @HiveField(4)
+  bool isExcluded; // Whether to exclude from total balance
+
   Wallet({
     required this.name,
     this.balance = 0.0,
     required this.type,
     required this.accountKey,
+    this.isExcluded = false,
   });
 }

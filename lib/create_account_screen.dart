@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
+import 'services/database_service.dart';
 import 'models/account.dart';
 import 'pin_setup_screen.dart';
 
@@ -20,9 +20,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
   void initState() {
     super.initState();
     _focusNode.addListener(() {
-      setState(() {
-        _isFocused = _focusNode.hasFocus;
-      });
+      setState(() => _isFocused = _focusNode.hasFocus);
     });
   }
 
@@ -35,34 +33,20 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   void _createAccount() async {
     final name = _accountNameController.text.trim();
-
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter an account name'),
-          backgroundColor: Colors.black,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter an account name')));
       return;
     }
-
-    final box = Hive.box<Account>('accounts');
-    final newAccount = Account(name: name);
-    
-    await box.add(newAccount);
-
+    await DatabaseService.saveAccount(Account(name: name));
     if (mounted) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PinSetupScreen()),
-      );
+      Navigator.push(context, MaterialPageRoute(builder: (context) => const PinSetupScreen()));
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: Colors.white,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -70,47 +54,26 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 80),
-              const Text(
-                'New Account',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
-                  letterSpacing: -0.5,
-                ),
-              ),
+              Text('New Account', style: theme.textTheme.headlineLarge),
               const SizedBox(height: 8),
-              const Text(
-                'Give your budget account a name to get started.',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
-              ),
+              const Text('Give your budget account a name to get started.', style: TextStyle(color: Colors.grey)),
               const SizedBox(height: 48),
               AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.grey[50],
+                  color: theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: _isFocused ? Colors.black : Colors.grey[300]!,
+                    color: _isFocused ? theme.primaryColor : Colors.grey[300]!,
                     width: _isFocused ? 2.0 : 1.0,
                   ),
                 ),
                 child: TextField(
                   controller: _accountNameController,
                   focusNode: _focusNode,
-                  decoration: const InputDecoration(
-                    hintText: 'Account Name',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
-                  ),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  decoration: const InputDecoration(hintText: 'Account Name', border: InputBorder.none),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
                 ),
               ),
               const SizedBox(height: 32),
@@ -126,21 +89,17 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
+                        BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
                         'Create Account',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: theme.scaffoldBackgroundColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -151,13 +110,7 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               ),
               const SizedBox(height: 24),
               const Center(
-                child: Text(
-                  'You can set a PIN later for extra security',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
+                child: Text('You can set a PIN later for extra security', style: TextStyle(color: Colors.grey)),
               ),
             ],
           ),

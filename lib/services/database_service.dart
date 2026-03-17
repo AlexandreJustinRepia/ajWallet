@@ -1,14 +1,21 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/account.dart';
+import '../models/app_theme.dart';
 
 class DatabaseService {
   static const String _boxName = 'accounts';
 
   static Future<void> init() async {
     await Hive.initFlutter();
+    
+    // Register Adapters
     if (!Hive.isAdapterRegistered(0)) {
       Hive.registerAdapter(AccountAdapter());
     }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(AppThemeAdapter());
+    }
+
     await Hive.openBox<Account>(_boxName);
   }
 

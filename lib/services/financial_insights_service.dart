@@ -123,4 +123,25 @@ class FinancialInsightsService {
       color: daysRemaining < 7 ? Colors.red : Colors.blue,
     );
   }
+
+  static Map<String, double> getCategoryData(List<Transaction> expenses) {
+    final totals = <String, double>{};
+    for (var tx in expenses) {
+      totals[tx.category] = (totals[tx.category] ?? 0) + tx.amount;
+    }
+    return totals;
+  }
+
+  static List<double> getWeeklyTrendLineData(List<Transaction> expenses) {
+    final now = DateTime.now();
+    final data = List.generate(7, (_) => 0.0);
+    
+    for (var tx in expenses) {
+      final daysDiff = now.difference(tx.date).inDays;
+      if (daysDiff >= 0 && daysDiff < 7) {
+        data[6 - daysDiff] += tx.amount;
+      }
+    }
+    return data;
+  }
 }

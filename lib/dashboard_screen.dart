@@ -938,7 +938,11 @@ class _StatisticsView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildChartSection(context, totalIncome, totalExpense),
+          _buildHeroSection(context, totalBalance, transactions),
+          const SizedBox(height: 32),
+          _buildTrendSection(context, transactions),
+          const SizedBox(height: 32),
+          _buildCategoryBreakdown(context, transactions),
           const SizedBox(height: 32),
           _buildSummarySection(context, totalIncome, totalExpense),
           if (insights.isNotEmpty) ...[
@@ -950,38 +954,215 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildChartSection(BuildContext context, double totalIncome, double totalExpense) {
+  Widget _buildHeroSection(BuildContext context, double balance, List<Transaction> transactions) {
     final theme = Theme.of(context);
+    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    
+    // Burn Rate Calculation
+    double dailyAvg = 0;
+    if (expenses.isNotEmpty) {
+      final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+      final days = DateTime.now().difference(firstDate).inDays + 1;
+      dailyAvg = expenses.fold(0.0, (sum, e) => sum + e.amount) / days;
+    }
+    
+    final daysRemaining = dailyAvg > 0 ? (balance / dailyAvg).floor() : 0;
+
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 32),
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: theme.cardColor,
+        color: theme.primaryColor,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.dividerColor, width: 0.5),
       ),
-      child: SizedBox(
-        height: 200,
-        child: PieChart(
-          PieChartData(
-            sectionsSpace: 6,
-            centerSpaceRadius: 60,
-            sections: [
-              PieChartSectionData(
-                value: totalIncome == 0 && totalExpense == 0 ? 1 : totalIncome,
-                color: theme.colorScheme.tertiary,
-                title: '',
-                radius: 12,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'DAILY BURN RATE',
+            style: TextStyle(
+              color: theme.scaffoldBackgroundColor.withOpacity(0.6),
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '₱${dailyAvg.toStringAsFixed(2)}',
+            style: TextStyle(
+              color: theme.scaffoldBackgroundColor,
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              _HeroStat(
+                label: 'RUNWAY',
+                value: '$daysRemaining Days',
+                bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
+                textColor: theme.scaffoldBackgroundColor,
               ),
-              PieChartSectionData(
-                value: totalExpense,
-                color: theme.colorScheme.error,
-                title: '',
-                radius: 12,
+              const SizedBox(width: 12),
+              _HeroStat(
+                label: 'STATUS',
+                value: daysRemaining > 30 ? 'SURPLUS' : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL'),
+                bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
+                textColor: theme.scaffoldBackgroundColor,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrendSection(BuildContext context, List<Transaction> transactions) {
+    final theme = Theme.of(context);
+    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    final trendData = FinancialInsightsService.getWeeklyTrendLineData(expenses);
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'SPENDING TREND',
+          style: theme.textTheme.labelLarge?.copyWith(
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          height: 180,
+          padding: const EdgeInsets.only(top: 24, right: 24, left: 12),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
+          ),
+          child: LineChart(
+            LineChartData(
+              gridData: const FlGridData(show: false),
+              titlesData: const FlTitlesData(show: false),
+              borderData: FlBorderData(show: false),
+              lineBarsData: [
+                LineChartBarData(
+                  spots: trendData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                  isCurved: true,
+                  color: theme.primaryColor,
+                  barWidth: 4,
+                  isStrokeCapRound: true,
+                  dotData: const FlDotData(show: false),
+                  belowBarData: BarAreaData(
+                    show: true,
+                    color: theme.primaryColor.withOpacity(0.05),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryBreakdown(BuildContext context, List<Transaction> transactions) {
+    final theme = Theme.of(context);
+    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    final categoryData = FinancialInsightsService.getCategoryData(expenses);
+    
+    if (categoryData.isEmpty) return const SizedBox.shrink();
+
+    final colors = [
+      theme.primaryColor,
+      theme.dividerColor,
+      theme.textTheme.bodyMedium?.color?.withOpacity(0.5) ?? Colors.grey,
+      theme.primaryColor.withOpacity(0.3),
+      theme.primaryColor.withOpacity(0.6),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'CATEGORY BREAKDOWN',
+          style: theme.textTheme.labelLarge?.copyWith(
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
+          ),
+          child: Row(
+            children: [
+              SizedBox(
+                width: 120,
+                height: 120,
+                child: PieChart(
+                  PieChartData(
+                    sectionsSpace: 4,
+                    centerSpaceRadius: 40,
+                    sections: categoryData.entries.toList().asMap().entries.map((e) {
+                      return PieChartSectionData(
+                        value: e.value.value,
+                        color: colors[e.key % colors.length],
+                        radius: 8,
+                        title: '',
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: Column(
+                  children: categoryData.entries.toList().asMap().entries.map((e) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: colors[e.key % colors.length],
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              e.value.key,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                          Text(
+                            '₱${e.value.value.toStringAsFixed(0)}',
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
         ),
-      ),
+      ],
     );
   }
 
@@ -1110,6 +1291,55 @@ class _ComingSoonView extends StatelessWidget {
           const SizedBox(height: 8),
           Text('Coming Soon!', style: theme.textTheme.bodyMedium),
         ],
+      ),
+    );
+  }
+}
+
+class _HeroStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color bgColor;
+  final Color textColor;
+
+  const _HeroStat({
+    required this.label,
+    required this.value,
+    required this.bgColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                color: textColor.withOpacity(0.5),
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              value,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

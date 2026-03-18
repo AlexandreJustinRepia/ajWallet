@@ -366,21 +366,46 @@ class _HomeViewState extends State<_HomeView> {
           const SizedBox(height: 16),
           if (transactions.isEmpty)
             _buildEmptyState(context)
-          else
-            ListView.separated(
-              shrinkWrap: true,
-              padding: EdgeInsets.zero,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: transactions.length > 5 ? 5 : transactions.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 12),
-              itemBuilder: (context, index) {
-                final tx = transactions[transactions.length - 1 - index];
-                return SlideInListItem(
-                  index: index,
-                  child: _TransactionCard(tx: tx, onRefresh: widget.onRefresh),
-                );
-              },
-            ),
+          else ...[
+            (() {
+              final sortedTx = List<Transaction>.from(transactions)
+                ..sort((a, b) => b.date.compareTo(a.date));
+              final topTx = sortedTx.take(5).toList();
+
+              final List<dynamic> items = [];
+              DateTime? lastDate;
+
+              for (var tx in topTx) {
+                if (lastDate == null || !isSameDay(lastDate, tx.date)) {
+                  items.add(tx.date);
+                  lastDate = tx.date;
+                }
+                items.add(tx);
+              }
+
+              return ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: items.length,
+                itemBuilder: (context, index) {
+                  final item = items[index];
+                  if (item is DateTime) {
+                    return _buildDateHeader(context, item);
+                  }
+                  final tx = item as Transaction;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: SlideInListItem(
+                      index: index,
+                      child:
+                          _TransactionCard(tx: tx, onRefresh: widget.onRefresh),
+                    ),
+                  );
+                },
+              );
+            })(),
+          ],
         ],
       ),
     );
@@ -735,35 +760,35 @@ class _TransactionsView extends StatelessWidget {
             },
           );
   }
+}
 
-  Widget _buildDateHeader(BuildContext context, DateTime date) {
-    final theme = Theme.of(context);
-    final now = DateTime.now();
-    final isToday = isSameDay(date, now);
-    final isYesterday = isSameDay(date, now.subtract(const Duration(days: 1)));
+Widget _buildDateHeader(BuildContext context, DateTime date) {
+  final theme = Theme.of(context);
+  final now = DateTime.now();
+  final isToday = isSameDay(date, now);
+  final isYesterday = isSameDay(date, now.subtract(const Duration(days: 1)));
 
-    String dateStr;
-    if (isToday) {
-      dateStr = 'Today';
-    } else if (isYesterday) {
-      dateStr = 'Yesterday';
-    } else {
-      dateStr = DateFormat('MMMM dd, yyyy').format(date);
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 12, left: 4),
-      child: Text(
-        dateStr.toUpperCase(),
-        style: theme.textTheme.labelLarge?.copyWith(
-          letterSpacing: 1.5,
-          fontWeight: FontWeight.w900,
-          fontSize: 11,
-          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
-        ),
-      ),
-    );
+  String dateStr;
+  if (isToday) {
+    dateStr = 'Today';
+  } else if (isYesterday) {
+    dateStr = 'Yesterday';
+  } else {
+    dateStr = DateFormat('MMMM dd, yyyy').format(date);
   }
+
+  return Padding(
+    padding: const EdgeInsets.only(top: 16, bottom: 12, left: 4),
+    child: Text(
+      dateStr.toUpperCase(),
+      style: theme.textTheme.labelLarge?.copyWith(
+        letterSpacing: 1.5,
+        fontWeight: FontWeight.w900,
+        fontSize: 11,
+        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+      ),
+    ),
+  );
 }
 
 class _CalendarView extends StatefulWidget {

@@ -6,7 +6,8 @@ import 'models/wallet.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
-  const AddTransactionScreen({super.key, required this.accountKey});
+  final Transaction? existingTransaction;
+  const AddTransactionScreen({super.key, required this.accountKey, this.existingTransaction});
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -24,6 +25,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _selectedCategory = 'Food & Drinks';
   int? _selectedWalletKey;
   int? _selectedToWalletKey; // For Transfers
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.existingTransaction != null) {
+      final tx = widget.existingTransaction!;
+      _selectedType = tx.type;
+      _selectedDate = tx.date;
+      _selectedCategory = tx.category;
+      _selectedWalletKey = tx.walletKey;
+      _selectedToWalletKey = tx.toWalletKey;
+      _amountController.text = tx.amount.toStringAsFixed(2);
+      _descriptionController.text = tx.description;
+      if (tx.charge != null && tx.charge! > 0) {
+        _chargeController.text = tx.charge!.toStringAsFixed(2);
+      }
+      _isManualDate = true;
+    }
+  }
 
   final Map<String, IconData> _expenseCategories = {
     'Food & Drinks': Icons.fastfood,
@@ -65,24 +85,57 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         return;
       }
 
-      final transaction = Transaction(
-        title: _selectedType == TransactionType.transfer
-            ? 'Transfer'
-            : _selectedCategory,
-        amount: double.parse(_amountController.text),
-        charge: double.tryParse(_chargeController.text),
-        date: _selectedDate,
-        category: _selectedType == TransactionType.transfer
-            ? 'Transfer'
-            : _selectedCategory,
-        description: _descriptionController.text,
-        type: _selectedType,
-        accountKey: widget.accountKey,
-        walletKey: _selectedWalletKey,
-        toWalletKey: _selectedToWalletKey,
-      );
+      if (widget.existingTransaction != null) {
+        final existing = widget.existingTransaction!;
+        // Capture old state for DatabaseService.updateTransaction
+        final oldTx = Transaction(
+          title: existing.title,
+          amount: existing.amount,
+          date: existing.date,
+          category: existing.category,
+          description: existing.description,
+          type: existing.type,
+          accountKey: existing.accountKey,
+          walletKey: existing.walletKey,
+          toWalletKey: existing.toWalletKey,
+          charge: existing.charge,
+        );
 
-      await DatabaseService.saveTransaction(transaction);
+        // Update existing object's fields
+        existing.title = _selectedType == TransactionType.transfer
+            ? 'Transfer'
+            : _selectedCategory;
+        existing.amount = double.parse(_amountController.text);
+        existing.charge = double.tryParse(_chargeController.text);
+        existing.date = _selectedDate;
+        existing.category = _selectedType == TransactionType.transfer
+            ? 'Transfer'
+            : _selectedCategory;
+        existing.description = _descriptionController.text;
+        existing.type = _selectedType;
+        existing.walletKey = _selectedWalletKey;
+        existing.toWalletKey = _selectedToWalletKey;
+
+        await DatabaseService.updateTransaction(oldTx, existing);
+      } else {
+        final transaction = Transaction(
+          title: _selectedType == TransactionType.transfer
+              ? 'Transfer'
+              : _selectedCategory,
+          amount: double.parse(_amountController.text),
+          charge: double.tryParse(_chargeController.text),
+          date: _selectedDate,
+          category: _selectedType == TransactionType.transfer
+              ? 'Transfer'
+              : _selectedCategory,
+          description: _descriptionController.text,
+          type: _selectedType,
+          accountKey: widget.accountKey,
+          walletKey: _selectedWalletKey,
+          toWalletKey: _selectedToWalletKey,
+        );
+        await DatabaseService.saveTransaction(transaction);
+      }
       if (mounted) {
         Navigator.pop(context, true);
       }
@@ -103,7 +156,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Add Transaction'), elevation: 0),
+      appBar: AppBar(
+          title: Text(widget.existingTransaction == null
+              ? 'Add Transaction'
+              : 'Edit Transaction'),
+          elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(

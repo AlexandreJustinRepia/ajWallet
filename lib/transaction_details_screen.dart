@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'models/transaction_model.dart';
 import 'services/database_service.dart';
 import 'services/quick_add_service.dart';
+import 'add_transaction_screen.dart';
 
 class TransactionDetailsScreen extends StatelessWidget {
   final Transaction transaction;
@@ -48,6 +49,23 @@ class TransactionDetailsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Transaction Details'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_rounded),
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AddTransactionScreen(
+                    accountKey: transaction.accountKey,
+                    existingTransaction: transaction,
+                  ),
+                ),
+              );
+              if (result == true && context.mounted) {
+                Navigator.pop(context, true);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
             onPressed: () => _confirmDelete(context),

@@ -82,43 +82,66 @@ class DatabaseService {
   // Transaction Operations
   static Future<void> saveTransaction(Transaction transaction) async {
     await _transactionBox.add(transaction);
-    
+    await _applyTransactionEffect(transaction, isReversing: false);
+  }
+
+  static Future<void> deleteTransaction(Transaction transaction) async {
+    await _applyTransactionEffect(transaction, isReversing: true);
+    await transaction.delete();
+  }
+
+  static Future<void> updateTransaction(Transaction oldTx, Transaction newTx) async {
+    // 1. Reverse old transaction's effect
+    await _applyTransactionEffect(oldTx, isReversing: true);
+    // 2. Apply new transaction's effect
+    await _applyTransactionEffect(newTx, isReversing: false);
+    // 3. Save new data (assuming it's the same HiveObject or we update its fields)
+    await newTx.save();
+  }
+
+  static Future<void> _applyTransactionEffect(Transaction tx, {required bool isReversing}) async {
+    double amount = isReversing ? -tx.amount : tx.amount;
+    double charge = isReversing ? -(tx.charge ?? 0) : (tx.charge ?? 0);
+
     // Handle Income/Expense wallet updates
-    if (transaction.type == TransactionType.income && transaction.walletKey != null) {
-      final wallet = _walletBox.get(transaction.walletKey);
+    if (tx.type == TransactionType.income && tx.walletKey != null) {
+      final wallet = _walletBox.get(tx.walletKey);
       if (wallet != null) {
-        wallet.balance += transaction.amount;
+        wallet.balance += amount;
         await wallet.save();
       }
-    } else if (transaction.type == TransactionType.expense && transaction.walletKey != null) {
-      final wallet = _walletBox.get(transaction.walletKey);
+    } else if (tx.type == TransactionType.expense && tx.walletKey != null) {
+      final wallet = _walletBox.get(tx.walletKey);
       if (wallet != null) {
-        wallet.balance -= transaction.amount;
+        wallet.balance -= amount;
         await wallet.save();
       }
     } 
     // Handle Transfers between wallets
-    else if (transaction.type == TransactionType.transfer && transaction.walletKey != null && transaction.toWalletKey != null) {
-      final fromWallet = _walletBox.get(transaction.walletKey);
-      final toWallet = _walletBox.get(transaction.toWalletKey);
+    else if (tx.type == TransactionType.transfer && tx.walletKey != null && tx.toWalletKey != null) {
+      final fromWallet = _walletBox.get(tx.walletKey);
+      final toWallet = _walletBox.get(tx.toWalletKey);
       if (fromWallet != null && toWallet != null) {
-        double totalDeduction = transaction.amount + (transaction.charge ?? 0);
-        fromWallet.balance -= totalDeduction;
-        toWallet.balance += transaction.amount;
+        double fromDeduction = tx.amount + (tx.charge ?? 0);
+        if (isReversing) fromDeduction = -fromDeduction;
+        
+        fromWallet.balance -= fromDeduction;
+        toWallet.balance += amount;
+        
         await fromWallet.save();
         await toWallet.save();
       }
     }
 
-    // Update global account balance
-    final account = _box.values.firstWhere((a) => a.key == transaction.accountKey);
-    if (transaction.type == TransactionType.income) {
-      account.budget += transaction.amount;
-    } else if (transaction.type == TransactionType.expense) {
-      account.budget -= transaction.amount;
-    } else if (transaction.type == TransactionType.transfer && transaction.charge != null) {
-      // Transfers themselves don't change total budget, but charges do (money leaving the system)
-      account.budget -= transaction.charge!;
+    // Update global account budget
+    final account = _box.values.firstWhere((a) => a.key == tx.accountKey);
+    if (tx.type == TransactionType.income) {
+      account.budget += amount;
+    } else if (tx.type == TransactionType.expense) {
+      account.budget -= amount;
+    } else if (tx.type == TransactionType.transfer) {
+      // Transfers themselves don't change total budget, only charges do
+      account.budget -= charge;
     }
 
     await account.save();
@@ -142,10 +165,6 @@ class DatabaseService {
     await _box.clear();
     await _transactionBox.clear();
     await _walletBox.clear();
-  }
-
-  static Future<void> deleteTransaction(Transaction transaction) async {
-    await transaction.delete();
   }
 
   static Wallet? getWalletByKey(int key) {

@@ -207,7 +207,9 @@ class _HomeView extends StatelessWidget {
     final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
     final wallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
     
-    double totalBalance = wallets.fold(0, (sum, wallet) => sum + wallet.balance);
+    double totalBalance = wallets
+        .where((w) => !w.isExcluded)
+        .fold(0, (sum, wallet) => sum + wallet.balance);
 
     return Padding(
       padding: const EdgeInsets.all(24.0),
@@ -399,32 +401,61 @@ class _WalletsView extends StatelessWidget {
             itemCount: wallets.length,
             itemBuilder: (context, index) {
               final wallet = wallets[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.grey[200]!),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: theme.primaryColor.withOpacity(0.1),
-                      child: Icon(_getWalletIcon(wallet.type), color: theme.primaryColor),
+              return InkWell(
+                onTap: () async {
+                  // Toggle exclusion on tap
+                  wallet.isExcluded = !wallet.isExcluded;
+                  await DatabaseService.updateWallet(wallet);
+                  onRefresh();
+                },
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: wallet.isExcluded ? Colors.red.withOpacity(0.3) : Colors.grey[200]!,
+                      width: wallet.isExcluded ? 2 : 1,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(wallet.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          Text(wallet.type, style: const TextStyle(color: Colors.grey)),
-                        ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: theme.primaryColor.withOpacity(0.1),
+                        child: Icon(_getWalletIcon(wallet.type), color: theme.primaryColor),
                       ),
-                    ),
-                    Text('₱${wallet.balance.toStringAsFixed(2)}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              wallet.name,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                decoration: wallet.isExcluded ? TextDecoration.lineThrough : null,
+                              ),
+                            ),
+                            Text(
+                              wallet.isExcluded ? 'Excluded' : wallet.type,
+                              style: TextStyle(color: wallet.isExcluded ? Colors.red : Colors.grey),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '₱${wallet.balance.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          fontSize: 18, 
+                          fontWeight: FontWeight.bold,
+                          color: wallet.isExcluded ? Colors.grey : null,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

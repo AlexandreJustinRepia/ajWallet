@@ -54,6 +54,10 @@ class DatabaseService {
     await _walletBox.add(wallet);
   }
 
+  static Future<void> updateWallet(Wallet wallet) async {
+    await wallet.save();
+  }
+
   static List<Wallet> getWallets(int accountKey) {
     return _walletBox.values.where((w) => w.accountKey == accountKey).toList();
   }

@@ -14,7 +14,6 @@ class AddTransactionScreen extends StatefulWidget {
 
 class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   
@@ -48,10 +47,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       final transaction = Transaction(
-        title: _titleController.text,
+        title: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
         amount: double.parse(_amountController.text),
         date: _selectedDate,
-        category: _selectedCategory,
+        category: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
         description: _descriptionController.text,
         type: _selectedType,
         accountKey: widget.accountKey,
@@ -68,7 +67,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   void dispose() {
-    _titleController.dispose();
     _amountController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -77,7 +75,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final wallets = DatabaseService.getWallets(widget.accountKey);
+    final wallets = DatabaseService.getWallets(widget.accountKey)
+        .where((w) => !w.isExcluded)
+        .toList();
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -138,17 +138,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Title Field
-              Text('Title', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _titleController,
-                decoration: InputDecoration(
-                  hintText: 'e.g., Grocery Shopping',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Enter title' : null,
-              ),
               const SizedBox(height: 24),
 
               // Category Picker (Hidden for transfers as it's just moving money)

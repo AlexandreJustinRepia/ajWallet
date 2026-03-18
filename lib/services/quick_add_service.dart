@@ -71,11 +71,11 @@ class QuickAddService {
       if (categoryFound) break;
     }
 
-    // 3. Generate title (everything that's not the amount)
-    title = input.replaceAll(amountRegex, '').trim();
-    if (title.isEmpty) {
-      title = categoryFound ? category : 'Quick Transaction';
-    }
+    // 3. Generate title (Category as Title)
+    title = categoryFound ? category : (input.replaceAll(amountRegex, '').trim().isEmpty ? 'Quick Transaction' : input.replaceAll(amountRegex, '').trim());
+    
+    // For transfers, if identified as such (not in current keywords but planned)
+    if (type == TransactionType.transfer) title = 'Transfer';
 
     return QuickAddResult(
       amount: amount,

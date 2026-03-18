@@ -44,7 +44,9 @@ class _QuickAddInputState extends State<QuickAddInput> {
     final result = _preview;
     if (result == null || result.amount <= 0) return;
 
-    final wallets = DatabaseService.getWallets(widget.accountKey);
+    final wallets = DatabaseService.getWallets(widget.accountKey)
+        .where((w) => !w.isExcluded)
+        .toList();
     if (wallets.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please create a wallet first')),

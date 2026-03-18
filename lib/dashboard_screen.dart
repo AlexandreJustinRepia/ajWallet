@@ -245,6 +245,7 @@ class _HomeView extends StatefulWidget {
 class _HomeViewState extends State<_HomeView> {
   double _prevBalance = 0;
   bool _showGlow = false;
+  bool _isNetWorthMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -257,7 +258,7 @@ class _HomeViewState extends State<_HomeView> {
         : <Wallet>[];
 
     double totalBalance = wallets
-        .where((w) => !w.isExcluded)
+        .where((w) => _isNetWorthMode || !w.isExcluded)
         .fold(0, (sum, wallet) => sum + wallet.balance);
 
     if (totalBalance != _prevBalance) {
@@ -280,7 +281,9 @@ class _HomeViewState extends State<_HomeView> {
         children: [
           _buildHeader(context, account?.name ?? "User"),
           const SizedBox(height: 32),
-          _buildBalanceCard(context, totalBalance),
+          _buildBalanceCard(context, totalBalance, _isNetWorthMode, (val) {
+            setState(() => _isNetWorthMode = val);
+          }),
           if (account != null) ...[
             const SizedBox(height: 16),
             QuickAddInput(
@@ -336,16 +339,17 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context, double totalBalance) {
+  Widget _buildBalanceCard(BuildContext context, double totalBalance,
+      bool isNetWorth, Function(bool) onToggle) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
     return AnimatedScale(
       scale: _showGlow ? 1.02 : 1.0,
       duration: const Duration(milliseconds: 400),
-      curve: Curves.elasticOut,
+      curve: Curves.easeOutBack,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+        duration: const Duration(milliseconds: 500),
         width: double.infinity,
         padding: const EdgeInsets.all(32),
         decoration: BoxDecoration(
@@ -366,23 +370,62 @@ class _HomeViewState extends State<_HomeView> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'TOTAL LIQUIDITY',
-                  style: TextStyle(
-                    color: (isDark ? Colors.black : Colors.white).withOpacity(0.5),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2.0,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isNetWorth ? 'TOTAL NET WORTH' : 'TOTAL LIQUIDITY',
+                      style: TextStyle(
+                        color: (isDark ? Colors.black : Colors.white)
+                            .withOpacity(0.5),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 2.0,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      isNetWorth
+                          ? 'INCLUDES EXCLUDED WALLETS'
+                          : 'SPENDABLE BALANCE ONLY',
+                      style: TextStyle(
+                        color: (isDark ? Colors.black : Colors.white)
+                            .withOpacity(0.3),
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
-                Icon(
-                  Icons.auto_awesome_rounded,
-                  color: (isDark ? Colors.black : Colors.white).withOpacity(0.3),
-                  size: 18,
+                GestureDetector(
+                  onTap: () => onToggle(!isNetWorth),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: (isDark ? Colors.black : Colors.white)
+                          .withOpacity(0.1),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: (isDark ? Colors.black : Colors.white)
+                            .withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Icon(
+                      isNetWorth
+                          ? Icons.account_balance_rounded
+                          : Icons.payments_rounded,
+                      color: (isDark ? Colors.black : Colors.white)
+                          .withOpacity(0.5),
+                      size: 18,
+                    ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             AnimatedCountText(
               value: totalBalance,
               prefix: '₱',
@@ -393,7 +436,7 @@ class _HomeViewState extends State<_HomeView> {
                 letterSpacing: -1,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
@@ -403,7 +446,8 @@ class _HomeViewState extends State<_HomeView> {
               child: Text(
                 'LIVE UPDATES',
                 style: TextStyle(
-                  color: (isDark ? Colors.black : Colors.white).withOpacity(0.4),
+                  color:
+                      (isDark ? Colors.black : Colors.white).withOpacity(0.4),
                   fontSize: 8,
                   fontWeight: FontWeight.bold,
                 ),
@@ -755,9 +799,9 @@ class _WalletsView extends StatelessWidget {
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: wallet.isExcluded
-                          ? theme.colorScheme.error.withOpacity(0.2)
+                          ? theme.colorScheme.error.withOpacity(0.5)
                           : theme.dividerColor,
-                      width: wallet.isExcluded ? 1.5 : 0.5,
+                      width: wallet.isExcluded ? 2 : 0.5,
                     ),
                   ),
                   child: Row(
@@ -765,12 +809,16 @@ class _WalletsView extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.05),
+                          color: wallet.isExcluded
+                              ? theme.colorScheme.error.withOpacity(0.1)
+                              : theme.primaryColor.withOpacity(0.05),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           _getWalletIcon(wallet.type),
-                          color: theme.primaryColor,
+                          color: wallet.isExcluded
+                              ? theme.colorScheme.error
+                              : theme.primaryColor,
                           size: 22,
                         ),
                       ),
@@ -785,13 +833,21 @@ class _WalletsView extends StatelessWidget {
                                 decoration: wallet.isExcluded
                                     ? TextDecoration.lineThrough
                                     : null,
+                                decorationColor: theme.colorScheme.error,
+                                color: wallet.isExcluded
+                                    ? theme.colorScheme.error.withOpacity(0.7)
+                                    : null,
                               ),
                             ),
                             Text(
                               wallet.isExcluded
                                   ? 'Excluded from Liquidity'
                                   : wallet.type,
-                              style: theme.textTheme.labelLarge,
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                color: wallet.isExcluded
+                                    ? theme.colorScheme.error.withOpacity(0.5)
+                                    : null,
+                              ),
                             ),
                           ],
                         ),
@@ -800,9 +856,10 @@ class _WalletsView extends StatelessWidget {
                         '₱${wallet.balance.toStringAsFixed(2)}',
                         style: theme.textTheme.titleLarge?.copyWith(
                           color: wallet.isExcluded
-                              ? theme.textTheme.bodyMedium?.color?.withOpacity(
-                                  0.3,
-                                )
+                              ? theme.colorScheme.error.withOpacity(0.5)
+                              : null,
+                          decoration: wallet.isExcluded
+                              ? TextDecoration.lineThrough
                               : null,
                         ),
                       ),

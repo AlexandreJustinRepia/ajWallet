@@ -71,6 +71,10 @@ class DatabaseService {
     return _walletBox.values.where((w) => w.accountKey == accountKey).toList();
   }
 
+  static List<Wallet> getAllWallets() {
+    return _walletBox.values.toList();
+  }
+
   static Wallet? getWallet(int key) {
     return _walletBox.get(key);
   }
@@ -122,6 +126,10 @@ class DatabaseService {
 
   static List<Transaction> getTransactions(int accountKey) {
     return _transactionBox.values.where((t) => t.accountKey == accountKey).toList();
+  }
+
+  static List<Transaction> getAllTransactions() {
+    return _transactionBox.values.toList();
   }
 
   static List<Transaction> getWalletTransactions(int walletKey) {

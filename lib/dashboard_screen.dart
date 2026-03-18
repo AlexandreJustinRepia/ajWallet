@@ -112,6 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'Theme Settings',
                   'theme',
                 ),
+                _buildPopupItem(
+                  Icons.security_rounded,
+                  'Security',
+                  'security',
+                ),
                 _buildPopupItem(Icons.logout_rounded, 'Logout', 'logout'),
               ],
             ),

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/session_service.dart';
+import 'services/backup_service.dart';
+import 'services/security_service.dart';
 import 'models/account.dart';
+import 'login_screen.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -67,6 +70,22 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 }
               },
             ),
+      ),
+          const SizedBox(height: 16),
+          _buildSectionTitle('Data Management'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.cloud_upload_outlined, color: theme.primaryColor),
+            title: const Text('Export Backup'),
+            subtitle: const Text('Encrypt and save your data offline.'),
+            onTap: () => _handleBackup(context, isExport: true),
+          ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.cloud_download_outlined, color: theme.primaryColor),
+            title: const Text('Import Backup'),
+            subtitle: const Text('Restore data from an encrypted file.'),
+            onTap: () => _handleBackup(context, isExport: false),
           ),
           const SizedBox(height: 32),
           ElevatedButton(
@@ -92,6 +111,80 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _handleBackup(BuildContext context, {required bool isExport}) async {
+    final theme = Theme.of(context);
+    final pinController = TextEditingController();
+
+    final pinConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(isExport ? 'Export Backup' : 'Import Backup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              isExport 
+                ? 'Enter your PIN to encrypt the backup file.' 
+                : 'Enter the PIN used to encrypt this backup.',
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              decoration: const InputDecoration(
+                hintText: 'Enter 4-digit PIN',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 4,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(isExport ? 'Export' : 'Import'),
+          ),
+        ],
+      ),
+    );
+
+    if (pinConfirmed == true && pinController.text.length == 4) {
+      if (isExport) {
+        final success = await BackupService.exportBackup(pinController.text);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(success ? 'Backup exported successfully' : 'Export failed')),
+          );
+        }
+      } else {
+        final success = await BackupService.importBackup(pinController.text);
+        if (mounted) {
+          if (success) {
+            final newAccount = DatabaseService.getLatestAccount();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Data restored successfully.')),
+            );
+            
+            if (newAccount != null) {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen(account: newAccount)),
+                (route) => false,
+              );
+            }
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Import failed. Check your PIN or file integrity.')),
+            );
+          }
+        }
+      }
+    }
   }
 
   Widget _buildSectionTitle(String title) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'services/database_service.dart';
+import 'services/session_service.dart';
 import 'dashboard_screen.dart';
 
 class PinSetupScreen extends StatefulWidget {
@@ -60,6 +61,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
         account.fakePin = _fakePinController.text;
       }
       await DatabaseService.updateAccount(account);
+      SessionService.setActiveAccount(account);
       
       if (mounted) {
         Navigator.pushReplacement(

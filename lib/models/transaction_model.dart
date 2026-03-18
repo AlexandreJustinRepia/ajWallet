@@ -58,6 +58,36 @@ class Transaction extends HiveObject {
     this.charge,
   });
 
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'category': category,
+      'description': description,
+      'type': type.index,
+      'accountKey': accountKey,
+      'walletKey': walletKey,
+      'toWalletKey': toWalletKey,
+      'charge': charge,
+    };
+  }
+
+  factory Transaction.fromMap(Map<String, dynamic> map) {
+    return Transaction(
+      title: map['title'],
+      amount: map['amount'],
+      date: DateTime.parse(map['date']),
+      category: map['category'],
+      description: map['description'],
+      type: TransactionType.values[map['type']],
+      accountKey: map['accountKey'],
+      walletKey: map['walletKey'],
+      toWalletKey: map['toWalletKey'],
+      charge: map['charge'],
+    );
+  }
+
   Color get typeColor {
     switch (type) {
       case TransactionType.income:

@@ -42,4 +42,32 @@ class Account extends HiveObject {
     this.isWipeEnabled = false,
     this.autoLockDurationSeconds = 30,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'budget': budget,
+      'pin': pin,
+      'isBiometricEnabled': isBiometricEnabled,
+      'fakePin': fakePin,
+      'isFake': isFake,
+      'maxFailedAttempts': maxFailedAttempts,
+      'isWipeEnabled': isWipeEnabled,
+      'autoLockDurationSeconds': autoLockDurationSeconds,
+    };
+  }
+
+  factory Account.fromMap(Map<String, dynamic> map) {
+    return Account(
+      name: map['name'],
+      budget: map['budget'],
+      pin: map['pin'],
+      isBiometricEnabled: map['isBiometricEnabled'],
+      fakePin: map['fakePin'],
+      isFake: map['isFake'],
+      maxFailedAttempts: map['maxFailedAttempts'],
+      isWipeEnabled: map['isWipeEnabled'],
+      autoLockDurationSeconds: map['autoLockDurationSeconds'],
+    );
+  }
 }

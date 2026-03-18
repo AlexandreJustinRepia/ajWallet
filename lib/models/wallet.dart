@@ -26,4 +26,24 @@ class Wallet extends HiveObject {
     required this.accountKey,
     this.isExcluded = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'balance': balance,
+      'type': type,
+      'accountKey': accountKey,
+      'isExcluded': isExcluded,
+    };
+  }
+
+  factory Wallet.fromMap(Map<String, dynamic> map) {
+    return Wallet(
+      name: map['name'],
+      balance: map['balance'],
+      type: map['type'],
+      accountKey: map['accountKey'],
+      isExcluded: map['isExcluded'],
+    );
+  }
 }

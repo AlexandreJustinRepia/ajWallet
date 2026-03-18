@@ -54,6 +54,41 @@ class _QuickAddInputState extends State<QuickAddInput> {
       return;
     }
 
+    int walletKey = wallets.first.key as int;
+    int? toWalletKey;
+
+    if (result.type == TransactionType.transfer) {
+      final allWallets = DatabaseService.getWallets(widget.accountKey);
+      
+      if (result.fromWallet != null) {
+        for (var w in allWallets) {
+          if (w.name.toLowerCase() == result.fromWallet!.toLowerCase()) {
+            walletKey = w.key as int;
+            break;
+          }
+        }
+      }
+
+      if (result.toWallet != null) {
+        for (var w in allWallets) {
+          if (w.name.toLowerCase() == result.toWallet!.toLowerCase()) {
+            toWalletKey = w.key as int;
+            break;
+          }
+        }
+      }
+      
+      // Default destination if not specified or not found
+      if (toWalletKey == null) {
+        if (wallets.length > 1) {
+          toWalletKey = wallets.firstWhere((w) => (w.key as int) != walletKey).key as int;
+        } else {
+          // If only one wallet, transfer to itself (or show error?)
+          toWalletKey = walletKey;
+        }
+      }
+    }
+
     final transaction = Transaction(
       title: result.title,
       amount: result.amount,
@@ -62,7 +97,8 @@ class _QuickAddInputState extends State<QuickAddInput> {
       description: 'Quick added',
       type: result.type,
       accountKey: widget.accountKey,
-      walletKey: wallets.first.key as int, // Default to first wallet
+      walletKey: walletKey,
+      toWalletKey: toWalletKey,
     );
 
     await DatabaseService.saveTransaction(transaction);
@@ -73,7 +109,9 @@ class _QuickAddInputState extends State<QuickAddInput> {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Added ₱${result.amount.toStringAsFixed(2)} to ${result.category}'),
+          content: Text(result.type == TransactionType.transfer 
+            ? 'Transferred ₱${result.amount.toStringAsFixed(2)}' 
+            : 'Added ₱${result.amount.toStringAsFixed(2)} to ${result.category}'),
           duration: const Duration(seconds: 2),
         ),
       );

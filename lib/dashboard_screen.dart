@@ -12,6 +12,8 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'widgets/animated_count_text.dart';
 import 'widgets/slide_in_list_item.dart';
+import 'widgets/insight_card.dart';
+import 'services/financial_insights_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -246,7 +248,6 @@ class _HomeViewState extends State<_HomeView> {
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
-    final theme = Theme.of(context);
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];
@@ -840,63 +841,122 @@ class _StatisticsView extends StatelessWidget {
         .where((tx) => tx.type == TransactionType.expense)
         .fold(0, (sum, tx) => sum + tx.amount);
 
+    final wallets = account != null
+        ? DatabaseService.getWallets(account.key as int)
+        : <Wallet>[];
+    double totalBalance = wallets
+        .where((w) => !w.isExcluded)
+        .fold(0, (sum, wallet) => sum + wallet.balance);
+
+    final insights = FinancialInsightsService.generateInsights(transactions, totalBalance);
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
+      physics: const BouncingScrollPhysics(),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 32),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: theme.dividerColor, width: 0.5),
-            ),
-            child: SizedBox(
-              height: 200,
-              child: PieChart(
-                PieChartData(
-                  sectionsSpace: 6,
-                  centerSpaceRadius: 60,
-                  sections: [
-                    PieChartSectionData(
-                      value: totalIncome == 0 && totalExpense == 0
-                          ? 1
-                          : totalIncome,
-                      color: theme.colorScheme.tertiary,
-                      title: '',
-                      radius: 12,
-                    ),
-                    PieChartSectionData(
-                      value: totalExpense,
-                      color: theme.colorScheme.error,
-                      title: '',
-                      radius: 12,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
+          _buildChartSection(context, totalIncome, totalExpense),
           const SizedBox(height: 32),
-          _StatRow(
-            label: 'Total Inflow',
-            amount: totalIncome,
-            color: theme.colorScheme.tertiary,
-          ),
-          const SizedBox(height: 12),
-          _StatRow(
-            label: 'Total Outflow',
-            amount: totalExpense,
-            color: theme.colorScheme.error,
-          ),
-          const SizedBox(height: 12),
-          _StatRow(
-            label: 'Net Position',
-            amount: totalIncome - totalExpense,
-            color: theme.primaryColor,
-          ),
+          _buildSummarySection(context, totalIncome, totalExpense),
+          if (insights.isNotEmpty) ...[
+            const SizedBox(height: 48),
+            _buildInsightsSection(context, insights),
+          ],
         ],
       ),
+    );
+  }
+
+  Widget _buildChartSection(BuildContext context, double totalIncome, double totalExpense) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: theme.dividerColor, width: 0.5),
+      ),
+      child: SizedBox(
+        height: 200,
+        child: PieChart(
+          PieChartData(
+            sectionsSpace: 6,
+            centerSpaceRadius: 60,
+            sections: [
+              PieChartSectionData(
+                value: totalIncome == 0 && totalExpense == 0 ? 1 : totalIncome,
+                color: theme.colorScheme.tertiary,
+                title: '',
+                radius: 12,
+              ),
+              PieChartSectionData(
+                value: totalExpense,
+                color: theme.colorScheme.error,
+                title: '',
+                radius: 12,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummarySection(BuildContext context, double totalIncome, double totalExpense) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        _StatRow(
+          label: 'Total Inflow',
+          amount: totalIncome,
+          color: theme.colorScheme.tertiary,
+        ),
+        const SizedBox(height: 12),
+        _StatRow(
+          label: 'Total Outflow',
+          amount: totalExpense,
+          color: theme.colorScheme.error,
+        ),
+        const SizedBox(height: 12),
+        _StatRow(
+          label: 'Net Position',
+          amount: totalIncome - totalExpense,
+          color: theme.primaryColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsightsSection(BuildContext context, List<Insight> insights) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'INTELLIGENT INSIGHTS',
+          style: theme.textTheme.labelLarge?.copyWith(
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+          ),
+        ),
+        const SizedBox(height: 16),
+        ListView.separated(
+          shrinkWrap: true,
+          padding: EdgeInsets.zero,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: insights.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            return SlideInListItem(
+              index: index,
+              child: InsightCard(insight: insights[index]),
+            );
+          },
+        ),
+      ],
     );
   }
 }

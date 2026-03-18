@@ -17,7 +17,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _chargeController = TextEditingController();
-  
+
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
   String _selectedCategory = 'Food & Drinks';
@@ -38,21 +38,30 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedWalletKey == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
         return;
       }
 
-      if (_selectedType == TransactionType.transfer && _selectedToWalletKey == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a destination wallet')));
+      if (_selectedType == TransactionType.transfer &&
+          _selectedToWalletKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a destination wallet')),
+        );
         return;
       }
 
       final transaction = Transaction(
-        title: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
+        title: _selectedType == TransactionType.transfer
+            ? 'Transfer'
+            : _selectedCategory,
         amount: double.parse(_amountController.text),
         charge: double.tryParse(_chargeController.text),
         date: _selectedDate,
-        category: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
+        category: _selectedType == TransactionType.transfer
+            ? 'Transfer'
+            : _selectedCategory,
         description: _descriptionController.text,
         type: _selectedType,
         accountKey: widget.accountKey,
@@ -78,13 +87,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Add Transaction'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Add Transaction'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -99,50 +105,71 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   const SizedBox(width: 8),
                   _typeButton('Expense', TransactionType.expense, Colors.red),
                   const SizedBox(width: 8),
-                  _typeButton('Transfer', TransactionType.transfer, Colors.blue),
+                  _typeButton(
+                    'Transfer',
+                    TransactionType.transfer,
+                    Colors.blue,
+                  ),
                 ],
               ),
               const SizedBox(height: 32),
-              
+
               // Wallet Selector (Source)
-              Text(_selectedType == TransactionType.transfer ? 'From Wallet' : 'Wallet', style: theme.textTheme.titleMedium),
+              Text(
+                _selectedType == TransactionType.transfer ? 'From' : 'Wallet',
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               _buildWalletDropdown(
-                _selectedType == TransactionType.transfer 
-                    ? DatabaseService.getWallets(widget.accountKey) // All wallets for transfer
-                    : DatabaseService.getWallets(widget.accountKey).where((w) => !w.isExcluded).toList(), // Spendable only for others
-                _selectedWalletKey, 
-                (val) => setState(() => _selectedWalletKey = val)
+                _selectedType == TransactionType.transfer
+                    ? DatabaseService.getWallets(
+                        widget.accountKey,
+                      ) // All wallets for transfer
+                    : DatabaseService.getWallets(widget.accountKey)
+                          .where((w) => !w.isExcluded)
+                          .toList(), // Spendable only for others
+                _selectedWalletKey,
+                (val) => setState(() => _selectedWalletKey = val),
               ),
               const SizedBox(height: 24),
 
               // Destination Wallet (For Transfers)
               if (_selectedType == TransactionType.transfer) ...[
-                Text('To Wallet', style: theme.textTheme.titleMedium),
+                Text('To', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _buildWalletDropdown(
-                  DatabaseService.getWallets(widget.accountKey), // All wallets for destination
-                  _selectedToWalletKey, 
-                  (val) => setState(() => _selectedToWalletKey = val)
+                  DatabaseService.getWallets(
+                    widget.accountKey,
+                  ), // All wallets for destination
+                  _selectedToWalletKey,
+                  (val) => setState(() => _selectedToWalletKey = val),
                 ),
                 const SizedBox(height: 24),
               ],
-              
+
               // Amount Field
               Text('Amount', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                ),
                 decoration: InputDecoration(
                   hintText: '0.00',
                   prefixText: "₱ ",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) return 'Enter amount';
-                  if (double.tryParse(value) == null) return 'Enter a valid number';
+                  if (double.tryParse(value) == null)
+                    return 'Enter a valid number';
                   return null;
                 },
               ),
@@ -150,15 +177,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
               // Charge Field (Optional, for Transfers)
               if (_selectedType == TransactionType.transfer) ...[
-                Text('Transfer Charge (Optional)', style: theme.textTheme.titleMedium),
+                Text(
+                  'Transfer Charge (Optional)',
+                  style: theme.textTheme.titleMedium,
+                ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _chargeController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   decoration: InputDecoration(
                     hintText: '0.00',
                     prefixText: "₱ ",
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -204,14 +238,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ],
 
               // Description Field
-              Text('Description (Optional)', style: theme.textTheme.titleMedium),
+              Text(
+                'Description (Optional)',
+                style: theme.textTheme.titleMedium,
+              ),
               const SizedBox(height: 8),
               TextFormField(
                 controller: _descriptionController,
                 maxLines: 2,
                 decoration: InputDecoration(
                   hintText: 'Add a note...',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
               ),
               const SizedBox(height: 24),
@@ -219,7 +258,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               // Date Display (Realtime)
               Row(
                 children: [
-                  const Icon(Icons.calendar_today, size: 20, color: Colors.grey),
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(width: 8),
                   Text(
                     'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(_selectedDate)}',
@@ -237,7 +280,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   onPressed: _saveTransaction,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                   ),
                   child: Text(
                     'Save Transaction',
@@ -256,7 +301,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildWalletDropdown(List<Wallet> wallets, int? selectedKey, ValueChanged<int?> onChanged) {
+  Widget _buildWalletDropdown(
+    List<Wallet> wallets,
+    int? selectedKey,
+    ValueChanged<int?> onChanged,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
@@ -271,7 +320,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           items: wallets.map((wallet) {
             return DropdownMenuItem<int>(
               value: wallet.key as int,
-              child: Text('${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})'),
+              child: Text(
+                '${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})',
+              ),
             );
           }).toList(),
           onChanged: onChanged,

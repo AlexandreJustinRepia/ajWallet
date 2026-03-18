@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
+import 'services/session_service.dart';
 import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
 import 'add_wallet_screen.dart';
 import 'wallet_details_screen.dart';
+import 'security_settings_screen.dart';
 import 'models/transaction_model.dart';
 import 'models/wallet.dart';
 import 'package:intl/intl.dart';
@@ -31,7 +33,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
 
     final List<Widget> _pages = [
       _HomeView(onRefresh: _refresh),
@@ -91,6 +93,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ThemePickerScreen(),
+                    ),
+                  );
+                } else if (value == 'security') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SecuritySettingsScreen(),
                     ),
                   );
                 } else if (value == 'logout') {

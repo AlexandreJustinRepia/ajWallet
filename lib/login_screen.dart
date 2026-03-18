@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:local_auth/local_auth.dart';
 import 'services/database_service.dart';
+import 'services/session_service.dart';
+import 'services/security_service.dart';
 import 'dashboard_screen.dart';
 import 'models/account.dart';
 
@@ -16,7 +18,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _pinController = TextEditingController();
   final LocalAuthentication _auth = LocalAuthentication();
   bool _canCheckBiometrics = false;
-  int _failedAttempts = 0;
   bool _isLocked = false;
 
   @override
@@ -62,38 +63,59 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _verifyPin() {
-    if (_isLocked) return;
+  Future<void> _verifyPin() async {
+    if (SecurityService.isLockedOut) {
+      _showLockoutMessage();
+      return;
+    }
 
     final enteredPin = _pinController.text;
+    final result = await SecurityService.verifyPin(enteredPin, widget.account);
 
-    if (widget.account.pin == enteredPin) {
-      _failedAttempts = 0;
+    if (result == AuthResult.success) {
+      SessionService.setActiveAccount(widget.account);
       _navigateToDashboard();
+    } else if (result == AuthResult.fakeSuccess) {
+      final fakeAccount = DatabaseService.getFakeAccount(widget.account.name);
+      if (fakeAccount != null) {
+        SessionService.setActiveAccount(fakeAccount);
+        _navigateToDashboard();
+      } else {
+        // If fake account doesn't exist yet, just login to a clean state or show success
+        SessionService.setActiveAccount(Account(name: '${widget.account.name} (Private)', isFake: true));
+        _navigateToDashboard();
+      }
+    } else if (result == AuthResult.lockedOut) {
+      if (widget.account.isWipeEnabled) {
+        await SecurityService.wipeData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Security wipe triggered due to too many attempts.')),
+          );
+        }
+      }
+      setState(() => _isLocked = true);
+      _showLockoutMessage();
     } else {
       setState(() {
-        _failedAttempts++;
         _pinController.clear();
-        if (_failedAttempts >= 5) {
-          _isLocked = true;
-        }
       });
-
-      String errorMessage = 'Incorrect PIN';
-      if (_isLocked) {
-        errorMessage = 'Too many failed attempts. Device locked.';
-      } else {
-        errorMessage = 'Incorrect PIN. ${5 - _failedAttempts} attempts remaining.';
-      }
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text('Incorrect PIN. ${widget.account.maxFailedAttempts - SecurityService.failedAttempts} attempts remaining.'),
           backgroundColor: Colors.red[900],
-          duration: const Duration(seconds: 2),
         ),
       );
     }
+  }
+
+  void _showLockoutMessage() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Too many failed attempts. Locked out for ${SecurityService.remainingLockoutTime?.inMinutes ?? 5} minutes.'),
+        backgroundColor: Colors.red[900],
+      ),
+    );
   }
 
   void _navigateToDashboard() {

@@ -13,6 +13,7 @@ class PinSetupScreen extends StatefulWidget {
 class _PinSetupScreenState extends State<PinSetupScreen> {
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _confirmPinController = TextEditingController();
+  final TextEditingController _fakePinController = TextEditingController();
   final LocalAuthentication _auth = LocalAuthentication();
   bool _isButtonPressed = false;
   bool _canCheckBiometrics = false;
@@ -55,6 +56,9 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     if (account != null) {
       account.pin = pin;
       account.isBiometricEnabled = _useBiometrics;
+      if (_fakePinController.text.isNotEmpty) {
+        account.fakePin = _fakePinController.text;
+      }
       await DatabaseService.updateAccount(account);
       
       if (mounted) {
@@ -104,6 +108,18 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               _buildPinField('Enter PIN', _pinController),
               const SizedBox(height: 24),
               _buildPinField('Confirm PIN', _confirmPinController),
+              const SizedBox(height: 32),
+              const Text(
+                'Fake Vault PIN (Optional)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Enter a secondary PIN to open a dummy account under duress.',
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              _buildPinField('Fake PIN', _fakePinController),
               const SizedBox(height: 32),
               if (_canCheckBiometrics)
                 Row(

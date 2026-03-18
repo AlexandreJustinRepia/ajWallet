@@ -46,7 +46,16 @@ class DatabaseService {
 
   static Account? getLatestAccount() {
     if (_box.isEmpty) return null;
-    return _box.values.last;
+    // Return the first non-fake account as the primary one for initial loading
+    return _box.values.firstWhere((a) => !a.isFake, orElse: () => _box.values.last);
+  }
+
+  static Account? getFakeAccount(String primaryName) {
+    try {
+      return _box.values.firstWhere((a) => a.isFake && a.name.contains(primaryName));
+    } catch (_) {
+      return null;
+    }
   }
 
   // Wallet Operations
@@ -119,5 +128,11 @@ class DatabaseService {
     return _transactionBox.values
         .where((t) => t.walletKey == walletKey || t.toWalletKey == walletKey)
         .toList();
+  }
+
+  static Future<void> wipeAllData() async {
+    await _box.clear();
+    await _transactionBox.clear();
+    await _walletBox.clear();
   }
 }

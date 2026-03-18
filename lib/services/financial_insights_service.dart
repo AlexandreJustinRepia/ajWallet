@@ -178,4 +178,41 @@ class FinancialInsightsService {
     }
     return data;
   }
+
+  // AI Dedicated Methods
+  static double getSpendingForCategory(List<Transaction> expenses, String category, DateTimeRange range) {
+    return expenses
+        .where((e) => e.category.toLowerCase() == category.toLowerCase() && 
+                      e.date.isAfter(range.start) && 
+                      e.date.isBefore(range.end))
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  static double getTotalSpending(List<Transaction> expenses, DateTimeRange range) {
+    return expenses
+        .where((e) => e.date.isAfter(range.start) && e.date.isBefore(range.end))
+        .fold(0.0, (sum, e) => sum + e.amount);
+  }
+
+  static Transaction? getLargestExpense(List<Transaction> expenses, DateTimeRange range) {
+    final rangeExpenses = expenses.where((e) => e.date.isAfter(range.start) && e.date.isBefore(range.end)).toList();
+    if (rangeExpenses.isEmpty) return null;
+    return rangeExpenses.reduce((a, b) => a.amount > b.amount ? a : b);
+  }
+
+  static List<Transaction> getAnomalies(List<Transaction> expenses) {
+    if (expenses.isEmpty) return [];
+    final avg = expenses.fold(0.0, (sum, e) => sum + e.amount) / expenses.length;
+    // Anomaly defined as 3x the average transaction amount
+    return expenses.where((e) => e.amount > (avg * 3)).toList();
+  }
+
+  static List<String> getRecurringCategories(List<Transaction> expenses) {
+    final categoryCounts = <String, int>{};
+    for (var tx in expenses) {
+      categoryCounts[tx.category] = (categoryCounts[tx.category] ?? 0) + 1;
+    }
+    // Categories appearing more than 3 times are considered potential recurring
+    return categoryCounts.entries.where((e) => e.value >= 3).map((e) => e.key).toList();
+  }
 }

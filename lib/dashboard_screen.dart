@@ -14,7 +14,7 @@ import 'package:table_calendar/table_calendar.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'widgets/animated_count_text.dart';
 import 'widgets/slide_in_list_item.dart';
-import 'widgets/insight_card.dart';
+import 'widgets/ai_assistant_view.dart';
 import 'widgets/quick_add_input.dart';
 import 'services/financial_insights_service.dart';
 
@@ -40,10 +40,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _TransactionsView(onRefresh: _refresh),
       _CalendarView(onRefresh: _refresh),
       _WalletsView(onRefresh: _refresh),
-      const _ComingSoonView(
-        title: 'AI Assistant',
-        icon: Icons.psychology_outlined,
-      ),
+      const AIAssistantView(),
       _StatisticsView(onRefresh: _refresh),
     ];
 
@@ -1327,41 +1324,6 @@ class _StatRow extends StatelessWidget {
               fontWeight: FontWeight.bold,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ComingSoonView extends StatelessWidget {
-  final String title;
-  final IconData icon;
-
-  const _ComingSoonView({required this.title, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              size: 64,
-              color: theme.primaryColor.withOpacity(0.3),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(title, style: theme.textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text('Coming Soon!', style: theme.textTheme.bodyMedium),
         ],
       ),
     );

@@ -125,7 +125,7 @@ class TransactionDetailsScreen extends StatelessWidget {
             _InfoRow(
               icon: Icons.access_time_rounded,
               label: 'Time',
-              value: DateFormat('HH:mm a').format(transaction.date),
+              value: DateFormat('hh:mm a').format(transaction.date),
               theme: theme,
             ),
             const Divider(),

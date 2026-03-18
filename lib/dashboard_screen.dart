@@ -105,13 +105,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 }
               },
               itemBuilder: (BuildContext context) => [
+                _buildPopupHeader(context, account?.name ?? 'User'),
+                const PopupMenuDivider(),
                 _buildPopupItem(
                   Icons.palette_outlined,
                   'Theme Settings',
                   'theme',
                 ),
                 _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
-                _buildPopupItem(Icons.logout_rounded, 'Logout', 'logout'),
+                const PopupMenuDivider(),
+                _buildPopupItem(
+                  Icons.logout_rounded,
+                  'Logout',
+                  'logout',
+                  color: theme.colorScheme.error,
+                ),
               ],
             ),
           ),
@@ -182,17 +190,69 @@ class _DashboardScreenState extends State<DashboardScreen> {
   PopupMenuItem<String> _buildPopupItem(
     IconData icon,
     String title,
-    String value,
-  ) {
+    String value, {
+    Color? color,
+  }) {
     return PopupMenuItem<String>(
       value: value,
       child: Row(
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 20, color: color),
           const SizedBox(width: 12),
           Text(
             title,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PopupMenuItem<String> _buildPopupHeader(BuildContext context, String name) {
+    final theme = Theme.of(context);
+    return PopupMenuItem<String>(
+      enabled: false,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.person_rounded,
+              color: theme.primaryColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  name,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+                Text(
+                  'Account',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -637,21 +697,72 @@ class _TransactionsView extends StatelessWidget {
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];
 
+    // Sort by date descending
+    final sortedTx = List<Transaction>.from(transactions)
+      ..sort((a, b) => b.date.compareTo(a.date));
+
+    // Grouping
+    final List<dynamic> items = [];
+    DateTime? lastDate;
+
+    for (var tx in sortedTx) {
+      if (lastDate == null || !isSameDay(lastDate, tx.date)) {
+        items.add(tx.date);
+        lastDate = tx.date;
+      }
+      items.add(tx);
+    }
+
     return transactions.isEmpty
         ? Center(child: Text('Vault empty', style: theme.textTheme.bodyMedium))
-        : ListView.separated(
+        : ListView.builder(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.all(24),
-            itemCount: transactions.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemCount: items.length,
             itemBuilder: (context, index) {
-              final tx = transactions[transactions.length - 1 - index];
-              return SlideInListItem(
-                index: index,
-                child: _TransactionCard(tx: tx, onRefresh: onRefresh),
+              final item = items[index];
+              if (item is DateTime) {
+                return _buildDateHeader(context, item);
+              }
+              final tx = item as Transaction;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: SlideInListItem(
+                  index: index,
+                  child: _TransactionCard(tx: tx, onRefresh: onRefresh),
+                ),
               );
             },
           );
+  }
+
+  Widget _buildDateHeader(BuildContext context, DateTime date) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+    final isToday = isSameDay(date, now);
+    final isYesterday = isSameDay(date, now.subtract(const Duration(days: 1)));
+
+    String dateStr;
+    if (isToday) {
+      dateStr = 'Today';
+    } else if (isYesterday) {
+      dateStr = 'Yesterday';
+    } else {
+      dateStr = DateFormat('MMMM dd, yyyy').format(date);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16, bottom: 12, left: 4),
+      child: Text(
+        dateStr.toUpperCase(),
+        style: theme.textTheme.labelLarge?.copyWith(
+          letterSpacing: 1.5,
+          fontWeight: FontWeight.w900,
+          fontSize: 11,
+          color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+        ),
+      ),
+    );
   }
 }
 
@@ -925,7 +1036,12 @@ class _CalendarViewState extends State<_CalendarView> {
                               ],
                             ),
                             const SizedBox(width: 20),
-                            Expanded(child: _TransactionCard(tx: tx, onRefresh: widget.onRefresh)),
+                            Expanded(
+                              child: _TransactionCard(
+                                tx: tx,
+                                onRefresh: widget.onRefresh,
+                              ),
+                            ),
                           ],
                         ),
                       );

@@ -333,7 +333,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         const Icon(Icons.event, size: 20, color: Colors.grey),
                         const SizedBox(width: 12),
                         Text(
-                          DateFormat('EEEE, MMM dd, yyyy • HH:mm').format(_selectedDate),
+                          DateFormat('EEEE, MMM dd, yyyy • hh:mm a').format(_selectedDate),
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const Spacer(),
@@ -347,7 +347,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 Padding(
                   padding: const EdgeInsets.only(left: 4),
                   child: Text(
-                    'Recorded as Today, ${DateFormat('HH:mm').format(_selectedDate)}',
+                    'Recorded as Today, ${DateFormat('hh:mm a').format(_selectedDate)}',
                     style: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 12),
                   ),
                 ),

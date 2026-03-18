@@ -21,13 +21,21 @@ class QuickAddResult {
 
 class QuickAddService {
   static final Map<String, List<String>> _categoryKeywords = {
+    // Expense Categories
     'Food & Drinks': ['food', 'eat', 'coffee', 'starbucks', 'dinner', 'lunch', 'breakfast', 'snack', 'restaurant', 'pizza', 'burger', 'drink', 'water', 'grocery', 'market'],
     'Transportation': ['taxi', 'uber', 'grab', 'bus', 'train', 'gas', 'fuel', 'oil', 'parking', 'toll', 'ticket', 'flight', 'travel', 'car', 'jeep', 'tricycle', 'e-tric'],
     'Shopping': ['shop', 'clothe', 'shirt', 'shoe', 'mall', 'amazon', 'lazada', 'shopee', 'gift', 'buy', 'purchase', 'gadget', 'phone'],
     'Entertainment': ['movie', 'netflix', 'game', 'party', 'concert', 'club', 'spotify', 'subscription', 'fun'],
     'Health': ['doctor', 'med', 'pharmacy', 'hospital', 'dentist', 'clinic', 'gym', 'workout', 'fitness', 'health'],
     'Utilities': ['rent', 'bill', 'electric', 'water', 'internet', 'wifi', 'cleaning', 'maintenance', 'repair'],
-    'Salary': ['salary', 'bonus', 'paycheck', 'dividend', 'income', 'profit', 'work', 'freelance'],
+    'Education': ['school', 'course', 'book', 'tuition', 'class', 'study'],
+    
+    // Income Categories
+    'Salary': ['salary', 'paycheck', 'work', 'freelance', 'job', 'wage'],
+    'Bonus': ['bonus', 'extra'],
+    'Dividend': ['dividend', 'stock', 'share'],
+    'Gift': ['gift', 'present'],
+    'Investment': ['investment', 'crypto', 'bitcoin', 'profit', 'trade'],
   };
 
   static QuickAddResult parse(String input) {
@@ -93,7 +101,10 @@ class QuickAddService {
           if (entry.value.contains(cleanWord)) {
             category = entry.key;
             categoryFound = true;
-            if (category == 'Salary' || entry.value.contains('income')) {
+            
+            // Check if it's an income category
+            final incomeCategories = ['Salary', 'Bonus', 'Dividend', 'Gift', 'Investment'];
+            if (incomeCategories.contains(category)) {
               type = TransactionType.income;
             }
             break;
@@ -119,13 +130,22 @@ class QuickAddService {
 
   static IconData getCategoryIcon(String category) {
     switch (category) {
+      // Expense
       case 'Food & Drinks': return Icons.fastfood;
       case 'Transportation': return Icons.directions_car;
       case 'Shopping': return Icons.shopping_bag;
       case 'Entertainment': return Icons.movie;
       case 'Health': return Icons.medical_services;
       case 'Utilities': return Icons.home;
-      case 'Salary': return Icons.payments;
+      case 'Education': return Icons.school;
+      
+      // Income
+      case 'Salary': return Icons.work;
+      case 'Bonus': return Icons.card_giftcard;
+      case 'Dividend': return Icons.pie_chart;
+      case 'Gift': return Icons.redeem;
+      case 'Investment': return Icons.trending_up;
+      
       default: return Icons.more_horiz;
     }
   }

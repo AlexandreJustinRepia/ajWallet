@@ -109,11 +109,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   'Theme Settings',
                   'theme',
                 ),
-                _buildPopupItem(
-                  Icons.security_rounded,
-                  'Security',
-                  'security',
-                ),
+                _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
                 _buildPopupItem(Icons.logout_rounded, 'Logout', 'logout'),
               ],
             ),
@@ -352,8 +348,12 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  Widget _buildBalanceCard(BuildContext context, double totalBalance,
-      bool isNetWorth, Function(bool) onToggle) {
+  Widget _buildBalanceCard(
+    BuildContext context,
+    double totalBalance,
+    bool isNetWorth,
+    Function(bool) onToggle,
+  ) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
@@ -370,8 +370,9 @@ class _HomeViewState extends State<_HomeView> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: (isDark ? Colors.white : Colors.black)
-                  .withOpacity(_showGlow ? 0.3 : 0.1),
+              color: (isDark ? Colors.white : Colors.black).withOpacity(
+                _showGlow ? 0.3 : 0.1,
+              ),
               blurRadius: _showGlow ? 40 : 20,
               offset: const Offset(0, 10),
             ),
@@ -387,7 +388,7 @@ class _HomeViewState extends State<_HomeView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isNetWorth ? 'TOTAL NET WORTH' : 'TOTAL LIQUIDITY',
+                      isNetWorth ? 'TOTAL NET WORTH' : 'TOTAL BALANCE',
                       style: TextStyle(
                         color: (isDark ? Colors.black : Colors.white)
                             .withOpacity(0.5),
@@ -417,8 +418,9 @@ class _HomeViewState extends State<_HomeView> {
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: (isDark ? Colors.black : Colors.white)
-                          .withOpacity(0.1),
+                      color: (isDark ? Colors.black : Colors.white).withOpacity(
+                        0.1,
+                      ),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: (isDark ? Colors.black : Colors.white)
@@ -430,8 +432,9 @@ class _HomeViewState extends State<_HomeView> {
                       isNetWorth
                           ? Icons.account_balance_rounded
                           : Icons.payments_rounded,
-                      color: (isDark ? Colors.black : Colors.white)
-                          .withOpacity(0.5),
+                      color: (isDark ? Colors.black : Colors.white).withOpacity(
+                        0.5,
+                      ),
                       size: 18,
                     ),
                   ),
@@ -459,8 +462,9 @@ class _HomeViewState extends State<_HomeView> {
               child: Text(
                 'LIVE UPDATES',
                 style: TextStyle(
-                  color:
-                      (isDark ? Colors.black : Colors.white).withOpacity(0.4),
+                  color: (isDark ? Colors.black : Colors.white).withOpacity(
+                    0.4,
+                  ),
                   fontSize: 8,
                   fontWeight: FontWeight.bold,
                 ),
@@ -510,11 +514,7 @@ class _HomeViewState extends State<_HomeView> {
       child: Center(
         child: Column(
           children: [
-            Icon(
-              Icons.blur_on_rounded,
-              size: 48,
-              color: theme.dividerColor,
-            ),
+            Icon(Icons.blur_on_rounded, size: 48, color: theme.dividerColor),
             const SizedBox(height: 16),
             Text(
               'No activities recorded yet.',
@@ -695,17 +695,24 @@ class _CalendarViewState extends State<_CalendarView> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          DateFormat('MMMM yyyy').format(_focusedDay).toUpperCase(),
+                          DateFormat(
+                            'MMMM yyyy',
+                          ).format(_focusedDay).toUpperCase(),
                           style: theme.textTheme.labelLarge?.copyWith(
                             letterSpacing: 2,
                             fontWeight: FontWeight.w900,
                             fontSize: 10,
-                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withOpacity(0.4),
                           ),
                         ),
                         const Text(
                           'Financial Timeline',
-                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
+                          ),
                         ),
                       ],
                     ),
@@ -725,29 +732,52 @@ class _CalendarViewState extends State<_CalendarView> {
                     },
                     headerVisible: false,
                     daysOfWeekStyle: DaysOfWeekStyle(
-                      weekdayStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold),
-                      weekendStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold),
+                      weekdayStyle: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.4,
+                        ),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      weekendStyle: TextStyle(
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.4,
+                        ),
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     calendarStyle: CalendarStyle(
                       todayDecoration: BoxDecoration(
                         color: theme.primaryColor.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      todayTextStyle: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold),
+                      todayTextStyle: TextStyle(
+                        color: theme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
                       selectedDecoration: BoxDecoration(
                         color: isDark ? Colors.white : Colors.black,
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+                            color: (isDark ? Colors.white : Colors.black)
+                                .withOpacity(0.2),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                      selectedTextStyle: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold),
-                      defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
-                      weekendTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+                      selectedTextStyle: TextStyle(
+                        color: isDark ? Colors.black : Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      defaultTextStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
+                      weekendTextStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                      ),
                       outsideDaysVisible: false,
                     ),
                   ),
@@ -769,13 +799,15 @@ class _CalendarViewState extends State<_CalendarView> {
                   _FilterTab(
                     label: 'Income',
                     isSelected: _filter == TransactionType.income,
-                    onTap: () => setState(() => _filter = TransactionType.income),
+                    onTap: () =>
+                        setState(() => _filter = TransactionType.income),
                   ),
                   const SizedBox(width: 8),
                   _FilterTab(
                     label: 'Expense',
                     isSelected: _filter == TransactionType.expense,
-                    onTap: () => setState(() => _filter = TransactionType.expense),
+                    onTap: () =>
+                        setState(() => _filter = TransactionType.expense),
                   ),
                 ],
               ),
@@ -784,7 +816,10 @@ class _CalendarViewState extends State<_CalendarView> {
           if (filteredTransactions.isNotEmpty)
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 8,
+                ),
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -795,9 +830,21 @@ class _CalendarViewState extends State<_CalendarView> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _DaySummaryStat(label: 'Income', amount: dayIncome, color: theme.colorScheme.tertiary),
-                      Container(width: 1, height: 30, color: theme.dividerColor),
-                      _DaySummaryStat(label: 'Expense', amount: dayExpense, color: theme.colorScheme.error),
+                      _DaySummaryStat(
+                        label: 'Income',
+                        amount: dayIncome,
+                        color: theme.colorScheme.tertiary,
+                      ),
+                      Container(
+                        width: 1,
+                        height: 30,
+                        color: theme.dividerColor,
+                      ),
+                      _DaySummaryStat(
+                        label: 'Expense',
+                        amount: dayExpense,
+                        color: theme.colorScheme.error,
+                      ),
                     ],
                   ),
                 ),
@@ -810,9 +857,16 @@ class _CalendarViewState extends State<_CalendarView> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.event_busy_rounded, size: 48, color: theme.dividerColor),
+                        Icon(
+                          Icons.event_busy_rounded,
+                          size: 48,
+                          color: theme.dividerColor,
+                        ),
                         const SizedBox(height: 16),
-                        Text('No records for this day', style: TextStyle(color: theme.dividerColor)),
+                        Text(
+                          'No records for this day',
+                          style: TextStyle(color: theme.dividerColor),
+                        ),
                       ],
                     ),
                   ),
@@ -820,37 +874,40 @@ class _CalendarViewState extends State<_CalendarView> {
               : SliverPadding(
                   padding: const EdgeInsets.all(24),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final tx = filteredTransactions[index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Column(
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    margin: const EdgeInsets.only(top: 20),
-                                    decoration: BoxDecoration(
-                                      color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : theme.colorScheme.error,
-                                      shape: BoxShape.circle,
-                                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final tx = filteredTransactions[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Column(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  margin: const EdgeInsets.only(top: 20),
+                                  decoration: BoxDecoration(
+                                    color: tx.type == TransactionType.income
+                                        ? theme.colorScheme.tertiary
+                                        : theme.colorScheme.error,
+                                    shape: BoxShape.circle,
                                   ),
-                                  if (index < filteredTransactions.length - 1)
-                                    Container(width: 2, height: 60, color: theme.dividerColor.withOpacity(0.5)),
-                                ],
-                              ),
-                              const SizedBox(width: 20),
-                              Expanded(child: _TransactionCard(tx: tx)),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: filteredTransactions.length,
-                    ),
+                                ),
+                                if (index < filteredTransactions.length - 1)
+                                  Container(
+                                    width: 2,
+                                    height: 60,
+                                    color: theme.dividerColor.withOpacity(0.5),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 20),
+                            Expanded(child: _TransactionCard(tx: tx)),
+                          ],
+                        ),
+                      );
+                    }, childCount: filteredTransactions.length),
                   ),
                 ),
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
@@ -865,16 +922,35 @@ class _DaySummaryStat extends StatelessWidget {
   final double amount;
   final Color color;
 
-  const _DaySummaryStat({required this.label, required this.amount, required this.color});
+  const _DaySummaryStat({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Column(
       children: [
-        Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), letterSpacing: 1)),
+        Text(
+          label.toUpperCase(),
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            letterSpacing: 1,
+          ),
+        ),
         const SizedBox(height: 4),
-        Text('₱${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+        Text(
+          '₱${amount.toStringAsFixed(0)}',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
       ],
     );
   }
@@ -1074,7 +1150,10 @@ class _StatisticsView extends StatelessWidget {
         .where((w) => !w.isExcluded)
         .fold(0, (sum, wallet) => sum + wallet.balance);
 
-    final insights = FinancialInsightsService.generateInsights(transactions, totalBalance);
+    final insights = FinancialInsightsService.generateInsights(
+      transactions,
+      totalBalance,
+    );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -1098,18 +1177,26 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeroSection(BuildContext context, double balance, List<Transaction> transactions) {
+  Widget _buildHeroSection(
+    BuildContext context,
+    double balance,
+    List<Transaction> transactions,
+  ) {
     final theme = Theme.of(context);
-    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
-    
+    final expenses = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
+
     // Burn Rate Calculation
     double dailyAvg = 0;
     if (expenses.isNotEmpty) {
-      final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+      final firstDate = expenses
+          .map((e) => e.date)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
       final days = DateTime.now().difference(firstDate).inDays + 1;
       dailyAvg = expenses.fold(0.0, (sum, e) => sum + e.amount) / days;
     }
-    
+
     final daysRemaining = dailyAvg > 0 ? (balance / dailyAvg).floor() : 0;
 
     return Container(
@@ -1152,7 +1239,9 @@ class _StatisticsView extends StatelessWidget {
               const SizedBox(width: 12),
               _HeroStat(
                 label: 'STATUS',
-                value: daysRemaining > 30 ? 'SURPLUS' : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL'),
+                value: daysRemaining > 30
+                    ? 'SURPLUS'
+                    : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL'),
                 bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
                 textColor: theme.scaffoldBackgroundColor,
               ),
@@ -1163,11 +1252,16 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildTrendSection(BuildContext context, List<Transaction> transactions) {
+  Widget _buildTrendSection(
+    BuildContext context,
+    List<Transaction> transactions,
+  ) {
     final theme = Theme.of(context);
-    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    final expenses = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
     final trendData = FinancialInsightsService.getWeeklyTrendLineData(expenses);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1196,7 +1290,11 @@ class _StatisticsView extends StatelessWidget {
               borderData: FlBorderData(show: false),
               lineBarsData: [
                 LineChartBarData(
-                  spots: trendData.asMap().entries.map((e) => FlSpot(e.key.toDouble(), e.value)).toList(),
+                  spots: trendData
+                      .asMap()
+                      .entries
+                      .map((e) => FlSpot(e.key.toDouble(), e.value))
+                      .toList(),
                   isCurved: true,
                   color: theme.primaryColor,
                   barWidth: 4,
@@ -1215,11 +1313,16 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoryBreakdown(BuildContext context, List<Transaction> transactions) {
+  Widget _buildCategoryBreakdown(
+    BuildContext context,
+    List<Transaction> transactions,
+  ) {
     final theme = Theme.of(context);
-    final expenses = transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    final expenses = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
     final categoryData = FinancialInsightsService.getCategoryData(expenses);
-    
+
     if (categoryData.isEmpty) return const SizedBox.shrink();
 
     final colors = [
@@ -1259,21 +1362,25 @@ class _StatisticsView extends StatelessWidget {
                   PieChartData(
                     sectionsSpace: 4,
                     centerSpaceRadius: 40,
-                    sections: categoryData.entries.toList().asMap().entries.map((e) {
-                      return PieChartSectionData(
-                        value: e.value.value,
-                        color: colors[e.key % colors.length],
-                        radius: 8,
-                        title: '',
-                      );
-                    }).toList(),
+                    sections: categoryData.entries.toList().asMap().entries.map(
+                      (e) {
+                        return PieChartSectionData(
+                          value: e.value.value,
+                          color: colors[e.key % colors.length],
+                          radius: 8,
+                          title: '',
+                        );
+                      },
+                    ).toList(),
                   ),
                 ),
               ),
               const SizedBox(width: 24),
               Expanded(
                 child: Column(
-                  children: categoryData.entries.toList().asMap().entries.map((e) {
+                  children: categoryData.entries.toList().asMap().entries.map((
+                    e,
+                  ) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
                       child: Row(
@@ -1290,12 +1397,18 @@ class _StatisticsView extends StatelessWidget {
                           Expanded(
                             child: Text(
                               e.value.key,
-                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
                           Text(
                             '₱${e.value.value.toStringAsFixed(0)}',
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -1310,7 +1423,11 @@ class _StatisticsView extends StatelessWidget {
     );
   }
 
-  Widget _buildSummarySection(BuildContext context, double totalIncome, double totalExpense) {
+  Widget _buildSummarySection(
+    BuildContext context,
+    double totalIncome,
+    double totalExpense,
+  ) {
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -1376,7 +1493,8 @@ class InsightCard extends StatefulWidget {
   State<InsightCard> createState() => _InsightCardState();
 }
 
-class _InsightCardState extends State<InsightCard> with SingleTickerProviderStateMixin {
+class _InsightCardState extends State<InsightCard>
+    with SingleTickerProviderStateMixin {
   double _opacity = 0;
 
   @override

@@ -20,20 +20,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
+  bool _isManualDate = false;
   String _selectedCategory = 'Food & Drinks';
   int? _selectedWalletKey;
   int? _selectedToWalletKey; // For Transfers
 
-  final Map<String, IconData> _categories = {
+  final Map<String, IconData> _expenseCategories = {
     'Food & Drinks': Icons.fastfood,
     'Transportation': Icons.directions_car,
     'Shopping': Icons.shopping_bag,
     'Entertainment': Icons.movie,
     'Health': Icons.medical_services,
     'Utilities': Icons.home,
-    'Salary': Icons.payments,
+    'Education': Icons.school,
     'Others': Icons.more_horiz,
   };
+
+  final Map<String, IconData> _incomeCategories = {
+    'Salary': Icons.work,
+    'Bonus': Icons.card_giftcard,
+    'Dividend': Icons.pie_chart,
+    'Gift': Icons.redeem,
+    'Investment': Icons.trending_up,
+    'Others': Icons.more_horiz,
+  };
+
+  Map<String, IconData> get _currentCategories => 
+    _selectedType == TransactionType.income ? _incomeCategories : _expenseCategories;
 
   void _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
@@ -207,19 +220,23 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
+                    color: theme.cardColor,
+                    border: Border.all(color: theme.dividerColor),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
-                      value: _selectedCategory,
+                      value: _currentCategories.containsKey(_selectedCategory) 
+                          ? _selectedCategory 
+                          : _currentCategories.keys.first,
                       isExpanded: true,
-                      items: _categories.keys.map((String category) {
+                      dropdownColor: theme.cardColor,
+                      items: _currentCategories.keys.map((String category) {
                         return DropdownMenuItem<String>(
                           value: category,
                           child: Row(
                             children: [
-                              Icon(_categories[category], size: 20),
+                              Icon(_currentCategories[category], size: 20, color: theme.primaryColor),
                               const SizedBox(width: 12),
                               Text(category),
                             ],
@@ -253,23 +270,88 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
-              // Date Display (Realtime)
+              // Manual Date Toggle
               Row(
                 children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 20,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Date: ${DateFormat('yyyy-MM-dd HH:mm').format(_selectedDate)}',
-                    style: const TextStyle(color: Colors.grey),
+                  const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
+                  const SizedBox(width: 12),
+                  const Text('Manual Date Entry', style: TextStyle(fontWeight: FontWeight.w500)),
+                  const Spacer(),
+                  Switch(
+                    value: _isManualDate,
+                    onChanged: (val) {
+                      setState(() {
+                        _isManualDate = val;
+                        if (!val) _selectedDate = DateTime.now();
+                      });
+                    },
+                    activeColor: theme.primaryColor,
                   ),
                 ],
               ),
+              
+              if (_isManualDate) ...[
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: _selectedDate,
+                      firstDate: DateTime(2020),
+                      lastDate: DateTime.now(),
+                    );
+                    if (pickedDate != null) {
+                      final pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: TimeOfDay.fromDateTime(_selectedDate),
+                      );
+                      if (pickedTime != null) {
+                        setState(() {
+                          _selectedDate = DateTime(
+                            pickedDate.year,
+                            pickedDate.month,
+                            pickedDate.day,
+                            pickedTime.hour,
+                            pickedTime.minute,
+                          );
+                        });
+                      }
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      border: Border.all(color: theme.dividerColor),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.event, size: 20, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Text(
+                          DateFormat('EEEE, MMM dd, yyyy • HH:mm').format(_selectedDate),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const Spacer(),
+                        const Icon(Icons.edit_rounded, size: 16, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    'Recorded as Today, ${DateFormat('HH:mm').format(_selectedDate)}',
+                    style: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 12),
+                  ),
+                ),
+              ],
               const SizedBox(height: 40),
 
               // Save Button
@@ -335,7 +417,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     bool isSelected = _selectedType == type;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _selectedType = type),
+        onTap: () => setState(() {
+          _selectedType = type;
+          _selectedCategory = type == TransactionType.income ? 'Salary' : 'Food & Drinks';
+        }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(

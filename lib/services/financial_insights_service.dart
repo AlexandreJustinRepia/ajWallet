@@ -22,19 +22,23 @@ class FinancialInsightsService {
     final expenses = transactions.where((t) => t.type == TransactionType.expense).toList();
     if (expenses.isEmpty) return [];
 
-    // 1. Weekly spending increase/decrease
+    // 1. Weekly spending trends
     final weeklyTrend = _calculateWeeklyTrend(expenses);
     if (weeklyTrend != null) insights.add(weeklyTrend);
 
-    // 2. Most frequent expense category
+    // 2. Spending spikes
+    final spike = _detectSpikes(expenses);
+    if (spike != null) insights.add(spike);
+
+    // 3. Most frequent expense category
     final topCategory = _getTopCategory(expenses);
     if (topCategory != null) insights.add(topCategory);
 
-    // 3. Daily average spending
+    // 4. Daily average spending
     final dailyAvg = _calculateDailyAverage(expenses);
     if (dailyAvg != null) insights.add(dailyAvg);
 
-    // 4. Predicted days until balance reaches zero
+    // 5. Predicted days until balance reaches zero
     final prediction = _predictExhaustion(expenses, currentBalance);
     if (prediction != null) insights.add(prediction);
 
@@ -63,10 +67,37 @@ class FinancialInsightsService {
     final isIncrease = diff > 0;
     
     return Insight(
-      message: "You spent ${diff.abs().toStringAsFixed(0)}% ${isIncrease ? 'more' : 'less'} this week",
+      message: isIncrease 
+          ? "Reflecting on this week's pace may help find balance" 
+          : "Your spending has been more intentional this week",
       icon: isIncrease ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-      color: isIncrease ? Colors.orange : Colors.green,
+      color: isIncrease ? Colors.grey : Colors.green,
     );
+  }
+
+  static Insight? _detectSpikes(List<Transaction> expenses) {
+    if (expenses.isEmpty) return null;
+
+    final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    final days = DateTime.now().difference(firstDate).inDays + 1;
+    if (days < 3) return null;
+
+    final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final avgDaily = totalExpense / days;
+    
+    // Check for today's spending spike
+    final today = DateTime.now();
+    final todayTotal = expenses.where((e) => e.date.year == today.year && e.date.month == today.month && e.date.day == today.day)
+        .fold(0.0, (sum, e) => sum + e.amount);
+
+    if (avgDaily > 0 && todayTotal > (avgDaily * 2.5)) {
+      return Insight(
+        message: "A subtle spending spike was detected today",
+        icon: Icons.bolt_rounded,
+        color: Colors.grey,
+      );
+    }
+    return null;
   }
 
   static Insight? _getTopCategory(List<Transaction> expenses) {
@@ -80,9 +111,9 @@ class FinancialInsightsService {
     final topCategory = categoryCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
 
     return Insight(
-      message: "$topCategory is your top expense",
+      message: "$topCategory accounts for most of your outflows",
       icon: Icons.pie_chart_outline_rounded,
-      color: Colors.blue,
+      color: Colors.grey,
     );
   }
 
@@ -96,8 +127,9 @@ class FinancialInsightsService {
     final avg = totalExpense / days;
 
     return Insight(
-      message: "₱${avg.toStringAsFixed(2)} is your daily average",
+      message: "Daily average spending sits at ₱${avg.toStringAsFixed(2)}",
       icon: Icons.calendar_today_rounded,
+      color: Colors.grey,
     );
   }
 
@@ -118,9 +150,11 @@ class FinancialInsightsService {
     final daysRemaining = (balance / avgDaily).floor();
 
     return Insight(
-      message: "At this rate, your balance will last $daysRemaining days",
+      message: daysRemaining < 7 
+          ? "Pacing your outflows may extend your runway" 
+          : "Your current runway is approximately $daysRemaining days",
       icon: Icons.hourglass_bottom_rounded,
-      color: daysRemaining < 7 ? Colors.red : Colors.blue,
+      color: daysRemaining < 7 ? Colors.orange.withOpacity(0.7) : Colors.grey,
     );
   }
 

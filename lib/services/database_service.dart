@@ -143,4 +143,13 @@ class DatabaseService {
     await _transactionBox.clear();
     await _walletBox.clear();
   }
+
+  static Future<void> deleteTransaction(Transaction transaction) async {
+    await transaction.delete();
+  }
+
+  static Wallet? getWalletByKey(int key) {
+    final box = Hive.box<Wallet>(_walletBoxName);
+    return box.get(key);
+  }
 }

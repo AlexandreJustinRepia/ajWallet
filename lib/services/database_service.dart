@@ -89,7 +89,8 @@ class DatabaseService {
       final fromWallet = _walletBox.get(transaction.walletKey);
       final toWallet = _walletBox.get(transaction.toWalletKey);
       if (fromWallet != null && toWallet != null) {
-        fromWallet.balance -= transaction.amount;
+        double totalDeduction = transaction.amount + (transaction.charge ?? 0);
+        fromWallet.balance -= totalDeduction;
         toWallet.balance += transaction.amount;
         await fromWallet.save();
         await toWallet.save();
@@ -102,8 +103,10 @@ class DatabaseService {
       account.budget += transaction.amount;
     } else if (transaction.type == TransactionType.expense) {
       account.budget -= transaction.amount;
+    } else if (transaction.type == TransactionType.transfer && transaction.charge != null) {
+      // Transfers themselves don't change total budget, but charges do (money leaving the system)
+      account.budget -= transaction.charge!;
     }
-    // Transfers don't change the total account budget, just move money between wallets.
 
     await account.save();
   }

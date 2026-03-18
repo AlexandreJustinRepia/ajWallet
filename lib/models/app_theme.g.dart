@@ -22,13 +22,15 @@ class AppThemeAdapter extends TypeAdapter<AppTheme> {
       textColor: fields[2] as int,
       cardColor: fields[3] as int,
       name: fields[4] as String,
+      incomeColor: fields[5] as int?,
+      expenseColor: fields[6] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, AppTheme obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.primaryColor)
       ..writeByte(1)
@@ -38,7 +40,11 @@ class AppThemeAdapter extends TypeAdapter<AppTheme> {
       ..writeByte(3)
       ..write(obj.cardColor)
       ..writeByte(4)
-      ..write(obj.name);
+      ..write(obj.name)
+      ..writeByte(5)
+      ..write(obj.incomeColor)
+      ..writeByte(6)
+      ..write(obj.expenseColor);
   }
 
   @override

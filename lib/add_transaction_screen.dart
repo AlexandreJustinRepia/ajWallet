@@ -16,6 +16,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _chargeController = TextEditingController();
   
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
@@ -49,6 +50,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       final transaction = Transaction(
         title: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
         amount: double.parse(_amountController.text),
+        charge: double.tryParse(_chargeController.text),
         date: _selectedDate,
         category: _selectedType == TransactionType.transfer ? 'Transfer' : _selectedCategory,
         description: _descriptionController.text,
@@ -69,15 +71,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void dispose() {
     _amountController.dispose();
     _descriptionController.dispose();
+    _chargeController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final wallets = DatabaseService.getWallets(widget.accountKey)
-        .where((w) => !w.isExcluded)
-        .toList();
     
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -107,14 +107,24 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               // Wallet Selector (Source)
               Text(_selectedType == TransactionType.transfer ? 'From Wallet' : 'Wallet', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
-              _buildWalletDropdown(wallets, _selectedWalletKey, (val) => setState(() => _selectedWalletKey = val)),
+              _buildWalletDropdown(
+                _selectedType == TransactionType.transfer 
+                    ? DatabaseService.getWallets(widget.accountKey) // All wallets for transfer
+                    : DatabaseService.getWallets(widget.accountKey).where((w) => !w.isExcluded).toList(), // Spendable only for others
+                _selectedWalletKey, 
+                (val) => setState(() => _selectedWalletKey = val)
+              ),
               const SizedBox(height: 24),
 
               // Destination Wallet (For Transfers)
               if (_selectedType == TransactionType.transfer) ...[
                 Text('To Wallet', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
-                _buildWalletDropdown(wallets, _selectedToWalletKey, (val) => setState(() => _selectedToWalletKey = val)),
+                _buildWalletDropdown(
+                  DatabaseService.getWallets(widget.accountKey), // All wallets for destination
+                  _selectedToWalletKey, 
+                  (val) => setState(() => _selectedToWalletKey = val)
+                ),
                 const SizedBox(height: 24),
               ],
               
@@ -137,6 +147,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 },
               ),
               const SizedBox(height: 24),
+
+              // Charge Field (Optional, for Transfers)
+              if (_selectedType == TransactionType.transfer) ...[
+                Text('Transfer Charge (Optional)', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _chargeController,
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  decoration: InputDecoration(
+                    hintText: '0.00',
+                    prefixText: "₱ ",
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
 
               const SizedBox(height: 24),
 

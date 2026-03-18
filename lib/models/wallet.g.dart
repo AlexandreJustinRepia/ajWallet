@@ -21,7 +21,7 @@ class WalletAdapter extends TypeAdapter<Wallet> {
       balance: fields[1] as double,
       type: fields[2] as String,
       accountKey: fields[3] as int,
-      isExcluded: fields[4] as bool? ?? false,
+      isExcluded: fields[4] as bool,
     );
   }
 

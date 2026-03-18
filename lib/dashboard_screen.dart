@@ -570,6 +570,14 @@ class _TransactionCard extends StatelessWidget {
                   fontSize: 16,
                 ),
               ),
+              if (tx.charge != null && tx.charge! > 0)
+                Text(
+                  'Fee: ₱${tx.charge!.toStringAsFixed(2)}',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.error.withOpacity(0.5),
+                    fontSize: 10,
+                  ),
+                ),
               Text(
                 DateFormat('MMM dd').format(tx.date),
                 style: theme.textTheme.labelLarge,

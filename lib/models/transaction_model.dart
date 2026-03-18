@@ -42,6 +42,9 @@ class Transaction extends HiveObject {
   @HiveField(8)
   int? toWalletKey; // Specifically for Transfer
 
+  @HiveField(9)
+  double? charge;
+
   Transaction({
     required this.title,
     required this.amount,
@@ -52,6 +55,7 @@ class Transaction extends HiveObject {
     required this.accountKey,
     this.walletKey,
     this.toWalletKey,
+    this.charge,
   });
 
   Color get typeColor {

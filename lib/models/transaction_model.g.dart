@@ -6,6 +6,67 @@ part of 'transaction_model.dart';
 // TypeAdapterGenerator
 // **************************************************************************
 
+class TransactionAdapter extends TypeAdapter<Transaction> {
+  @override
+  final int typeId = 3;
+
+  @override
+  Transaction read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return Transaction(
+      title: fields[0] as String,
+      amount: fields[1] as double,
+      date: fields[2] as DateTime,
+      category: fields[3] as String,
+      description: fields[4] as String,
+      type: fields[5] as TransactionType,
+      accountKey: fields[6] as int,
+      walletKey: fields[7] as int?,
+      toWalletKey: fields[8] as int?,
+      charge: fields[9] as double?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Transaction obj) {
+    writer
+      ..writeByte(10)
+      ..writeByte(0)
+      ..write(obj.title)
+      ..writeByte(1)
+      ..write(obj.amount)
+      ..writeByte(2)
+      ..write(obj.date)
+      ..writeByte(3)
+      ..write(obj.category)
+      ..writeByte(4)
+      ..write(obj.description)
+      ..writeByte(5)
+      ..write(obj.type)
+      ..writeByte(6)
+      ..write(obj.accountKey)
+      ..writeByte(7)
+      ..write(obj.walletKey)
+      ..writeByte(8)
+      ..write(obj.toWalletKey)
+      ..writeByte(9)
+      ..write(obj.charge);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is TransactionAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 class TransactionTypeAdapter extends TypeAdapter<TransactionType> {
   @override
   final int typeId = 2;
@@ -46,58 +107,6 @@ class TransactionTypeAdapter extends TypeAdapter<TransactionType> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is TransactionTypeAdapter &&
-          runtimeType == other.runtimeType &&
-          typeId == other.typeId;
-}
-
-class TransactionAdapter extends TypeAdapter<Transaction> {
-  @override
-  final int typeId = 3;
-
-  @override
-  Transaction read(BinaryReader reader) {
-    final numOfFields = reader.readByte();
-    final fields = <int, dynamic>{
-      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
-    };
-    return Transaction(
-      title: fields[0] as String,
-      amount: fields[1] as double,
-      date: fields[2] as DateTime,
-      category: fields[3] as String,
-      description: fields[4] as String,
-      type: fields[5] as TransactionType,
-      accountKey: fields[6] as int,
-    );
-  }
-
-  @override
-  void write(BinaryWriter writer, Transaction obj) {
-    writer
-      ..writeByte(7)
-      ..writeByte(0)
-      ..write(obj.title)
-      ..writeByte(1)
-      ..write(obj.amount)
-      ..writeByte(2)
-      ..write(obj.date)
-      ..writeByte(3)
-      ..write(obj.category)
-      ..writeByte(4)
-      ..write(obj.description)
-      ..writeByte(5)
-      ..write(obj.type)
-      ..writeByte(6)
-      ..write(obj.accountKey);
-  }
-
-  @override
-  int get hashCode => typeId.hashCode;
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is TransactionAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

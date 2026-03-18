@@ -10,6 +10,8 @@ import 'models/wallet.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'widgets/animated_count_text.dart';
+import 'widgets/slide_in_list_item.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -33,77 +35,86 @@ class _DashboardScreenState extends State<DashboardScreen> {
       _TransactionsView(onRefresh: _refresh),
       _CalendarView(onRefresh: _refresh),
       _WalletsView(onRefresh: _refresh),
-      const _ComingSoonView(title: 'AI Assistant', icon: Icons.psychology),
+      const _ComingSoonView(
+        title: 'AI Assistant',
+        icon: Icons.psychology_outlined,
+      ),
       _StatisticsView(onRefresh: _refresh),
     ];
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(_selectedIndex == 1 
-            ? 'Transactions' 
-            : _selectedIndex == 2 
-                ? 'Calendar' 
-                : _selectedIndex == 3
-                    ? 'Wallets'
-                    : _selectedIndex == 5
-                        ? 'Statistics' 
-                        : 'AJ Wallet'),
+        title: Text(
+          _selectedIndex == 1
+              ? 'Transactions'
+              : _selectedIndex == 2
+              ? 'Calendar'
+              : _selectedIndex == 3
+              ? 'Wallets'
+              : _selectedIndex == 5
+              ? 'Analytics'
+              : 'AJ Wallet',
+          style: theme.textTheme.titleLarge,
+        ),
         automaticallyImplyLeading: false,
         actions: [
-          PopupMenuButton<String>(
-            icon: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: theme.dividerColor),
+          Container(
+            margin: const EdgeInsets.only(right: 16),
+            child: PopupMenuButton<String>(
+              offset: const Offset(0, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Padding(
-                padding: EdgeInsets.all(4.0),
-                child: Icon(Icons.person, size: 28),
+              icon: Container(
+                padding: const EdgeInsets.all(2),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: theme.dividerColor, width: 1.5),
+                ),
+                child: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: theme.cardColor,
+                  child: Icon(
+                    Icons.person_outline,
+                    size: 20,
+                    color: theme.primaryColor,
+                  ),
+                ),
               ),
+              onSelected: (value) {
+                if (value == 'theme') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ThemePickerScreen(),
+                    ),
+                  );
+                } else if (value == 'logout') {
+                  _showLogoutDialog(context);
+                }
+              },
+              itemBuilder: (BuildContext context) => [
+                _buildPopupItem(
+                  Icons.palette_outlined,
+                  'Theme Settings',
+                  'theme',
+                ),
+                _buildPopupItem(Icons.logout_rounded, 'Logout', 'logout'),
+              ],
             ),
-            onSelected: (value) {
-              if (value == 'theme') {
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const ThemePickerScreen()));
-              } else if (value == 'logout') {
-                _showLogoutDialog(context);
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'theme',
-                child: Row(
-                  children: [
-                    Icon(Icons.palette_outlined, size: 20),
-                    SizedBox(width: 12),
-                    Text('Theme Settings'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout, size: 20),
-                    SizedBox(width: 12),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
           ),
-          const SizedBox(width: 16),
         ],
       ),
       body: _pages[_selectedIndex],
-      floatingActionButton: (_selectedIndex == 0 || _selectedIndex == 1 || _selectedIndex == 2 || _selectedIndex == 3)
+      floatingActionButton: (_selectedIndex >= 0 && _selectedIndex <= 3)
           ? FloatingActionButton(
               onPressed: () async {
                 if (account != null) {
-                  final Widget targetScreen = _selectedIndex == 3 
+                  final Widget targetScreen = _selectedIndex == 3
                       ? AddWalletScreen(accountKey: account.key as int)
                       : AddTransactionScreen(accountKey: account.key as int);
-                  
+
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => targetScreen),
@@ -111,85 +122,108 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (result == true) _refresh();
                 }
               },
-              backgroundColor: theme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Icon(Icons.add, color: theme.scaffoldBackgroundColor),
+              child: const Icon(Icons.add_rounded, size: 28),
             )
           : null,
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: theme.dividerColor.withOpacity(0.1), width: 1)),
+          border: Border(
+            top: BorderSide(color: theme.dividerColor, width: 0.5),
+          ),
         ),
-        child: NavigationBarTheme(
-          data: NavigationBarThemeData(
-            indicatorColor: theme.primaryColor.withOpacity(0.1),
-            labelTextStyle: MaterialStateProperty.all(
-              const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: (index) =>
+              setState(() => _selectedIndex = index),
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.grid_view_rounded),
+              label: 'Hub',
             ),
-          ),
-          child: NavigationBar(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) => setState(() => _selectedIndex = index),
-            backgroundColor: theme.cardColor,
-            elevation: 0,
-            height: 65,
-            labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-            destinations: [
-              NavigationDestination(
-                icon: Icon(Icons.home_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.home, color: theme.primaryColor),
-                label: 'Home',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.receipt_long_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.receipt_long, color: theme.primaryColor),
-                label: 'Docs',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.calendar_month, color: theme.primaryColor),
-                label: 'Calendar',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.account_balance_wallet_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.account_balance_wallet, color: theme.primaryColor),
-                label: 'Wallets',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.psychology_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.psychology, color: theme.primaryColor),
-                label: 'AI',
-              ),
-              NavigationDestination(
-                icon: Icon(Icons.bar_chart_outlined, color: theme.textTheme.bodyMedium?.color),
-                selectedIcon: Icon(Icons.bar_chart, color: theme.primaryColor),
-                label: 'Stats',
-              ),
-            ],
-          ),
+            NavigationDestination(
+              icon: Icon(Icons.receipt_long_rounded),
+              label: 'Transactions',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_today_rounded),
+              label: 'Plan',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.account_balance_wallet_rounded),
+              label: 'Wallet',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.auto_awesome_rounded),
+              label: 'AI',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_rounded),
+              label: 'Stats',
+            ),
+          ],
         ),
       ),
     );
   }
 
+  PopupMenuItem<String> _buildPopupItem(
+    IconData icon,
+    String title,
+    String value,
+  ) {
+    return PopupMenuItem<String>(
+      value: value,
+      child: Row(
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLogoutDialog(BuildContext context) {
+    final theme = Theme.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to log out?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Exit Vault'),
+        content: const Text(
+          'Are you sure you want to log out of your session?',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+              ),
+            ),
+          ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => const AccountListScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const AccountListScreen(),
+                ),
                 (route) => false,
               );
             },
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text(
+              'Logout',
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ],
       ),
@@ -197,73 +231,297 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _HomeView extends StatelessWidget {
+class _HomeView extends StatefulWidget {
   final VoidCallback onRefresh;
   const _HomeView({required this.onRefresh});
+
+  @override
+  State<_HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<_HomeView> {
+  double _prevBalance = 0;
+  bool _showGlow = false;
 
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
     final theme = Theme.of(context);
-    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
-    final wallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
-    
+    final transactions = account != null
+        ? DatabaseService.getTransactions(account.key as int)
+        : <Transaction>[];
+    final wallets = account != null
+        ? DatabaseService.getWallets(account.key as int)
+        : <Wallet>[];
+
     double totalBalance = wallets
         .where((w) => !w.isExcluded)
         .fold(0, (sum, wallet) => sum + wallet.balance);
 
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
+    if (totalBalance != _prevBalance) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _showGlow = true;
+          _prevBalance = totalBalance;
+        });
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) setState(() => _showGlow = false);
+        });
+      });
+    }
+
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome, ${account?.name ?? "User"}',
-            style: theme.textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
+          _buildHeader(context, account?.name ?? "User"),
           const SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: theme.primaryColor,
-              borderRadius: BorderRadius.circular(20),
+          _buildBalanceCard(context, totalBalance),
+          const SizedBox(height: 48),
+          _buildRecentActivityHeader(context),
+          const SizedBox(height: 16),
+          if (transactions.isEmpty)
+            _buildEmptyState(context)
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: transactions.length > 5 ? 5 : transactions.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final tx = transactions[transactions.length - 1 - index];
+                return SlideInListItem(
+                  index: index,
+                  child: _TransactionCard(tx: tx),
+                );
+              },
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, String name) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Good Day,',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+            letterSpacing: 0.5,
+          ),
+        ),
+        Text(
+          name,
+          style: theme.textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            letterSpacing: -1,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBalanceCard(BuildContext context, double totalBalance) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return AnimatedScale(
+      scale: _showGlow ? 1.02 : 1.0,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.elasticOut,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 400),
+        width: double.infinity,
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white : Colors.black,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: (isDark ? Colors.white : Colors.black)
+                  .withOpacity(_showGlow ? 0.3 : 0.1),
+              blurRadius: _showGlow ? 40 : 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Total Balance',
-                  style: TextStyle(color: theme.scaffoldBackgroundColor.withOpacity(0.7), fontSize: 16),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '₱${totalBalance.toStringAsFixed(2)}',
+                  'TOTAL LIQUIDITY',
                   style: TextStyle(
-                    color: theme.scaffoldBackgroundColor,
-                    fontSize: 36,
-                    fontWeight: FontWeight.bold,
+                    color: (isDark ? Colors.black : Colors.white).withOpacity(0.5),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2.0,
                   ),
+                ),
+                Icon(
+                  Icons.auto_awesome_rounded,
+                  color: (isDark ? Colors.black : Colors.white).withOpacity(0.3),
+                  size: 18,
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            AnimatedCountText(
+              value: totalBalance,
+              prefix: '₱',
+              style: theme.textTheme.displayMedium?.copyWith(
+                color: isDark ? Colors.black : Colors.white,
+                fontSize: 42,
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.black : Colors.white).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                'LIVE UPDATES',
+                style: TextStyle(
+                  color: (isDark ? Colors.black : Colors.white).withOpacity(0.4),
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentActivityHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'RECENT ACTIVITY',
+          style: theme.textTheme.labelLarge?.copyWith(
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
           ),
-          const SizedBox(height: 40),
-          Text(
-            'Recent Transactions',
-            style: theme.textTheme.titleLarge,
+        ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: theme.dividerColor, width: 0.5),
           ),
-          const SizedBox(height: 8),
+          child: Icon(
+            Icons.horizontal_rule_rounded,
+            size: 14,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 60),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.blur_on_rounded,
+              size: 48,
+              color: theme.dividerColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No activities recorded yet.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TransactionCard extends StatelessWidget {
+  final Transaction tx;
+  const _TransactionCard({required this.tx});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isIncome = tx.type == TransactionType.income;
+    final displayColor = isIncome
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.error;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.dividerColor, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: displayColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              isIncome ? Icons.south_west_rounded : Icons.north_east_rounded,
+              color: displayColor,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 16),
           Expanded(
-            child: transactions.isEmpty
-                ? const Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey)))
-                : ListView.builder(
-                    itemCount: transactions.length > 5 ? 5 : transactions.length,
-                    itemBuilder: (context, index) {
-                      final tx = transactions[transactions.length - 1 - index];
-                      return _TransactionTile(tx: tx);
-                    },
-                  ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tx.title, style: theme.textTheme.titleSmall),
+                Text(tx.category, style: theme.textTheme.labelLarge),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '${isIncome ? '+' : '-'} ₱${tx.amount.toStringAsFixed(2)}',
+                style: TextStyle(
+                  color: displayColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Text(
+                DateFormat('MMM dd').format(tx.date),
+                style: theme.textTheme.labelLarge,
+              ),
+            ],
           ),
         ],
       ),
@@ -278,27 +536,26 @@ class _TransactionsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
-    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final theme = Theme.of(context);
+    final transactions = account != null
+        ? DatabaseService.getTransactions(account.key as int)
+        : <Transaction>[];
 
-    return Column(
-      children: [
-        if (transactions.isEmpty)
-          const Expanded(
-            child: Center(child: Text('No transactions yet', style: TextStyle(color: Colors.grey))),
-          )
-        else
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              itemCount: transactions.length,
-              itemBuilder: (context, index) {
-                final tx = transactions[transactions.length - 1 - index];
-                return _TransactionTile(tx: tx);
-              },
-            ),
-          ),
-      ],
-    );
+    return transactions.isEmpty
+        ? Center(child: Text('Vault empty', style: theme.textTheme.bodyMedium))
+        : ListView.separated(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            itemCount: transactions.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final tx = transactions[transactions.length - 1 - index];
+              return SlideInListItem(
+                index: index,
+                child: _TransactionCard(tx: tx),
+              );
+            },
+          );
   }
 }
 
@@ -318,7 +575,9 @@ class _CalendarViewState extends State<_CalendarView> {
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
-    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final transactions = account != null
+        ? DatabaseService.getTransactions(account.key as int)
+        : <Transaction>[];
     final theme = Theme.of(context);
 
     List<Transaction> filteredTransactions = transactions.where((tx) {
@@ -329,58 +588,120 @@ class _CalendarViewState extends State<_CalendarView> {
 
     return Column(
       children: [
-        TableCalendar(
-          firstDay: DateTime.utc(2020, 1, 1),
-          lastDay: DateTime.utc(2030, 12, 31),
-          focusedDay: _focusedDay,
-          selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-          onDaySelected: (selectedDay, focusedDay) {
-            setState(() {
-              _selectedDay = selectedDay;
-              _focusedDay = focusedDay;
-            });
-          },
-          calendarStyle: CalendarStyle(
-            selectedDecoration: BoxDecoration(color: theme.primaryColor, shape: BoxShape.circle),
-            todayDecoration: BoxDecoration(color: theme.primaryColor.withOpacity(0.3), shape: BoxShape.circle),
-          ),
-          headerStyle: const HeaderStyle(formatButtonVisible: false, titleCentered: true),
-        ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              _filterChip('All', null, Colors.grey),
-              const SizedBox(width: 8),
-              _filterChip('Income', TransactionType.income, Colors.green),
-              const SizedBox(width: 8),
-              _filterChip('Expense', TransactionType.expense, Colors.red),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TableCalendar(
+            firstDay: DateTime.utc(2020, 1, 1),
+            lastDay: DateTime.utc(2030, 12, 31),
+            focusedDay: _focusedDay,
+            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+            onDaySelected: (selectedDay, focusedDay) {
+              setState(() {
+                _selectedDay = selectedDay;
+                _focusedDay = focusedDay;
+              });
+            },
+            calendarStyle: CalendarStyle(
+              selectedDecoration: BoxDecoration(
+                color: theme.primaryColor,
+                shape: BoxShape.circle,
+              ),
+              todayDecoration: BoxDecoration(
+                color: theme.primaryColor.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              todayTextStyle: TextStyle(
+                color: theme.primaryColor,
+                fontWeight: FontWeight.bold,
+              ),
+              outsideDaysVisible: false,
+            ),
+            headerStyle: HeaderStyle(
+              formatButtonVisible: false,
+              titleCentered: true,
+              titleTextStyle: theme.textTheme.titleMedium!,
+            ),
           ),
         ),
+        const SizedBox(height: 16),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _FilterTab(
+              label: 'All',
+              isSelected: _filter == null,
+              onTap: () => setState(() => _filter = null),
+            ),
+            const SizedBox(width: 8),
+            _FilterTab(
+              label: 'Income',
+              isSelected: _filter == TransactionType.income,
+              onTap: () => setState(() => _filter = TransactionType.income),
+            ),
+            const SizedBox(width: 8),
+            _FilterTab(
+              label: 'Expense',
+              isSelected: _filter == TransactionType.expense,
+              onTap: () => setState(() => _filter = TransactionType.expense),
+            ),
+          ],
+        ),
+        const SizedBox(height: 24),
         Expanded(
           child: filteredTransactions.isEmpty
-              ? const Center(child: Text('No transactions for this day', style: TextStyle(color: Colors.grey)))
-              : ListView.builder(
+              ? Center(
+                  child: Text('No records', style: theme.textTheme.bodyMedium),
+                )
+              : ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   itemCount: filteredTransactions.length,
-                  itemBuilder: (context, index) {
-                    return _TransactionTile(tx: filteredTransactions[index]);
-                  },
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
+                  itemBuilder: (context, index) =>
+                      _TransactionCard(tx: filteredTransactions[index]),
                 ),
         ),
       ],
     );
   }
+}
 
-  Widget _filterChip(String label, TransactionType? type, Color color) {
-    bool isSelected = _filter == type;
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.black)),
-      selected: isSelected,
-      onSelected: (val) => setState(() => _filter = val ? type : null),
-      selectedColor: color,
+class _FilterTab extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  const _FilterTab({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.primaryColor : theme.cardColor,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? theme.primaryColor : theme.dividerColor,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected
+                ? theme.scaffoldBackgroundColor
+                : theme.textTheme.bodyMedium?.color,
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -393,67 +714,87 @@ class _WalletsView extends StatelessWidget {
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
     final theme = Theme.of(context);
-    final wallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
+    final wallets = account != null
+        ? DatabaseService.getWallets(account.key as int)
+        : <Wallet>[];
 
     return wallets.isEmpty
-        ? const Center(child: Text('No wallets added yet', style: TextStyle(color: Colors.grey)))
-        : ListView.builder(
+        ? Center(
+            child: Text('Vault is empty', style: theme.textTheme.bodyMedium),
+          )
+        : ListView.separated(
             padding: const EdgeInsets.all(24),
             itemCount: wallets.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final wallet = wallets[index];
               return InkWell(
                 onTap: () async {
                   await Navigator.push(
-                    context, 
-                    MaterialPageRoute(builder: (context) => WalletDetailsScreen(wallet: wallet))
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => WalletDetailsScreen(wallet: wallet),
+                    ),
                   );
                   onRefresh();
                 },
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(24),
                 child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
                     color: theme.cardColor,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(24),
                     border: Border.all(
-                      color: wallet.isExcluded ? Colors.red.withOpacity(0.3) : Colors.grey[200]!,
-                      width: wallet.isExcluded ? 2 : 1,
+                      color: wallet.isExcluded
+                          ? theme.colorScheme.error.withOpacity(0.2)
+                          : theme.dividerColor,
+                      width: wallet.isExcluded ? 1.5 : 0.5,
                     ),
                   ),
                   child: Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: theme.primaryColor.withOpacity(0.1),
-                        child: Icon(_getWalletIcon(wallet.type), color: theme.primaryColor),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _getWalletIcon(wallet.type),
+                          color: theme.primaryColor,
+                          size: 22,
+                        ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 20),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               wallet.name,
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                decoration: wallet.isExcluded ? TextDecoration.lineThrough : null,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                decoration: wallet.isExcluded
+                                    ? TextDecoration.lineThrough
+                                    : null,
                               ),
                             ),
                             Text(
-                              wallet.isExcluded ? 'Excluded' : wallet.type,
-                              style: TextStyle(color: wallet.isExcluded ? Colors.red : Colors.grey),
+                              wallet.isExcluded
+                                  ? 'Excluded from Liquidity'
+                                  : wallet.type,
+                              style: theme.textTheme.labelLarge,
                             ),
                           ],
                         ),
                       ),
                       Text(
                         '₱${wallet.balance.toStringAsFixed(2)}',
-                        style: TextStyle(
-                          fontSize: 18, 
-                          fontWeight: FontWeight.bold,
-                          color: wallet.isExcluded ? Colors.grey : null,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: wallet.isExcluded
+                              ? theme.textTheme.bodyMedium?.color?.withOpacity(
+                                  0.3,
+                                )
+                              : null,
                         ),
                       ),
                     ],
@@ -466,11 +807,16 @@ class _WalletsView extends StatelessWidget {
 
   IconData _getWalletIcon(String type) {
     switch (type) {
-      case 'ATM': return Icons.credit_card;
-      case 'Bank': return Icons.account_balance;
-      case 'E-Wallet': return Icons.phone_android;
-      case 'Savings': return Icons.savings;
-      default: return Icons.account_balance_wallet;
+      case 'ATM':
+        return Icons.credit_card_rounded;
+      case 'Bank':
+        return Icons.account_balance_rounded;
+      case 'E-Wallet':
+        return Icons.account_balance_wallet_rounded;
+      case 'Savings':
+        return Icons.savings_rounded;
+      default:
+        return Icons.wallet_rounded;
     }
   }
 }
@@ -482,84 +828,111 @@ class _StatisticsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
-    final transactions = account != null ? DatabaseService.getTransactions(account.key as int) : <Transaction>[];
+    final transactions = account != null
+        ? DatabaseService.getTransactions(account.key as int)
+        : <Transaction>[];
     final theme = Theme.of(context);
 
-    double totalIncome = transactions.where((tx) => tx.type == TransactionType.income).fold(0, (sum, tx) => sum + tx.amount);
-    double totalExpense = transactions.where((tx) => tx.type == TransactionType.expense).fold(0, (sum, tx) => sum + tx.amount);
+    double totalIncome = transactions
+        .where((tx) => tx.type == TransactionType.income)
+        .fold(0, (sum, tx) => sum + tx.amount);
+    double totalExpense = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .fold(0, (sum, tx) => sum + tx.amount);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          SizedBox(
-            height: 250,
-            child: PieChart(
-              PieChartData(
-                sectionsSpace: 4,
-                centerSpaceRadius: 50,
-                sections: [
-                  PieChartSectionData(value: totalIncome, color: Colors.green, title: 'Income', radius: 60, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  PieChartSectionData(value: totalExpense, color: Colors.red, title: 'Expense', radius: 60, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                ],
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: theme.dividerColor, width: 0.5),
+            ),
+            child: SizedBox(
+              height: 200,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 6,
+                  centerSpaceRadius: 60,
+                  sections: [
+                    PieChartSectionData(
+                      value: totalIncome == 0 && totalExpense == 0
+                          ? 1
+                          : totalIncome,
+                      color: theme.colorScheme.tertiary,
+                      title: '',
+                      radius: 12,
+                    ),
+                    PieChartSectionData(
+                      value: totalExpense,
+                      color: theme.colorScheme.error,
+                      title: '',
+                      radius: 12,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
           const SizedBox(height: 32),
-          _statCard('Total Income', totalIncome, Colors.green),
-          const SizedBox(height: 16),
-          _statCard('Total Expense', totalExpense, Colors.red),
-          const SizedBox(height: 16),
-          _statCard('Net Balance', totalIncome - totalExpense, Colors.blue),
-        ],
-      ),
-    );
-  }
-
-  Widget _statCard(String label, double amount, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
-          Text('₱${amount.toStringAsFixed(2)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+          _StatRow(
+            label: 'Total Inflow',
+            amount: totalIncome,
+            color: theme.colorScheme.tertiary,
+          ),
+          const SizedBox(height: 12),
+          _StatRow(
+            label: 'Total Outflow',
+            amount: totalExpense,
+            color: theme.colorScheme.error,
+          ),
+          const SizedBox(height: 12),
+          _StatRow(
+            label: 'Net Position',
+            amount: totalIncome - totalExpense,
+            color: theme.primaryColor,
+          ),
         ],
       ),
     );
   }
 }
 
-class _TransactionTile extends StatelessWidget {
-  final Transaction tx;
-  const _TransactionTile({required this.tx});
+class _StatRow extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+  const _StatRow({
+    required this.label,
+    required this.amount,
+    required this.color,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: CircleAvatar(
-        backgroundColor: tx.typeColor.withOpacity(0.1),
-        child: Icon(
-          tx.type == TransactionType.income 
-              ? Icons.arrow_upward 
-              : tx.type == TransactionType.expense 
-                  ? Icons.arrow_downward 
-                  : Icons.sync, 
-          color: tx.typeColor,
-          size: 20,
-        ),
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.dividerColor, width: 0.5),
       ),
-      title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      subtitle: Text('${tx.category} • ${DateFormat('MMM dd, yyyy').format(tx.date)}'),
-      trailing: Text(
-        '${tx.type == TransactionType.income ? '+' : tx.type == TransactionType.expense ? '-' : ''} ₱${tx.amount.toStringAsFixed(2)}',
-        style: TextStyle(color: tx.typeColor, fontWeight: FontWeight.bold, fontSize: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: theme.textTheme.titleMedium),
+          Text(
+            '₱${amount.toStringAsFixed(2)}',
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -578,17 +951,22 @@ class _ComingSoonView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 80, color: theme.primaryColor.withOpacity(0.2)),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              size: 64,
+              color: theme.primaryColor.withOpacity(0.3),
+            ),
           ),
+          const SizedBox(height: 24),
+          Text(title, style: theme.textTheme.headlineMedium),
           const SizedBox(height: 8),
-          const Text(
-            'Feature Coming Soon',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
+          Text('Coming Soon!', style: theme.textTheme.bodyMedium),
         ],
       ),
     );

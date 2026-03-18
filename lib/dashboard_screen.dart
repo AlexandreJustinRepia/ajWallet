@@ -647,12 +647,19 @@ class _CalendarViewState extends State<_CalendarView> {
   TransactionType? _filter;
 
   @override
+  void initState() {
+    super.initState();
+    _selectedDay = _focusedDay;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     List<Transaction> filteredTransactions = transactions.where((tx) {
       bool dateMatch = isSameDay(tx.date, _selectedDay ?? _focusedDay);
@@ -660,81 +667,214 @@ class _CalendarViewState extends State<_CalendarView> {
       return dateMatch && typeMatch;
     }).toList();
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: TableCalendar(
-            firstDay: DateTime.utc(2020, 1, 1),
-            lastDay: DateTime.utc(2030, 12, 31),
-            focusedDay: _focusedDay,
-            selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-            onDaySelected: (selectedDay, focusedDay) {
-              setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              });
-            },
-            calendarStyle: CalendarStyle(
-              selectedDecoration: BoxDecoration(
-                color: theme.primaryColor,
-                shape: BoxShape.circle,
+    double dayIncome = filteredTransactions
+        .where((tx) => tx.type == TransactionType.income)
+        .fold(0, (sum, tx) => sum + tx.amount);
+    double dayExpense = filteredTransactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .fold(0, (sum, tx) => sum + tx.amount);
+
+    return Container(
+      color: theme.scaffoldBackgroundColor,
+      child: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 460,
+            floating: false,
+            pinned: true,
+            backgroundColor: theme.scaffoldBackgroundColor,
+            elevation: 0,
+            flexibleSpace: FlexibleSpaceBar(
+              background: Column(
+                children: [
+                  const SizedBox(height: 60),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          DateFormat('MMMM yyyy').format(_focusedDay).toUpperCase(),
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            letterSpacing: 2,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                          ),
+                        ),
+                        const Text(
+                          'Financial Timeline',
+                          style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: -0.5),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TableCalendar(
+                    firstDay: DateTime.utc(2020, 1, 1),
+                    lastDay: DateTime.utc(2030, 12, 31),
+                    focusedDay: _focusedDay,
+                    calendarFormat: CalendarFormat.month,
+                    selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
+                    onDaySelected: (selectedDay, focusedDay) {
+                      setState(() {
+                        _selectedDay = selectedDay;
+                        _focusedDay = focusedDay;
+                      });
+                    },
+                    headerVisible: false,
+                    daysOfWeekStyle: DaysOfWeekStyle(
+                      weekdayStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold),
+                      weekendStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                    calendarStyle: CalendarStyle(
+                      todayDecoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      todayTextStyle: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold),
+                      selectedDecoration: BoxDecoration(
+                        color: isDark ? Colors.white : Colors.black,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: (isDark ? Colors.white : Colors.black).withOpacity(0.2),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      selectedTextStyle: TextStyle(color: isDark ? Colors.black : Colors.white, fontWeight: FontWeight.bold),
+                      defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+                      weekendTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+                      outsideDaysVisible: false,
+                    ),
+                  ),
+                ],
               ),
-              todayDecoration: BoxDecoration(
-                color: theme.primaryColor.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              todayTextStyle: TextStyle(
-                color: theme.primaryColor,
-                fontWeight: FontWeight.bold,
-              ),
-              outsideDaysVisible: false,
-            ),
-            headerStyle: HeaderStyle(
-              formatButtonVisible: false,
-              titleCentered: true,
-              titleTextStyle: theme.textTheme.titleMedium!,
             ),
           ),
-        ),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _FilterTab(
-              label: 'All',
-              isSelected: _filter == null,
-              onTap: () => setState(() => _filter = null),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: Row(
+                children: [
+                  _FilterTab(
+                    label: 'All',
+                    isSelected: _filter == null,
+                    onTap: () => setState(() => _filter = null),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterTab(
+                    label: 'Income',
+                    isSelected: _filter == TransactionType.income,
+                    onTap: () => setState(() => _filter = TransactionType.income),
+                  ),
+                  const SizedBox(width: 8),
+                  _FilterTab(
+                    label: 'Expense',
+                    isSelected: _filter == TransactionType.expense,
+                    onTap: () => setState(() => _filter = TransactionType.expense),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(width: 8),
-            _FilterTab(
-              label: 'Income',
-              isSelected: _filter == TransactionType.income,
-              onTap: () => setState(() => _filter = TransactionType.income),
-            ),
-            const SizedBox(width: 8),
-            _FilterTab(
-              label: 'Expense',
-              isSelected: _filter == TransactionType.expense,
-              onTap: () => setState(() => _filter = TransactionType.expense),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Expanded(
-          child: filteredTransactions.isEmpty
-              ? Center(
-                  child: Text('No records', style: theme.textTheme.bodyMedium),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  itemCount: filteredTransactions.length,
-                  separatorBuilder: (context, index) =>
-                      const SizedBox(height: 12),
-                  itemBuilder: (context, index) =>
-                      _TransactionCard(tx: filteredTransactions[index]),
+          ),
+          if (filteredTransactions.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                child: Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: theme.dividerColor, width: 0.5),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _DaySummaryStat(label: 'Income', amount: dayIncome, color: theme.colorScheme.tertiary),
+                      Container(width: 1, height: 30, color: theme.dividerColor),
+                      _DaySummaryStat(label: 'Expense', amount: dayExpense, color: theme.colorScheme.error),
+                    ],
+                  ),
                 ),
-        ),
+              ),
+            ),
+          filteredTransactions.isEmpty
+              ? SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.event_busy_rounded, size: 48, color: theme.dividerColor),
+                        const SizedBox(height: 16),
+                        Text('No records for this day', style: TextStyle(color: theme.dividerColor)),
+                      ],
+                    ),
+                  ),
+                )
+              : SliverPadding(
+                  padding: const EdgeInsets.all(24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final tx = filteredTransactions[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Column(
+                                children: [
+                                  Container(
+                                    width: 12,
+                                    height: 12,
+                                    margin: const EdgeInsets.only(top: 20),
+                                    decoration: BoxDecoration(
+                                      color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : theme.colorScheme.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  if (index < filteredTransactions.length - 1)
+                                    Container(width: 2, height: 60, color: theme.dividerColor.withOpacity(0.5)),
+                                ],
+                              ),
+                              const SizedBox(width: 20),
+                              Expanded(child: _TransactionCard(tx: tx)),
+                            ],
+                          ),
+                        );
+                      },
+                      childCount: filteredTransactions.length,
+                    ),
+                  ),
+                ),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
+        ],
+      ),
+    );
+  }
+}
+
+class _DaySummaryStat extends StatelessWidget {
+  final String label;
+  final double amount;
+  final Color color;
+
+  const _DaySummaryStat({required this.label, required this.amount, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      children: [
+        Text(label.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), letterSpacing: 1)),
+        const SizedBox(height: 4),
+        Text('₱${amount.toStringAsFixed(0)}', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color)),
       ],
     );
   }

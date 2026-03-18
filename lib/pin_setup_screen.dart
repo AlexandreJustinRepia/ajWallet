@@ -53,6 +53,11 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       return;
     }
 
+    if (_fakePinController.text.isNotEmpty && pin == _fakePinController.text) {
+      _showError('Original and Fake PIN cannot be the same');
+      return;
+    }
+
     final account = DatabaseService.getLatestAccount();
     if (account != null) {
       account.pin = pin;

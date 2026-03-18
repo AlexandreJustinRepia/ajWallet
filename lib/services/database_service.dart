@@ -111,4 +111,10 @@ class DatabaseService {
   static List<Transaction> getTransactions(int accountKey) {
     return _transactionBox.values.where((t) => t.accountKey == accountKey).toList();
   }
+
+  static List<Transaction> getWalletTransactions(int walletKey) {
+    return _transactionBox.values
+        .where((t) => t.walletKey == walletKey || t.toWalletKey == walletKey)
+        .toList();
+  }
 }

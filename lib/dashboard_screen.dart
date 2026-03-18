@@ -4,6 +4,7 @@ import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
 import 'add_wallet_screen.dart';
+import 'wallet_details_screen.dart';
 import 'models/transaction_model.dart';
 import 'models/wallet.dart';
 import 'package:intl/intl.dart';
@@ -403,9 +404,10 @@ class _WalletsView extends StatelessWidget {
               final wallet = wallets[index];
               return InkWell(
                 onTap: () async {
-                  // Toggle exclusion on tap
-                  wallet.isExcluded = !wallet.isExcluded;
-                  await DatabaseService.updateWallet(wallet);
+                  await Navigator.push(
+                    context, 
+                    MaterialPageRoute(builder: (context) => WalletDetailsScreen(wallet: wallet))
+                  );
                   onRefresh();
                 },
                 borderRadius: BorderRadius.circular(16),

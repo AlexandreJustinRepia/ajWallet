@@ -13,6 +13,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'widgets/animated_count_text.dart';
 import 'widgets/slide_in_list_item.dart';
 import 'widgets/insight_card.dart';
+import 'widgets/quick_add_input.dart';
 import 'services/financial_insights_service.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -280,7 +281,14 @@ class _HomeViewState extends State<_HomeView> {
           _buildHeader(context, account?.name ?? "User"),
           const SizedBox(height: 32),
           _buildBalanceCard(context, totalBalance),
-          const SizedBox(height: 48),
+          if (account != null) ...[
+            const SizedBox(height: 16),
+            QuickAddInput(
+              accountKey: account.key as int,
+              onSaved: widget.onRefresh,
+            ),
+          ],
+          const SizedBox(height: 32),
           _buildRecentActivityHeader(context),
           const SizedBox(height: 16),
           if (transactions.isEmpty)

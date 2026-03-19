@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'services/database_service.dart';
 import 'models/transaction_model.dart';
-import 'models/wallet.dart';
+import '../models/wallet.dart';
+import '../models/goal.dart';
+import '../models/budget.dart';
+import '../models/debt.dart';
+import 'package:hive/hive.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -26,9 +30,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int? _selectedWalletKey;
   int? _selectedToWalletKey; // For Transfers
 
+  List<Goal> _goals = [];
+  List<Budget> _budgets = [];
+  List<Debt> _debts = [];
+
+  int? _selectedGoalKey;
+  int? _selectedBudgetKey;
+  int? _selectedDebtKey;
+
   @override
   void initState() {
     super.initState();
+    _loadPlanningEntities();
+    
     if (widget.existingTransaction != null) {
       final tx = widget.existingTransaction!;
       _selectedType = tx.type;
@@ -42,6 +56,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _chargeController.text = tx.charge!.toStringAsFixed(2);
       }
       _isManualDate = true;
+      _selectedGoalKey = tx.goalKey;
+      _selectedBudgetKey = tx.budgetKey;
+      _selectedDebtKey = tx.debtKey;
     } else {
       final wallets = DatabaseService.getWallets(widget.accountKey);
       try {
@@ -50,6 +67,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         if (wallets.isNotEmpty) _selectedWalletKey = wallets.first.key as int;
       }
     }
+  }
+
+  void _loadPlanningEntities() {
+    _goals = DatabaseService.getGoals(widget.accountKey);
+    _budgets = DatabaseService.getBudgets(widget.accountKey);
+    _debts = DatabaseService.getDebts(widget.accountKey);
   }
 
   final Map<String, IconData> _expenseCategories = {
@@ -134,6 +157,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           walletKey: existing.walletKey,
           toWalletKey: existing.toWalletKey,
           charge: existing.charge,
+          goalKey: existing.goalKey,
+          budgetKey: existing.budgetKey,
+          debtKey: existing.debtKey,
         );
 
         // Update existing object's fields
@@ -150,6 +176,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         existing.type = _selectedType;
         existing.walletKey = _selectedWalletKey;
         existing.toWalletKey = _selectedToWalletKey;
+        existing.goalKey = _selectedGoalKey;
+        existing.budgetKey = _selectedBudgetKey;
+        existing.debtKey = _selectedDebtKey;
 
         await DatabaseService.updateTransaction(oldTx, existing);
       } else {
@@ -168,6 +197,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           accountKey: widget.accountKey,
           walletKey: _selectedWalletKey,
           toWalletKey: _selectedToWalletKey,
+          goalKey: _selectedGoalKey,
+          budgetKey: _selectedBudgetKey,
+          debtKey: _selectedDebtKey,
         );
         await DatabaseService.saveTransaction(transaction);
       }
@@ -377,6 +409,44 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 32),
 
+              // ── Planning Linkage ──────────────────────────────────────────
+              Text('Link to Planning (Optional)', style: theme.textTheme.titleMedium?.copyWith(color: theme.primaryColor)),
+              const SizedBox(height: 16),
+              
+              // Goal Selector
+              _buildPlanningDropdown<Goal>(
+                label: 'Savings Goal',
+                items: _goals,
+                value: _selectedGoalKey,
+                itemLabel: (g) => '${g.name} (₱${g.savedAmount.toStringAsFixed(0)}/₱${g.targetAmount.toStringAsFixed(0)})',
+                onChanged: (val) => setState(() => _selectedGoalKey = val),
+                icon: Icons.flag_rounded,
+              ),
+              const SizedBox(height: 16),
+
+              // Budget Selector
+              _buildPlanningDropdown<Budget>(
+                label: 'Category Budget',
+                items: _budgets,
+                value: _selectedBudgetKey,
+                itemLabel: (b) => '${b.category} (${DateFormat('MMM').format(DateTime(2026, b.month))} - ₱${b.amountLimit.toStringAsFixed(0)})',
+                onChanged: (val) => setState(() => _selectedBudgetKey = val),
+                icon: Icons.pie_chart_rounded,
+              ),
+              const SizedBox(height: 16),
+
+              // Debt Selector
+              _buildPlanningDropdown<Debt>(
+                label: 'Debt / Loan',
+                items: _debts,
+                value: _selectedDebtKey,
+                itemLabel: (d) => '${d.personName} (${d.isOwedToMe ? 'Owed to me' : 'Borrowed'})',
+                onChanged: (val) => setState(() => _selectedDebtKey = val),
+                icon: Icons.handshake_rounded,
+              ),
+
+              const SizedBox(height: 32),
+
               // Manual Date Toggle
               Row(
                 children: [
@@ -485,6 +555,56 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildPlanningDropdown<T extends HiveObject>({
+    required String label,
+    required List<T> items,
+    required int? value,
+    required String Function(T) itemLabel,
+    required ValueChanged<int?> onChanged,
+    required IconData icon,
+  }) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            border: Border.all(color: theme.dividerColor),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: value,
+              isExpanded: true,
+              hint: Text('None', style: TextStyle(color: Colors.grey.withOpacity(0.5))),
+              dropdownColor: theme.cardColor,
+              items: [
+                const DropdownMenuItem<int>(value: null, child: Text('None')),
+                ...items.map((item) {
+                  return DropdownMenuItem<int>(
+                    value: item.key as int,
+                    child: Row(
+                      children: [
+                        Icon(icon, size: 16, color: theme.primaryColor.withOpacity(0.5)),
+                        const SizedBox(width: 12),
+                        Expanded(child: Text(itemLabel(item), overflow: TextOverflow.ellipsis)),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+              onChanged: onChanged,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

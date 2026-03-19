@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../services/session_service.dart';
 import '../services/database_service.dart';
 import '../screens/add_budget_screen.dart';
 import '../screens/add_goal_screen.dart';
 import '../screens/add_debt_screen.dart';
+import '../models/transaction_model.dart';
 
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
@@ -54,20 +56,29 @@ class PlanningView extends StatelessWidget {
               if (result == true) onRefresh();
             },
             child: budgets.isEmpty 
-              ? _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
+              ? const _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
               : Column(
-                  children: budgets.map((b) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('${b.category} • ${b.month}/${b.year}'),
-                    subtitle: Text('Limit: ₱${b.amountLimit.toStringAsFixed(2)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
+                  children: budgets.map((b) {
+                    final currentSpending = DatabaseService.getTransactions(accountKey)
+                        .where((t) => (t.budgetKey == b.key) || 
+                                     (t.category == b.category && t.date.month == b.month && t.date.year == b.year))
+                        .where((t) => t.type == TransactionType.expense)
+                        .fold(0.0, (sum, t) => sum + t.amount);
+                    final progress = b.amountLimit > 0 ? (currentSpending / b.amountLimit).clamp(0.0, 1.0) : 0.0;
+                    final isOver = currentSpending > b.amountLimit;
+
+                    return _PlanningItem(
+                      title: b.category,
+                      subtitle: '${DateFormat('MMM yyyy').format(DateTime(b.year, b.month))}',
+                      trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
+                      progress: progress,
+                      progressColor: isOver ? Colors.red : Colors.blue,
+                      onDelete: () async {
                         await DatabaseService.deleteBudget(b);
                         onRefresh();
                       },
-                    ),
-                  )).toList(),
+                    );
+                  }).toList(),
                 ),
           ),
         ),
@@ -84,20 +95,22 @@ class PlanningView extends StatelessWidget {
               if (result == true) onRefresh();
             },
             child: goals.isEmpty 
-              ? _EmptyState(icon: Icons.flag_outlined, message: 'No savings goals')
+              ? const _EmptyState(icon: Icons.flag_outlined, message: 'No savings goals')
               : Column(
-                  children: goals.map((g) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(g.name),
-                    subtitle: Text('₱${g.savedAmount.toStringAsFixed(2)} / ₱${g.targetAmount.toStringAsFixed(2)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
+                  children: goals.map((g) {
+                    final progress = g.targetAmount > 0 ? (g.savedAmount / g.targetAmount).clamp(0.0, 1.0) : 0.0;
+                    return _PlanningItem(
+                      title: g.name,
+                      subtitle: 'Target: ₱${g.targetAmount.toStringAsFixed(0)}',
+                      trailingText: '₱${g.savedAmount.toStringAsFixed(0)} saved',
+                      progress: progress,
+                      progressColor: Colors.green,
+                      onDelete: () async {
                         await DatabaseService.deleteGoal(g);
                         onRefresh();
                       },
-                    ),
-                  )).toList(),
+                    );
+                  }).toList(),
                 ),
           ),
         ),
@@ -114,26 +127,97 @@ class PlanningView extends StatelessWidget {
               if (result == true) onRefresh();
             },
             child: debts.isEmpty 
-              ? _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
+              ? const _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
               : Column(
-                  children: debts.map((d) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(d.personName),
-                    subtitle: Text('${d.isOwedToMe ? 'Owes you' : 'You owe'} ₱${(d.totalAmount - d.paidAmount).toStringAsFixed(2)}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () async {
+                  children: debts.map((d) {
+                    final total = d.totalAmount;
+                    final paid = d.paidAmount;
+                    final remaining = total - paid;
+                    final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
+                    
+                    return _PlanningItem(
+                      title: d.personName,
+                      subtitle: d.isOwedToMe ? 'Lent (Remaining)' : 'Borrowed (Remaining)',
+                      trailingText: '₱${remaining.toStringAsFixed(0)}',
+                      progress: progress,
+                      progressColor: Colors.orange,
+                      onDelete: () async {
                         await DatabaseService.deleteDebt(d);
                         onRefresh();
                       },
-                    ),
-                  )).toList(),
+                    );
+                  }).toList(),
                 ),
           ),
         ),
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
+    );
+  }
+}
+
+class _PlanningItem extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String trailingText;
+  final double progress;
+  final Color progressColor;
+  final VoidCallback onDelete;
+
+  const _PlanningItem({
+    required this.title,
+    required this.subtitle,
+    required this.trailingText,
+    required this.progress,
+    required this.progressColor,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                  ],
+                ),
+              ),
+              Text(trailingText, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, size: 20),
+                onPressed: onDelete,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: progressColor.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+              minHeight: 8,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${(progress * 100).toStringAsFixed(0)}%',
+            style: TextStyle(fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
+          ),
+        ],
+      ),
     );
   }
 }

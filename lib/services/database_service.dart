@@ -195,6 +195,43 @@ class DatabaseService {
     }
 
     await account.save();
+
+    // ── Update Linked Planning Entities ──────────────────────────────
+    if (tx.goalKey != null) {
+      final goal = _goalBox.get(tx.goalKey);
+      if (goal != null) {
+        double adjustment = isReversing ? -tx.amount : tx.amount;
+        if (tx.type == TransactionType.income) {
+          goal.savedAmount += adjustment;
+        } else if (tx.type == TransactionType.expense) {
+          goal.savedAmount -= adjustment;
+        }
+        await goal.save();
+      }
+    }
+
+    if (tx.debtKey != null) {
+      final debt = _debtBox.get(tx.debtKey);
+      if (debt != null) {
+        double adjustment = isReversing ? -tx.amount : tx.amount;
+        if (debt.isOwedToMe) {
+          // LENT: Income = they paid me back. Expense = I lent more.
+          if (tx.type == TransactionType.income) {
+            debt.paidAmount += adjustment;
+          } else if (tx.type == TransactionType.expense) {
+            debt.totalAmount += adjustment;
+          }
+        } else {
+          // BORROWED: Expense = I paid them back. Income = I borrowed more.
+          if (tx.type == TransactionType.expense) {
+            debt.paidAmount += adjustment;
+          } else if (tx.type == TransactionType.income) {
+            debt.totalAmount += adjustment;
+          }
+        }
+        await debt.save();
+      }
+    }
   }
 
   static List<Transaction> getTransactions(int accountKey) {

@@ -45,6 +45,15 @@ class Transaction extends HiveObject {
   @HiveField(9)
   double? charge;
 
+  @HiveField(10)
+  int? goalKey;
+
+  @HiveField(11)
+  int? budgetKey;
+
+  @HiveField(12)
+  int? debtKey;
+
   Transaction({
     required this.title,
     required this.amount,
@@ -56,6 +65,9 @@ class Transaction extends HiveObject {
     this.walletKey,
     this.toWalletKey,
     this.charge,
+    this.goalKey,
+    this.budgetKey,
+    this.debtKey,
   });
 
   Map<String, dynamic> toMap() {
@@ -70,6 +82,9 @@ class Transaction extends HiveObject {
       'walletKey': walletKey,
       'toWalletKey': toWalletKey,
       'charge': charge,
+      'goalKey': goalKey,
+      'budgetKey': budgetKey,
+      'debtKey': debtKey,
     };
   }
 
@@ -85,6 +100,9 @@ class Transaction extends HiveObject {
       walletKey: map['walletKey'],
       toWalletKey: map['toWalletKey'],
       charge: map['charge'],
+      goalKey: map['goalKey'],
+      budgetKey: map['budgetKey'],
+      debtKey: map['debtKey'],
     );
   }
 

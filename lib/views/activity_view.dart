@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/session_service.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../services/database_service.dart';
 import '../models/transaction_model.dart';
 import '../widgets/slide_in_list_item.dart';
@@ -199,6 +200,13 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
         .where((tx) => tx.type == TransactionType.expense)
         .fold(0.0, (s, tx) => s + tx.amount);
 
+    final categoryData = <String, double>{};
+    for (final tx in filtered) {
+      if (_filter == null && tx.type != TransactionType.expense) continue;
+      if (tx.type == TransactionType.transfer) continue;
+      categoryData[tx.category] = (categoryData[tx.category] ?? 0) + tx.amount;
+    }
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -342,6 +350,10 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
             ),
           ),
 
+        // Chart sliver
+        if (categoryData.isNotEmpty)
+          _buildChartSliver(theme, categoryData),
+
         // Transaction list or empty
         filtered.isEmpty
             ? SliverFillRemaining(
@@ -413,6 +425,116 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                 ),
               ),
       ],
+    );
+  }
+
+  Widget _buildChartSliver(ThemeData theme, Map<String, double> categoryData) {
+    if (categoryData.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+    final colors = [
+      theme.primaryColor,
+      theme.dividerColor,
+      theme.textTheme.bodyMedium?.color?.withOpacity(0.5) ?? Colors.grey,
+      theme.primaryColor.withOpacity(0.3),
+      theme.primaryColor.withOpacity(0.6),
+    ];
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _filter == TransactionType.income ? 'INCOME BREAKDOWN' : 'SPENDING BREAKDOWN',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 100,
+                    height: 100,
+                    child: PieChart(
+                      PieChartData(
+                        sectionsSpace: 2,
+                        centerSpaceRadius: 30,
+                        sections: categoryData.entries
+                            .toList()
+                            .asMap()
+                            .entries
+                            .map((e) => PieChartSectionData(
+                                  value: e.value.value,
+                                  color: colors[e.key % colors.length],
+                                  radius: 12,
+                                  title: '',
+                                ))
+                            .toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: categoryData.entries
+                          .toList()
+                          .asMap()
+                          .entries
+                          .map((e) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: colors[e.key % colors.length],
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        e.value.key,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                    Text(
+                                      '₱${e.value.value.toStringAsFixed(0)}',
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

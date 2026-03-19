@@ -85,13 +85,17 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = textColor.withOpacity(0.5);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: textColor),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -102,28 +106,28 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 20),
-              const Text(
+              Text(
                 'Secure your account',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Enter a 4-digit PIN for extra security.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: hintColor),
               ),
               const SizedBox(height: 40),
               _buildPinField('Enter PIN', _pinController),
               const SizedBox(height: 24),
               _buildPinField('Confirm PIN', _confirmPinController),
               const SizedBox(height: 32),
-              const Text(
+              Text(
                 'Fake Vault PIN (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Enter a secondary PIN to open a dummy account under duress.',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: TextStyle(fontSize: 14, color: hintColor),
               ),
               const SizedBox(height: 16),
               _buildPinField('Fake PIN', _fakePinController),
@@ -131,10 +135,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               if (_canCheckBiometrics)
                 Row(
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Enable Biometrics (Face ID / Fingerprint)',
-                        style: TextStyle(fontSize: 14),
+                        style: TextStyle(fontSize: 14, color: textColor),
                         overflow: TextOverflow.visible,
                       ),
                     ),
@@ -142,7 +146,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     Switch(
                       value: _useBiometrics,
                       onChanged: (val) => setState(() => _useBiometrics = val),
-                      activeColor: Colors.black,
+                      activeColor: theme.primaryColor,
                     ),
                   ],
                 ),
@@ -159,21 +163,21 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      color: Colors.black,
+                      color: theme.primaryColor,
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: theme.primaryColor.withOpacity(0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
                         'Finish Setup',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: theme.colorScheme.onPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -191,29 +195,33 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   }
 
   Widget _buildPinField(String hint, TextEditingController controller) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = textColor.withOpacity(0.5);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(hint,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black54)),
+            style: TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w600, color: hintColor)),
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: Colors.grey[50],
+            color: theme.cardColor,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: theme.dividerColor),
           ),
           child: TextField(
             controller: controller,
             obscureText: true,
             keyboardType: TextInputType.number,
             maxLength: 4,
-            style: const TextStyle(
-                fontSize: 24, letterSpacing: 16, fontWeight: FontWeight.bold),
-            decoration: const InputDecoration(
-                counterText: '', border: InputBorder.none),
+            style: TextStyle(
+                fontSize: 24, letterSpacing: 16, fontWeight: FontWeight.bold, color: textColor),
+            decoration: InputDecoration(
+                counterText: '', border: InputBorder.none, hintStyle: TextStyle(color: hintColor)),
           ),
         ),
       ],

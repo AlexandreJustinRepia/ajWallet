@@ -159,9 +159,8 @@ class _HomeViewState extends State<HomeView> {
     ValueChanged<bool> onToggle,
   ) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardColor = isDark ? Colors.white : Colors.black;
-    final contentColor = isDark ? Colors.black : Colors.white;
+    final cardColor = theme.primaryColor;
+    final contentColor = theme.colorScheme.onPrimary;
 
     return AnimatedScale(
       scale: _showGlow ? 1.02 : 1.0,

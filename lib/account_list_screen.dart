@@ -27,16 +27,20 @@ class _AccountListScreenState extends State<AccountListScreen> {
   }
 
   void _confirmDelete(Account account) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = textColor.withOpacity(0.5);
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Delete Account'),
-        content: Text('Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.'),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        title: Text('Delete Account', style: TextStyle(color: textColor)),
+        content: Text('Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.', style: TextStyle(color: textColor)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            child: Text('Cancel', style: TextStyle(color: hintColor)),
           ),
           TextButton(
             onPressed: () async {
@@ -61,14 +65,18 @@ class _AccountListScreenState extends State<AccountListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = textColor.withOpacity(0.5);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(32, 60, 32, 24),
+                padding: const EdgeInsets.fromLTRB(32, 60, 32, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -77,14 +85,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black,
+                        color: textColor,
                         letterSpacing: -0.5,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
                       'Select an account to continue.',
-                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      style: TextStyle(fontSize: 16, color: hintColor),
                     ),
                   ],
                 ),
@@ -112,12 +120,12 @@ class _AccountListScreenState extends State<AccountListScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: Colors.grey[50],
+                            color: theme.cardColor,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: Colors.grey[200]!),
+                            border: Border.all(color: theme.dividerColor),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: theme.shadowColor.withOpacity(0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -129,12 +137,12 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: Colors.black,
+                                  color: theme.primaryColor,
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.account_balance_wallet_outlined,
-                                  color: Colors.white,
+                                  color: theme.colorScheme.onPrimary,
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -144,10 +152,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                   children: [
                                     Text(
                                       account.name,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black,
+                                        color: textColor,
                                       ),
                                     ),
                                     const SizedBox(height: 4),
@@ -155,14 +163,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                       'Offline Budget',
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey[600],
+                                        color: hintColor,
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.delete_outline, color: Colors.grey),
+                                icon: Icon(Icons.delete_outline, color: hintColor),
                                 onPressed: () => _confirmDelete(account),
                               ),
                             ],
@@ -186,9 +194,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
           );
           _loadAccounts();
         },
-        backgroundColor: Colors.black,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Account', style: TextStyle(color: Colors.white)),
+        backgroundColor: theme.primaryColor,
+        icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
+        label: Text('Add Account', style: TextStyle(color: theme.colorScheme.onPrimary)),
       ),
     );
   }

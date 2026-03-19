@@ -147,12 +147,16 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final hintColor = textColor.withOpacity(0.5);
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        leading: const BackButton(color: Colors.black),
+        leading: BackButton(color: textColor),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -161,29 +165,29 @@ class _LoginScreenState extends State<LoginScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 40),
-              const Icon(Icons.lock_outline, size: 64, color: Colors.black),
+              Icon(Icons.lock_outline, size: 64, color: textColor),
               const SizedBox(height: 24),
               Text(
                 'Welcome Back, ${widget.account.name}',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: textColor,
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Enter your PIN to continue',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+                style: TextStyle(fontSize: 16, color: hintColor),
               ),
               const SizedBox(height: 48),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: _isLocked ? Colors.grey[200] : Colors.grey[50],
+                  color: _isLocked ? theme.colorScheme.error.withOpacity(0.1) : theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _isLocked ? Colors.red[100]! : Colors.grey[300]!),
+                  border: Border.all(color: _isLocked ? theme.colorScheme.error.withOpacity(0.5) : theme.dividerColor),
                 ),
                 child: TextField(
                   controller: _pinController,
@@ -196,33 +200,33 @@ class _LoginScreenState extends State<LoginScreen> {
                     fontSize: 24,
                     letterSpacing: 16,
                     fontWeight: FontWeight.bold,
-                    color: _isLocked ? Colors.grey : Colors.black,
+                    color: _isLocked ? hintColor : textColor,
                   ),
                   onChanged: (value) {
                     if (value.length == 4) {
                       _verifyPin();
                     }
                   },
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     counterText: '',
                     border: InputBorder.none,
                     hintText: '••••',
-                    hintStyle: TextStyle(color: Colors.grey, letterSpacing: 16),
+                    hintStyle: TextStyle(color: hintColor, letterSpacing: 16),
                   ),
                 ),
               ),
               const SizedBox(height: 32),
               if (_canCheckBiometrics && !_isLocked)
                 IconButton(
-                  icon: const Icon(Icons.fingerprint, size: 48, color: Colors.black),
+                  icon: Icon(Icons.fingerprint, size: 48, color: textColor),
                   onPressed: _authenticateWithBiometrics,
                 ),
               const SizedBox(height: 24),
               TextButton(
                 onPressed: _showForgotPinDialog,
-                child: const Text(
+                child: Text(
                   'Forgot PIN?',
-                  style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+                  style: TextStyle(color: hintColor, fontWeight: FontWeight.w600),
                 ),
               ),
               if (_isLocked)
@@ -230,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   padding: const EdgeInsets.only(top: 16),
                   child: Text(
                     'Security Lockout Active',
-                    style: TextStyle(color: Colors.red[900], fontWeight: FontWeight.bold),
+                    style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold),
                   ),
                 ),
             ],

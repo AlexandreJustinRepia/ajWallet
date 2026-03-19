@@ -19,10 +19,29 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   late Color _income;
   late Color _expense;
 
+  bool _isInitialized = false;
+
   @override
-  void initState() {
-    super.initState();
-    _loadFromState(ThemeService.themeNotifier.value.lightTheme);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isInitialized) {
+      _isInitialized = true;
+      _loadActiveTheme();
+    }
+  }
+
+  void _loadActiveTheme() {
+    final state = ThemeService.themeNotifier.value;
+    final mode = state.themeMode;
+    bool isDark = false;
+    if (mode == ThemeMode.dark) {
+      isDark = true;
+    } else if (mode == ThemeMode.light) {
+      isDark = false;
+    } else {
+      isDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+    }
+    _loadFromState(isDark ? state.darkTheme : state.lightTheme);
   }
 
   void _loadFromState(AppTheme theme) {
@@ -120,7 +139,11 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                   ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
                 ],
                 selected: {ThemeService.themeNotifier.value.themeMode},
-                onSelectionChanged: (set) => ThemeService.setThemeMode(set.first),
+                onSelectionChanged: (set) {
+                  final newMode = set.first;
+                  ThemeService.setThemeMode(newMode);
+                  _loadActiveTheme();
+                },
               ),
             ),
           ),

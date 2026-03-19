@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/session_service.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/database_service.dart';
 import '../models/transaction_model.dart';
@@ -12,7 +13,7 @@ class TransactionsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
     final theme = Theme.of(context);
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)

@@ -4,6 +4,7 @@ import 'services/session_service.dart';
 import 'services/backup_service.dart';
 import 'models/account.dart';
 import 'login_screen.dart';
+import 'pin_setup_screen.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
   const SecuritySettingsScreen({super.key});
@@ -35,6 +36,20 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         padding: const EdgeInsets.all(24),
         children: [
           _buildSectionTitle('Authentication'),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.password_rounded, color: theme.primaryColor),
+            title: Text(_account.pin == null || _account.pin!.isEmpty ? 'Set PIN' : 'Change PIN'),
+            subtitle: Text(_account.pin == null || _account.pin!.isEmpty 
+                ? 'Create a 4-digit PIN for offline security.' 
+                : 'Update your current vault sequence.'),
+            onTap: () async {
+              await Navigator.push(context, MaterialPageRoute(builder: (c) => const PinSetupScreen(isFromSettings: true)));
+              setState(() {
+                _account = SessionService.activeAccount!;
+              });
+            },
+          ),
           _buildSwitchTile(
             'Biometric Login',
             'Use fingerprint or face ID to unlock.',

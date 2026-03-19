@@ -69,7 +69,11 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
     if (mounted) {
       Navigator.pop(context); // Close modal
-      Navigator.push(context, MaterialPageRoute(builder: (context) => const PinSetupScreen()));
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => const PinSetupScreen()),
+        (route) => false,
+      );
     }
   }
 

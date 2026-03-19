@@ -5,7 +5,8 @@ import 'services/session_service.dart';
 import 'dashboard_screen.dart';
 
 class PinSetupScreen extends StatefulWidget {
-  const PinSetupScreen({super.key});
+  final bool isFromSettings;
+  const PinSetupScreen({super.key, this.isFromSettings = false});
 
   @override
   State<PinSetupScreen> createState() => _PinSetupScreenState();
@@ -69,10 +70,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       SessionService.setActiveAccount(account);
       
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const DashboardScreen()),
-        );
+        if (widget.isFromSettings) {
+          Navigator.pop(context);
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
+          );
+        }
       }
     }
   }
@@ -94,10 +99,25 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: textColor),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
+        actions: [
+          if (widget.isFromSettings)
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: hintColor, fontWeight: FontWeight.bold)),
+            )
+          else
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                );
+              },
+              child: Text('Skip', style: TextStyle(color: hintColor, fontWeight: FontWeight.bold)),
+            ),
+          const SizedBox(width: 16),
+        ],
       ),
       body: SafeArea(
         child: SingleChildScrollView(

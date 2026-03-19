@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/database_service.dart';
+import '../services/session_service.dart';
 import '../models/transaction_model.dart';
 import '../models/wallet.dart';
 import '../widgets/animated_count_text.dart';
@@ -26,7 +27,7 @@ class _HomeViewState extends State<HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];

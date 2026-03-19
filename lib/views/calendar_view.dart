@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/session_service.dart';
 import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/database_service.dart';
@@ -27,7 +28,7 @@ class _CalendarViewState extends State<CalendarView> {
 
   @override
   Widget build(BuildContext context) {
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];

@@ -3,6 +3,8 @@ import 'services/database_service.dart';
 import 'models/account.dart';
 import 'login_screen.dart';
 import 'create_account_screen.dart';
+import 'services/session_service.dart';
+import 'dashboard_screen.dart';
 
 class AccountListScreen extends StatefulWidget {
   const AccountListScreen({super.key});
@@ -109,12 +111,20 @@ class _AccountListScreenState extends State<AccountListScreen> {
                       child: InkWell(
                         onLongPress: () => _confirmDelete(account),
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LoginScreen(account: account),
-                            ),
-                          );
+                          if (account.pin == null || account.pin!.isEmpty) {
+                            SessionService.setActiveAccount(account);
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(builder: (context) => const DashboardScreen()),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LoginScreen(account: account),
+                              ),
+                            );
+                          }
                         },
                         borderRadius: BorderRadius.circular(16),
                         child: Container(

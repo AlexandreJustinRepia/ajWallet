@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/session_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/database_service.dart';
 import '../services/financial_insights_service.dart';
@@ -12,7 +13,7 @@ class WalletsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
     final theme = Theme.of(context);
     final wallets = account != null
         ? DatabaseService.getWallets(account.key as int)

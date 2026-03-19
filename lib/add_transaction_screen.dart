@@ -11,7 +11,22 @@ import 'package:hive/hive.dart';
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
   final Transaction? existingTransaction;
-  const AddTransactionScreen({super.key, required this.accountKey, this.existingTransaction});
+  
+  // Initial planning keys
+  final int? initialGoalKey;
+  final int? initialBudgetKey;
+  final int? initialDebtKey;
+  final TransactionType? initialType;
+
+  const AddTransactionScreen({
+    super.key, 
+    required this.accountKey, 
+    this.existingTransaction,
+    this.initialGoalKey,
+    this.initialBudgetKey,
+    this.initialDebtKey,
+    this.initialType,
+  });
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -66,6 +81,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       } catch (_) {
         if (wallets.isNotEmpty) _selectedWalletKey = wallets.first.key as int;
       }
+      
+      // Use initial values if provided
+      if (widget.initialType != null) {
+        _selectedType = widget.initialType!;
+        _selectedCategory = _selectedType == TransactionType.income ? 'Salary' : 'Food & Drinks';
+      }
+      _selectedGoalKey = widget.initialGoalKey;
+      _selectedBudgetKey = widget.initialBudgetKey;
+      _selectedDebtKey = widget.initialDebtKey;
     }
   }
 

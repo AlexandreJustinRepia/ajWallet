@@ -6,6 +6,7 @@ import '../screens/add_budget_screen.dart';
 import '../screens/add_goal_screen.dart';
 import '../screens/add_debt_screen.dart';
 import '../models/transaction_model.dart';
+import '../add_transaction_screen.dart';
 
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
@@ -105,6 +106,15 @@ class PlanningView extends StatelessWidget {
                       trailingText: '₱${g.savedAmount.toStringAsFixed(0)} saved',
                       progress: progress,
                       progressColor: Colors.green,
+                      primaryActionLabel: 'Save',
+                      onPrimaryAction: () async {
+                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
+                          accountKey: accountKey,
+                          initialType: TransactionType.income,
+                          initialGoalKey: g.key as int,
+                        )));
+                        if (res == true) onRefresh();
+                      },
                       onDelete: () async {
                         await DatabaseService.deleteGoal(g);
                         onRefresh();
@@ -141,6 +151,15 @@ class PlanningView extends StatelessWidget {
                       trailingText: '₱${remaining.toStringAsFixed(0)}',
                       progress: progress,
                       progressColor: Colors.orange,
+                      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
+                      onPrimaryAction: () async {
+                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
+                          accountKey: accountKey,
+                          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
+                          initialDebtKey: d.key as int,
+                        )));
+                        if (res == true) onRefresh();
+                      },
                       onDelete: () async {
                         await DatabaseService.deleteDebt(d);
                         onRefresh();
@@ -163,6 +182,8 @@ class _PlanningItem extends StatelessWidget {
   final String trailingText;
   final double progress;
   final Color progressColor;
+  final String? primaryActionLabel;
+  final VoidCallback? onPrimaryAction;
   final VoidCallback onDelete;
 
   const _PlanningItem({
@@ -171,6 +192,8 @@ class _PlanningItem extends StatelessWidget {
     required this.trailingText,
     required this.progress,
     required this.progressColor,
+    this.primaryActionLabel,
+    this.onPrimaryAction,
     required this.onDelete,
   });
 
@@ -211,10 +234,29 @@ class _PlanningItem extends StatelessWidget {
               minHeight: 8,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            '${(progress * 100).toStringAsFixed(0)}%',
-            style: TextStyle(fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '${(progress * 100).toStringAsFixed(0)}%',
+                style: TextStyle(fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
+              ),
+              if (onPrimaryAction != null)
+                TextButton.icon(
+                  onPressed: onPrimaryAction,
+                  icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: progressColor),
+                  label: Text(
+                    primaryActionLabel ?? 'Add',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    backgroundColor: progressColor.withOpacity(0.05),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                ),
+            ],
           ),
         ],
       ),

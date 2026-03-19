@@ -203,25 +203,38 @@ class _QuickAddInputState extends State<QuickAddInput> {
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               child: Row(
                 children: [
-                  _buildPreviewPill(
-                    icon: QuickAddService.getCategoryIcon(_preview!.category),
-                    label: _preview!.category,
-                    color: Colors.blue,
+                  Expanded(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: Row(
+                        children: [
+                          _buildPreviewPill(
+                            icon: QuickAddService.getCategoryIcon(_preview!.category),
+                            label: _preview!.category,
+                            color: Colors.blue,
+                          ),
+                          const SizedBox(width: 8),
+                          _buildPreviewPill(
+                            icon: _preview!.type == TransactionType.income 
+                              ? Icons.arrow_downward_rounded 
+                              : Icons.arrow_upward_rounded,
+                            label: _preview!.type == TransactionType.income ? 'Income' : 'Expense',
+                            color: QuickAddService.getTypeColor(_preview!.type),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 8),
-                  _buildPreviewPill(
-                    icon: _preview!.type == TransactionType.income 
-                      ? Icons.arrow_downward_rounded 
-                      : Icons.arrow_upward_rounded,
-                    label: _preview!.type == TransactionType.income ? 'Income' : 'Expense',
-                    color: QuickAddService.getTypeColor(_preview!.type),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '₱${_preview!.amount.toStringAsFixed(2)}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: QuickAddService.getTypeColor(_preview!.type),
+                  Flexible(
+                    child: Text(
+                      '₱${_preview!.amount.toStringAsFixed(2)}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: QuickAddService.getTypeColor(_preview!.type),
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

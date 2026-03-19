@@ -26,13 +26,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<AppTheme>(
+    return ValueListenableBuilder<ThemeState>(
       valueListenable: ThemeService.themeNotifier,
-      builder: (context, appTheme, _) {
+      builder: (context, themeState, _) {
         return MaterialApp(
           title: 'AJ Wallet',
           debugShowCheckedModeBanner: false,
-          theme: appTheme.toThemeData(),
+          theme: themeState.lightTheme.toThemeData(),
+          darkTheme: themeState.darkTheme.toThemeData(),
+          themeMode: themeState.themeMode,
           builder: (context, child) => SecurityWrapper(child: child!),
           home: const SplashScreen(),
         );

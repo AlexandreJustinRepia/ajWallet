@@ -19,6 +19,8 @@ class AccountAdapter extends TypeAdapter<Account> {
     return Account(
       name: fields[0] as String,
       budget: fields[1] as double,
+      pin: fields[2] as String?,
+      isBiometricEnabled: fields[3] as bool,
       fakePin: fields[4] as String?,
       isFake: fields[5] as bool,
       maxFailedAttempts: fields[6] as int,
@@ -30,11 +32,15 @@ class AccountAdapter extends TypeAdapter<Account> {
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
       ..write(obj.budget)
+      ..writeByte(2)
+      ..write(obj.pin)
+      ..writeByte(3)
+      ..write(obj.isBiometricEnabled)
       ..writeByte(4)
       ..write(obj.fakePin)
       ..writeByte(5)

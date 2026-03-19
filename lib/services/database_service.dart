@@ -19,9 +19,26 @@ class DatabaseService {
     if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TransactionAdapter());
     if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(WalletAdapter());
     
-    await Hive.openBox<Account>(_boxName);
-    await Hive.openBox<Transaction>(_transactionBoxName);
-    await Hive.openBox<Wallet>(_walletBoxName);
+    try {
+      await Hive.openBox<Account>(_boxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_boxName);
+      await Hive.openBox<Account>(_boxName);
+    }
+
+    try {
+      await Hive.openBox<Transaction>(_transactionBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_transactionBoxName);
+      await Hive.openBox<Transaction>(_transactionBoxName);
+    }
+
+    try {
+      await Hive.openBox<Wallet>(_walletBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_walletBoxName);
+      await Hive.openBox<Wallet>(_walletBoxName);
+    }
   }
 
   static Box<Account> get _box => Hive.box<Account>(_boxName);

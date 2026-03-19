@@ -181,7 +181,6 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
   Widget build(BuildContext context) {
     final account = DatabaseService.getLatestAccount();
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
     final transactions = account != null
         ? DatabaseService.getTransactions(account.key as int)
         : <Transaction>[];
@@ -257,19 +256,18 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                   fontWeight: FontWeight.bold,
                 ),
                 selectedDecoration: BoxDecoration(
-                  color: isDark ? Colors.white : Colors.black,
+                  color: theme.colorScheme.onBackground,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: (isDark ? Colors.white : Colors.black)
-                          .withOpacity(0.2),
+                      color: theme.colorScheme.onBackground.withOpacity(0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
                 selectedTextStyle: TextStyle(
-                  color: isDark ? Colors.black : Colors.white,
+                  color: theme.scaffoldBackgroundColor,
                   fontWeight: FontWeight.bold,
                 ),
                 defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),

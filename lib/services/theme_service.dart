@@ -2,24 +2,124 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import '../models/app_theme.dart';
 
+class ThemeState {
+  final AppTheme lightTheme;
+  final AppTheme darkTheme;
+  final ThemeMode themeMode;
+
+  ThemeState({
+    required this.lightTheme,
+    required this.darkTheme,
+    required this.themeMode,
+  });
+
+  ThemeState copyWith({
+    AppTheme? lightTheme,
+    AppTheme? darkTheme,
+    ThemeMode? themeMode,
+  }) {
+    return ThemeState(
+      lightTheme: lightTheme ?? this.lightTheme,
+      darkTheme: darkTheme ?? this.darkTheme,
+      themeMode: themeMode ?? this.themeMode,
+    );
+  }
+}
+
 class ThemeService {
   static const String _boxName = 'settings';
-  static const String _themeKey = 'current_theme';
+  static const String _lightThemeKey = 'light_theme';
+  static const String _darkThemeKey = 'dark_theme';
+  static const String _themeModeKey = 'theme_mode_v2';
+  static const String _savedThemesKey = 'saved_themes';
 
-  static final ValueNotifier<AppTheme> themeNotifier = 
-      ValueNotifier<AppTheme>(AppTheme.light());
+  static final ValueNotifier<ThemeState> themeNotifier =
+      ValueNotifier<ThemeState>(ThemeState(
+    lightTheme: AppTheme.light(),
+    darkTheme: AppTheme.dark(),
+    themeMode: ThemeMode.system,
+  ));
+
+  // Expose saved custom themes
+  static final ValueNotifier<List<AppTheme>> savedThemesNotifier =
+      ValueNotifier<List<AppTheme>>([]);
 
   static Future<void> init() async {
-    final box = await Hive.openBox(_boxName);
-    final savedTheme = box.get(_themeKey);
-    if (savedTheme != null) {
-      themeNotifier.value = savedTheme as AppTheme;
+    Box box;
+    try {
+      box = await Hive.openBox(_boxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_boxName);
+      box = await Hive.openBox(_boxName);
+    }
+    
+    // Load active themes
+    final lightTheme = box.get(_lightThemeKey) as AppTheme? ?? AppTheme.light();
+    final darkTheme = box.get(_darkThemeKey) as AppTheme? ?? AppTheme.dark();
+    
+    final modeIndex = box.get(_themeModeKey, defaultValue: ThemeMode.system.index);
+    final themeMode = ThemeMode.values[modeIndex];
+
+    themeNotifier.value = ThemeState(
+      lightTheme: lightTheme,
+      darkTheme: darkTheme,
+      themeMode: themeMode,
+    );
+
+    // Load saved themes
+    final savedList = box.get(_savedThemesKey);
+    if (savedList != null) {
+      savedThemesNotifier.value = List<AppTheme>.from(savedList);
+    } else {
+      // Provide defaults
+      savedThemesNotifier.value = [AppTheme.light(), AppTheme.dark()];
+      await box.put(_savedThemesKey, savedThemesNotifier.value);
     }
   }
 
-  static Future<void> setTheme(AppTheme theme) async {
+  static Future<void> setLightTheme(AppTheme theme) async {
     final box = Hive.box(_boxName);
-    await box.put(_themeKey, theme);
-    themeNotifier.value = theme;
+    await box.put(_lightThemeKey, theme);
+    themeNotifier.value = themeNotifier.value.copyWith(lightTheme: theme);
+  }
+
+  static Future<void> setDarkTheme(AppTheme theme) async {
+    final box = Hive.box(_boxName);
+    await box.put(_darkThemeKey, theme);
+    themeNotifier.value = themeNotifier.value.copyWith(darkTheme: theme);
+  }
+
+  static Future<void> setThemeMode(ThemeMode mode) async {
+    final box = Hive.box(_boxName);
+    await box.put(_themeModeKey, mode.index);
+    themeNotifier.value = themeNotifier.value.copyWith(themeMode: mode);
+  }
+
+  static Future<void> saveCustomTheme(AppTheme theme) async {
+    final box = Hive.box(_boxName);
+    final currentList = List<AppTheme>.from(savedThemesNotifier.value);
+    
+    // Replace if same ID, or add new
+    int existingIdx = currentList.indexWhere((t) => t.id == theme.id);
+    if (existingIdx >= 0) {
+      currentList[existingIdx] = theme;
+    } else {
+      currentList.add(theme);
+    }
+    
+    savedThemesNotifier.value = currentList;
+    await box.put(_savedThemesKey, currentList);
+  }
+  
+  static Future<void> deleteCustomTheme(AppTheme theme) async {
+    // Don't delete defaults
+    if (theme.id == 'default_light' || theme.id == 'default_dark') return;
+    
+    final box = Hive.box(_boxName);
+    final currentList = List<AppTheme>.from(savedThemesNotifier.value);
+    currentList.removeWhere((t) => t.id == theme.id);
+    
+    savedThemesNotifier.value = currentList;
+    await box.put(_savedThemesKey, currentList);
   }
 }

@@ -265,8 +265,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                                     theme.primaryColor,
                                     theme.colorScheme.tertiary,
                                     theme.colorScheme.error,
-                                    Colors.orange,
-                                    Colors.purple,
+                                    theme.colorScheme.secondary,
+                                    theme.primaryColor.withOpacity(0.5),
                                   ];
                                   return PieChartSectionData(
                                     value: e.value.value,

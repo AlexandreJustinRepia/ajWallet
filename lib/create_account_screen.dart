@@ -3,6 +3,7 @@ import 'services/database_service.dart';
 import 'models/account.dart';
 import 'models/wallet.dart';
 import 'pin_setup_screen.dart';
+import 'services/session_service.dart';
 
 class CreateAccountScreen extends StatefulWidget {
   const CreateAccountScreen({super.key});
@@ -57,6 +58,8 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     // 2. Get the saved account to get its key
     final savedAccount = DatabaseService.getLatestAccount();
     if (savedAccount != null) {
+      SessionService.setActiveAccount(savedAccount);
+      
       // 3. Create Default Wallet
       final defaultWallet = Wallet(
         name: 'Cash',

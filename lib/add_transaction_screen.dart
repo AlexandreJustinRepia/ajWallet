@@ -42,6 +42,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         _chargeController.text = tx.charge!.toStringAsFixed(2);
       }
       _isManualDate = true;
+    } else {
+      final wallets = DatabaseService.getWallets(widget.accountKey);
+      try {
+        _selectedWalletKey = wallets.firstWhere((w) => w.name.toLowerCase() == 'cash').key as int;
+      } catch (_) {
+        if (wallets.isNotEmpty) _selectedWalletKey = wallets.first.key as int;
+      }
     }
   }
 
@@ -83,6 +90,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           const SnackBar(content: Text('Please select a destination wallet')),
         );
         return;
+      }
+
+      if (_selectedType == TransactionType.expense || _selectedType == TransactionType.transfer) {
+        final amount = double.parse(_amountController.text);
+        final charge = double.tryParse(_chargeController.text) ?? 0.0;
+        final totalNeeded = amount + charge;
+        
+        final wallets = DatabaseService.getWallets(widget.accountKey);
+        final wallet = wallets.firstWhere((w) => w.key == _selectedWalletKey);
+        
+        double availableBalance = wallet.balance;
+        if (widget.existingTransaction != null) {
+          final tx = widget.existingTransaction!;
+          if (tx.walletKey == _selectedWalletKey && (tx.type == TransactionType.expense || tx.type == TransactionType.transfer)) {
+            availableBalance += tx.amount + (tx.charge ?? 0.0);
+          } else if (tx.toWalletKey == _selectedWalletKey && tx.type == TransactionType.transfer) {
+            availableBalance -= tx.amount;
+          } else if (tx.walletKey == _selectedWalletKey && tx.type == TransactionType.income) {
+            availableBalance -= tx.amount;
+          }
+        }
+        
+        if (availableBalance < totalNeeded) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Insufficient balance in ${wallet.name}')),
+          );
+          return;
+        }
       }
 
       if (widget.existingTransaction != null) {
@@ -201,10 +236,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                 _selectedWalletKey,
                 (val) => setState(() => _selectedWalletKey = val),
               ),
-              const SizedBox(height: 24),
 
               // Destination Wallet (For Transfers)
               if (_selectedType == TransactionType.transfer) ...[
+                Center(
+                  child: IconButton(
+                    icon: Icon(Icons.swap_vert_rounded, color: theme.primaryColor, size: 32),
+                    onPressed: () {
+                      setState(() {
+                        final temp = _selectedWalletKey;
+                        _selectedWalletKey = _selectedToWalletKey;
+                        _selectedToWalletKey = temp;
+                      });
+                    },
+                  ),
+                ),
                 Text('To', style: theme.textTheme.titleMedium),
                 const SizedBox(height: 8),
                 _buildWalletDropdown(
@@ -214,6 +260,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   _selectedToWalletKey,
                   (val) => setState(() => _selectedToWalletKey = val),
                 ),
+                const SizedBox(height: 24),
+              ] else ...[
                 const SizedBox(height: 24),
               ],
 

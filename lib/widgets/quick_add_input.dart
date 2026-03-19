@@ -57,9 +57,9 @@ class _QuickAddInputState extends State<QuickAddInput> {
     int walletKey = wallets.first.key as int;
     int? toWalletKey;
 
+    final allWallets = DatabaseService.getWallets(widget.accountKey);
+
     if (result.type == TransactionType.transfer) {
-      final allWallets = DatabaseService.getWallets(widget.accountKey);
-      
       if (result.fromWallet != null) {
         for (var w in allWallets) {
           if (w.name.toLowerCase() == result.fromWallet!.toLowerCase()) {
@@ -100,6 +100,17 @@ class _QuickAddInputState extends State<QuickAddInput> {
       walletKey: walletKey,
       toWalletKey: toWalletKey,
     );
+
+    if (result.type == TransactionType.expense || result.type == TransactionType.transfer) {
+      final totalNeeded = result.amount;
+      final wallet = allWallets.firstWhere((w) => w.key == walletKey);
+      if (wallet.balance < totalNeeded) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Insufficient balance in ${wallet.name}')));
+        }
+        return;
+      }
+    }
 
     await DatabaseService.saveTransaction(transaction);
     _controller.clear();

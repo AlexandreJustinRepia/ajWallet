@@ -8,6 +8,7 @@ import 'security_settings_screen.dart';
 import 'views/home_view.dart';
 import 'views/activity_view.dart';
 import 'views/wallets_view.dart';
+import 'views/planning_view.dart';
 import 'widgets/ai_assistant_view.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -29,7 +30,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String get _appBarTitle => switch (_selectedIndex) {
     1 => 'Activity',
     2 => 'Wallets',
-    3 => 'Assistant',
+    3 => 'Planning',
+    4 => 'Assistant',
     _ => 'AJWallet',
   };
 
@@ -42,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       HomeView(onRefresh: _refresh),
       ActivityView(onRefresh: _refresh),
       WalletsView(onRefresh: _refresh),
+      PlanningView(onRefresh: _refresh),
       const AIAssistantView(),
     ];
 
@@ -110,6 +113,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_rounded),
             label: 'Wallets',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.track_changes_rounded),
+            label: 'Plan',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_awesome_rounded),

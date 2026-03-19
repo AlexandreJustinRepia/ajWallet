@@ -3,11 +3,17 @@ import '../models/account.dart';
 import '../models/app_theme.dart';
 import '../models/transaction_model.dart';
 import '../models/wallet.dart';
+import '../models/goal.dart';
+import '../models/budget.dart';
+import '../models/debt.dart';
 
 class DatabaseService {
   static const String _boxName = 'accounts';
   static const String _transactionBoxName = 'transactions';
   static const String _walletBoxName = 'wallets';
+  static const String _goalBoxName = 'goals';
+  static const String _budgetBoxName = 'budgets';
+  static const String _debtBoxName = 'debts';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -18,6 +24,9 @@ class DatabaseService {
     if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(TransactionTypeAdapter());
     if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TransactionAdapter());
     if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(WalletAdapter());
+    if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(GoalAdapter());
+    if (!Hive.isAdapterRegistered(6)) Hive.registerAdapter(BudgetAdapter());
+    if (!Hive.isAdapterRegistered(7)) Hive.registerAdapter(DebtAdapter());
     
     try {
       await Hive.openBox<Account>(_boxName);
@@ -39,11 +48,35 @@ class DatabaseService {
       await Hive.deleteBoxFromDisk(_walletBoxName);
       await Hive.openBox<Wallet>(_walletBoxName);
     }
+
+    try {
+      await Hive.openBox<Goal>(_goalBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_goalBoxName);
+      await Hive.openBox<Goal>(_goalBoxName);
+    }
+
+    try {
+      await Hive.openBox<Budget>(_budgetBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_budgetBoxName);
+      await Hive.openBox<Budget>(_budgetBoxName);
+    }
+
+    try {
+      await Hive.openBox<Debt>(_debtBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_debtBoxName);
+      await Hive.openBox<Debt>(_debtBoxName);
+    }
   }
 
   static Box<Account> get _box => Hive.box<Account>(_boxName);
   static Box<Transaction> get _transactionBox => Hive.box<Transaction>(_transactionBoxName);
   static Box<Wallet> get _walletBox => Hive.box<Wallet>(_walletBoxName);
+  static Box<Goal> get _goalBox => Hive.box<Goal>(_goalBoxName);
+  static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
+  static Box<Debt> get _debtBox => Hive.box<Debt>(_debtBoxName);
 
   static Future<void> saveAccount(Account account) async {
     await _box.add(account);
@@ -178,10 +211,72 @@ class DatabaseService {
         .toList();
   }
 
+  // Goal Operations
+  static Future<void> saveGoal(Goal goal) async {
+    await _goalBox.add(goal);
+  }
+
+  static Future<void> updateGoal(Goal goal) async {
+    await goal.save();
+  }
+
+  static Future<void> deleteGoal(Goal goal) async {
+    await goal.delete();
+  }
+
+  static List<Goal> getGoals(int accountKey) {
+    return _goalBox.values.where((g) => g.accountKey == accountKey).toList();
+  }
+
+  // Budget Operations
+  static Future<void> saveBudget(Budget budget) async {
+    await _budgetBox.add(budget);
+  }
+
+  static Future<void> updateBudget(Budget budget) async {
+    await budget.save();
+  }
+
+  static Future<void> deleteBudget(Budget budget) async {
+    await budget.delete();
+  }
+
+  static List<Budget> getBudgets(int accountKey) {
+    return _budgetBox.values.where((b) => b.accountKey == accountKey).toList();
+  }
+
+  static Budget? getBudgetForCategory(int accountKey, String category, int month, int year) {
+    try {
+      return _budgetBox.values.firstWhere((b) => b.accountKey == accountKey && b.category == category && b.month == month && b.year == year);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Debt Operations
+  static Future<void> saveDebt(Debt debt) async {
+    await _debtBox.add(debt);
+  }
+
+  static Future<void> updateDebt(Debt debt) async {
+    await debt.save();
+  }
+
+  static Future<void> deleteDebt(Debt debt) async {
+    await debt.delete();
+  }
+
+  static List<Debt> getDebts(int accountKey) {
+    return _debtBox.values.where((d) => d.accountKey == accountKey).toList();
+  }
+
   static Future<void> wipeAllData() async {
     await _box.clear();
     await _transactionBox.clear();
     await _walletBox.clear();
+    await _goalBox.clear();
+    await _budgetBox.clear();
+    await _debtBox.clear();
   }
 
   static Wallet? getWalletByKey(int key) {

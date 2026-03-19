@@ -7,6 +7,8 @@ import '../widgets/animated_count_text.dart';
 import '../widgets/slide_in_list_item.dart';
 import '../widgets/quick_add_input.dart';
 import '../widgets/transaction_card.dart';
+import '../services/financial_insights_service.dart';
+import 'insight_card.dart';
 import 'dashboard_helpers.dart';
 
 class HomeView extends StatefulWidget {
@@ -35,6 +37,8 @@ class _HomeViewState extends State<HomeView> {
     final double totalBalance = wallets
         .where((w) => _isNetWorthMode || !w.isExcluded)
         .fold(0, (sum, wallet) => sum + wallet.balance);
+
+    final insights = FinancialInsightsService.generateInsights(transactions, totalBalance);
 
     if (totalBalance != _prevBalance) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -67,6 +71,12 @@ class _HomeViewState extends State<HomeView> {
             ),
           ],
           const SizedBox(height: 32),
+          if (insights.isNotEmpty) ...[
+            _buildInsightsHeader(context),
+            const SizedBox(height: 16),
+            _buildInsightsList(context, insights),
+            const SizedBox(height: 32),
+          ],
           _buildRecentActivityHeader(context),
           const SizedBox(height: 16),
           if (transactions.isEmpty)
@@ -74,6 +84,47 @@ class _HomeViewState extends State<HomeView> {
           else
             _buildRecentTransactions(context, transactions),
         ],
+      ),
+    );
+  }
+
+  Widget _buildInsightsHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'INTELLIGENT INSIGHTS',
+          style: theme.textTheme.labelLarge?.copyWith(
+            letterSpacing: 2,
+            fontWeight: FontWeight.w900,
+            fontSize: 10,
+            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+          ),
+        ),
+        Icon(
+          Icons.auto_awesome_rounded,
+          size: 14,
+          color: theme.colorScheme.tertiary,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInsightsList(BuildContext context, List<Insight> insights) {
+    return SizedBox(
+      height: 140,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        itemCount: insights.length > 3 ? 3 : insights.length, // Show top 3
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (context, index) {
+          return SizedBox(
+            width: 280,
+            child: InsightCard(insight: insights[index]),
+          );
+        },
       ),
     );
   }

@@ -5,12 +5,10 @@ import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
 import 'add_wallet_screen.dart';
 import 'security_settings_screen.dart';
-import 'widgets/ai_assistant_view.dart';
 import 'views/home_view.dart';
-import 'views/transactions_view.dart';
-import 'views/calendar_view.dart';
+import 'views/activity_view.dart';
 import 'views/wallets_view.dart';
-import 'views/statistics_view.dart';
+import 'widgets/ai_assistant_view.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -29,11 +27,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ---------------------------------------------------------------------------
 
   String get _appBarTitle => switch (_selectedIndex) {
-    1 => 'Transactions',
-    2 => 'Calendar',
-    3 => 'Wallets',
-    5 => 'Analytics',
-    _ => 'AJ Wallet',
+    1 => 'Activity',
+    2 => 'Wallets',
+    3 => 'Assistant',
+    _ => 'AJWallet',
   };
 
   @override
@@ -43,11 +40,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     final pages = [
       HomeView(onRefresh: _refresh),
-      TransactionsView(onRefresh: _refresh),
-      CalendarView(onRefresh: _refresh),
+      ActivityView(onRefresh: _refresh),
       WalletsView(onRefresh: _refresh),
       const AIAssistantView(),
-      StatisticsView(onRefresh: _refresh),
     ];
 
     return Scaffold(
@@ -78,7 +73,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    final targetScreen = _selectedIndex == 3
+    final targetScreen = _selectedIndex == 2
         ? AddWalletScreen(accountKey: accountKey)
         : AddTransactionScreen(accountKey: accountKey);
 
@@ -106,27 +101,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.grid_view_rounded),
-            label: 'Hub',
+            label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.receipt_long_rounded),
-            label: 'Transactions',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.calendar_today_rounded),
-            label: 'Plan',
+            label: 'Activity',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_rounded),
-            label: 'Wallet',
+            label: 'Wallets',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_awesome_rounded),
-            label: 'AI',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_rounded),
-            label: 'Stats',
+            label: 'Assistant',
           ),
         ],
       ),

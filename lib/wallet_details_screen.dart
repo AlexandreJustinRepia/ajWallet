@@ -74,7 +74,20 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(widget.wallet.name),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(widget.wallet.name),
+            if (_isExcluded) ...[
+              const SizedBox(width: 8),
+              Icon(
+                Icons.visibility_off_rounded,
+                size: 16,
+                color: theme.colorScheme.error.withOpacity(0.7),
+              ),
+            ],
+          ],
+        ),
         actions: [
           IconButton(
             icon: Icon(

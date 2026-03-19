@@ -359,17 +359,26 @@ class _WalletCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      wallet.name,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        decoration:
-                            isExcluded ? TextDecoration.lineThrough : null,
-                        decorationColor: theme.colorScheme.error,
-                        color: isExcluded
-                            ? theme.colorScheme.error.withOpacity(0.7)
-                            : null,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          wallet.name,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: isExcluded
+                                ? theme.colorScheme.error.withOpacity(0.7)
+                                : null,
+                          ),
+                        ),
+                        if (isExcluded) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.visibility_off_rounded,
+                            size: 14,
+                            color: theme.colorScheme.error.withOpacity(0.7),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       isExcluded ? 'Excluded from Liquidity' : wallet.type,
@@ -386,17 +395,15 @@ class _WalletCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '₱${wallet.balance.toStringAsFixed(2)}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: isExcluded
-                          ? theme.colorScheme.error.withOpacity(0.5)
-                          : null,
-                      decoration:
-                          isExcluded ? TextDecoration.lineThrough : null,
+                    Text(
+                      '₱${wallet.balance.toStringAsFixed(2)}',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: isExcluded
+                            ? theme.colorScheme.error.withOpacity(0.5)
+                            : null,
+                      ),
                     ),
-                  ),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 16,

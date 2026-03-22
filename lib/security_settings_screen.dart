@@ -179,15 +179,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         final success = await BackupService.importBackup(pinController.text);
         if (mounted) {
           if (success) {
-            final newAccount = DatabaseService.getLatestAccount();
+            final restoredAccount = DatabaseService.getLatestAccount();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Data restored successfully.')),
             );
             
-            if (newAccount != null) {
+            if (restoredAccount != null) {
               Navigator.pushAndRemoveUntil(
                 context,
-                MaterialPageRoute(builder: (context) => LoginScreen(account: newAccount)),
+                MaterialPageRoute(builder: (context) => LoginScreen(account: restoredAccount)),
                 (route) => false,
               );
             }

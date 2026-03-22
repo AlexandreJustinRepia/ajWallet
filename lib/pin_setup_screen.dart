@@ -59,7 +59,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       return;
     }
 
-    final account = DatabaseService.getLatestAccount();
+    final account = SessionService.activeAccount;
     if (account != null) {
       account.pin = pin;
       account.isBiometricEnabled = _useBiometrics;

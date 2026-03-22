@@ -78,8 +78,8 @@ class DatabaseService {
   static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
   static Box<Debt> get _debtBox => Hive.box<Debt>(_debtBoxName);
 
-  static Future<void> saveAccount(Account account) async {
-    await _box.add(account);
+  static Future<int> saveAccount(Account account) async {
+    return await _box.add(account);
   }
 
   static Future<void> updateAccount(Account account) async {
@@ -109,8 +109,8 @@ class DatabaseService {
   }
 
   // Wallet Operations
-  static Future<void> saveWallet(Wallet wallet) async {
-    await _walletBox.add(wallet);
+  static Future<int> saveWallet(Wallet wallet) async {
+    return await _walletBox.add(wallet);
   }
 
   static Future<void> updateWallet(Wallet wallet) async {
@@ -130,9 +130,10 @@ class DatabaseService {
   }
 
   // Transaction Operations
-  static Future<void> saveTransaction(Transaction transaction) async {
-    await _transactionBox.add(transaction);
+  static Future<int> saveTransaction(Transaction transaction) async {
+    final key = await _transactionBox.add(transaction);
     await _applyTransactionEffect(transaction, isReversing: false);
+    return key;
   }
 
   static Future<void> deleteTransaction(Transaction transaction) async {
@@ -249,8 +250,8 @@ class DatabaseService {
   }
 
   // Goal Operations
-  static Future<void> saveGoal(Goal goal) async {
-    await _goalBox.add(goal);
+  static Future<int> saveGoal(Goal goal) async {
+    return await _goalBox.add(goal);
   }
 
   static Future<void> updateGoal(Goal goal) async {
@@ -266,8 +267,8 @@ class DatabaseService {
   }
 
   // Budget Operations
-  static Future<void> saveBudget(Budget budget) async {
-    await _budgetBox.add(budget);
+  static Future<int> saveBudget(Budget budget) async {
+    return await _budgetBox.add(budget);
   }
 
   static Future<void> updateBudget(Budget budget) async {
@@ -291,8 +292,8 @@ class DatabaseService {
   }
 
   // Debt Operations
-  static Future<void> saveDebt(Debt debt) async {
-    await _debtBox.add(debt);
+  static Future<int> saveDebt(Debt debt) async {
+    return await _debtBox.add(debt);
   }
 
   static Future<void> updateDebt(Debt debt) async {

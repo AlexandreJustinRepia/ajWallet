@@ -53,22 +53,20 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
     // 1. Save Account
     final account = Account(name: name);
-    await DatabaseService.saveAccount(account);
+    final accountKey = await DatabaseService.saveAccount(account);
 
-    // 2. Get the saved account to get its key
-    final savedAccount = DatabaseService.getLatestAccount();
-    if (savedAccount != null) {
-      SessionService.setActiveAccount(savedAccount);
-      
-      // 3. Create Default Wallet
-      final defaultWallet = Wallet(
-        name: 'Cash',
-        balance: balance,
-        type: 'Cash',
-        accountKey: savedAccount.key as int,
-      );
-      await DatabaseService.saveWallet(defaultWallet);
-    }
+    // 2. Set Active Account
+    final savedAccount = DatabaseService.getAccounts().firstWhere((a) => a.key == accountKey);
+    SessionService.setActiveAccount(savedAccount);
+    
+    // 3. Create Default Wallet
+    final defaultWallet = Wallet(
+      name: 'Cash',
+      balance: balance,
+      type: 'Cash',
+      accountKey: accountKey,
+    );
+    await DatabaseService.saveWallet(defaultWallet);
 
     if (mounted) {
       Navigator.pop(context); // Close modal

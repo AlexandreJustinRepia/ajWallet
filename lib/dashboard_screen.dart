@@ -10,6 +10,7 @@ import 'views/activity_view.dart';
 import 'views/wallets_view.dart';
 import 'views/planning_view.dart';
 import 'widgets/ai_assistant_view.dart';
+import 'screens/about_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -166,6 +167,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const PopupMenuDivider(),
           _buildPopupItem(Icons.palette_outlined, 'Theme Settings', 'theme'),
           _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
+          _buildPopupItem(Icons.info_outline_rounded, 'About AJ Wallet', 'about'),
           const PopupMenuDivider(),
           _buildPopupItem(
             Icons.logout_rounded,
@@ -193,6 +195,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
         if (result == true) _refresh();
+      case 'about':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AboutScreen()),
+        );
       case 'logout':
         _showLogoutDialog(context);
     }

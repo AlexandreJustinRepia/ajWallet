@@ -86,8 +86,8 @@ class _BurnRateCard extends StatelessWidget {
       dailyAvg = expenses.fold(0.0, (sum, e) => sum + e.amount) / days;
     }
 
-    final daysRemaining = dailyAvg > 0 ? (balance / dailyAvg).floor() : 0;
-    final status = daysRemaining > 30
+    final daysRemaining = dailyAvg > 0 ? (balance / dailyAvg).floor() : -1;
+    final status = (dailyAvg == 0 || daysRemaining > 30)
         ? 'SURPLUS'
         : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL');
 
@@ -124,7 +124,7 @@ class _BurnRateCard extends StatelessWidget {
             children: [
               _HeroStat(
                 label: 'RUNWAY',
-                value: '$daysRemaining Days',
+                value: daysRemaining == -1 ? '∞ Days' : '$daysRemaining Days',
                 bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
                 textColor: theme.scaffoldBackgroundColor,
               ),

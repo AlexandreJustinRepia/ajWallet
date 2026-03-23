@@ -5,6 +5,7 @@ import 'models/transaction_model.dart';
 import 'services/database_service.dart';
 import 'services/financial_insights_service.dart';
 import 'widgets/transaction_card.dart';
+import 'wallet_form_screen.dart';
 
 class WalletDetailsScreen extends StatefulWidget {
   final Wallet wallet;
@@ -29,6 +30,52 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
     });
     widget.wallet.isExcluded = _isExcluded;
     await DatabaseService.updateWallet(widget.wallet);
+  }
+
+  void _editWallet() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => WalletFormScreen(
+          accountKey: widget.wallet.accountKey,
+          wallet: widget.wallet,
+        ),
+      ),
+    );
+    if (result == true) {
+      setState(() {});
+    }
+  }
+
+  void _confirmDelete() {
+    final theme = Theme.of(context);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Delete Wallet?'),
+        content: const Text(
+          'This will permanently delete this wallet and all its transaction history. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.dividerColor)),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog
+              await DatabaseService.deleteWallet(widget.wallet);
+              if (mounted) {
+                Navigator.pop(context, true); // Go back to wallets list
+              }
+            },
+            child: const Text('Delete', 
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _refresh() => setState(() {});
@@ -89,6 +136,16 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: _editWallet,
+            tooltip: 'Edit Wallet',
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: Colors.red),
+            onPressed: _confirmDelete,
+            tooltip: 'Delete Wallet',
+          ),
           IconButton(
             icon: Icon(
                 _isExcluded ? Icons.visibility_off : Icons.visibility,

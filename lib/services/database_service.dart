@@ -117,6 +117,21 @@ class DatabaseService {
     await wallet.save();
   }
 
+  static Future<void> deleteWallet(Wallet wallet) async {
+    final walletKey = wallet.key as int;
+    // 1. Delete all transactions involving this wallet
+    final transactionsToDelete = _transactionBox.values
+        .where((t) => t.walletKey == walletKey || t.toWalletKey == walletKey)
+        .toList();
+    
+    for (var tx in transactionsToDelete) {
+      await tx.delete();
+    }
+
+    // 2. Delete the wallet itself
+    await wallet.delete();
+  }
+
   static List<Wallet> getWallets(int accountKey) {
     return _walletBox.values.where((w) => w.accountKey == accountKey).toList();
   }

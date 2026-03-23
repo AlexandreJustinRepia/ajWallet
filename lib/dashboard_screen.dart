@@ -3,7 +3,7 @@ import 'services/session_service.dart';
 import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
-import 'add_wallet_screen.dart';
+import 'wallet_form_screen.dart';
 import 'security_settings_screen.dart';
 import 'views/home_view.dart';
 import 'views/activity_view.dart';
@@ -83,7 +83,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     final targetScreen = _selectedIndex == 2
-        ? AddWalletScreen(accountKey: accountKey)
+        ? WalletFormScreen(accountKey: accountKey)
         : AddTransactionScreen(accountKey: accountKey);
 
     final result = await Navigator.push(

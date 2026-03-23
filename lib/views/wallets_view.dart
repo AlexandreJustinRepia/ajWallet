@@ -115,12 +115,11 @@ class _GlobalStatsBanner extends StatelessWidget {
       final days = DateTime.now().difference(firstDate).inDays + 1;
       dailyAvg = expenses.fold(0.0, (s, e) => s + e.amount) / days;
     }
-    final daysRemaining =
-        dailyAvg > 0 ? (totalBalance / dailyAvg).floor() : 0;
-    final status = daysRemaining > 30
+    final daysRemaining = dailyAvg > 0 ? (totalBalance / dailyAvg).floor() : -1;
+    final status = (dailyAvg == 0 || daysRemaining > 30)
         ? 'SURPLUS'
         : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL');
-    final statusColor = daysRemaining > 30
+    final statusColor = (dailyAvg == 0 || daysRemaining > 30)
         ? theme.colorScheme.tertiary
         : (daysRemaining > 7 ? theme.primaryColor : theme.colorScheme.error);
 
@@ -238,7 +237,7 @@ class _GlobalStatsBanner extends StatelessWidget {
                 ),
                 _MiniStat(
                   label: 'RUNWAY',
-                  value: '$daysRemaining days',
+                  value: daysRemaining == -1 ? '∞ days' : '$daysRemaining days',
                   color: theme.primaryColor,
                 ),
               ],

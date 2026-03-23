@@ -3,34 +3,59 @@ import 'services/database_service.dart';
 import 'models/wallet.dart';
 import 'widgets/calculator_input.dart';
 
-class AddWalletScreen extends StatefulWidget {
+class WalletFormScreen extends StatefulWidget {
   final int accountKey;
-  const AddWalletScreen({super.key, required this.accountKey});
+  final Wallet? wallet; // If provided, we are editing
+
+  const WalletFormScreen({
+    super.key, 
+    required this.accountKey, 
+    this.wallet,
+  });
 
   @override
-  State<AddWalletScreen> createState() => _AddWalletScreenState();
+  State<WalletFormScreen> createState() => _WalletFormScreenState();
 }
 
-class _AddWalletScreenState extends State<AddWalletScreen> {
+class _WalletFormScreenState extends State<WalletFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _balanceController = TextEditingController();
-  String _selectedType = 'Wallet';
-  bool _isExcluded = false;
+  late TextEditingController _nameController;
+  late TextEditingController _balanceController;
+  late String _selectedType;
+  late bool _isExcluded;
 
-  final List<String> _walletTypes = ['Wallet', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
+  final List<String> _walletTypes = ['Wallet', 'Cash', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.wallet?.name ?? '');
+    _balanceController = TextEditingController(text: widget.wallet?.balance.toString() ?? '0');
+    _selectedType = widget.wallet?.type ?? 'Wallet';
+    _isExcluded = widget.wallet?.isExcluded ?? false;
+  }
 
   void _saveWallet() async {
     if (_formKey.currentState!.validate()) {
-      final wallet = Wallet(
-        name: _nameController.text,
-        balance: double.parse(_balanceController.text),
-        type: _selectedType,
-        accountKey: widget.accountKey,
-        isExcluded: _isExcluded,
-      );
-
-      await DatabaseService.saveWallet(wallet);
+      if (widget.wallet != null) {
+        // Edit existing
+        widget.wallet!.name = _nameController.text;
+        widget.wallet!.balance = double.parse(_balanceController.text);
+        widget.wallet!.type = _selectedType;
+        widget.wallet!.isExcluded = _isExcluded;
+        await DatabaseService.updateWallet(widget.wallet!);
+      } else {
+        // Create new
+        final wallet = Wallet(
+          name: _nameController.text,
+          balance: double.parse(_balanceController.text),
+          type: _selectedType,
+          accountKey: widget.accountKey,
+          isExcluded: _isExcluded,
+        );
+        await DatabaseService.saveWallet(wallet);
+      }
+      
       if (mounted) {
         Navigator.pop(context, true);
       }
@@ -47,9 +72,11 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEditing = widget.wallet != null;
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Add Wallet')),
+      appBar: AppBar(title: Text(isEditing ? 'Edit Wallet' : 'Add Wallet')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(
@@ -69,10 +96,10 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
               ),
               const SizedBox(height: 24),
               CalculatorInputField(
-                label: 'Initial Balance',
+                label: 'Balance',
                 initialValue: double.tryParse(_balanceController.text),
                 onChanged: (val) => setState(() => _balanceController.text = val.toStringAsFixed(2)),
-                validator: (value) => value == null || value == '0' || value.isEmpty ? 'Enter balance' : null,
+                validator: (value) => value == null || value.isEmpty ? 'Enter balance' : null,
               ),
               const SizedBox(height: 24),
               Text('Type', style: theme.textTheme.titleMedium),
@@ -104,7 +131,7 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
                     backgroundColor: theme.primaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  child: Text('Save Wallet', style: TextStyle(color: theme.scaffoldBackgroundColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                  child: Text(isEditing ? 'Update Wallet' : 'Save Wallet', style: TextStyle(color: theme.scaffoldBackgroundColor, fontSize: 18, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],

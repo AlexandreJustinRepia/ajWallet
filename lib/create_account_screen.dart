@@ -38,6 +38,15 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
 
   void _finishSetup() async {
     final name = _accountNameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter an account name'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     final balance = double.tryParse(_balanceController.text) ?? 0.0;
 
     // 1. Save Account

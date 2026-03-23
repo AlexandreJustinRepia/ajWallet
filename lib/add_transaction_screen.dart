@@ -7,6 +7,7 @@ import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/debt.dart';
 import 'package:hive/hive.dart';
+import 'widgets/calculator_input.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -322,28 +323,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ],
 
               // Amount Field
-              Text('Amount', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixText: "₱ ",
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
+              CalculatorInputField(
+                label: 'Amount',
+                initialValue: double.tryParse(_amountController.text),
+                onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
                 validator: (value) {
-                  if (value == null || value.isEmpty) return 'Enter amount';
-                  if (double.tryParse(value) == null)
-                    return 'Enter a valid number';
+                  if (value == null || value == '0' || value.isEmpty) return 'Enter amount';
                   return null;
                 },
               ),
@@ -351,23 +336,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
               // Charge Field (Optional, for Transfers)
               if (_selectedType == TransactionType.transfer) ...[
-                Text(
-                  'Transfer Charge (Optional)',
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _chargeController,
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                  decoration: InputDecoration(
-                    hintText: '0.00',
-                    prefixText: "₱ ",
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                CalculatorInputField(
+                  label: 'Transfer Charge (Optional)',
+                  initialValue: double.tryParse(_chargeController.text),
+                  onChanged: (val) => setState(() => _chargeController.text = val.toStringAsFixed(2)),
                 ),
                 const SizedBox(height: 24),
               ],

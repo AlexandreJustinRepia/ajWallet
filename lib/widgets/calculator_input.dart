@@ -1,0 +1,346 @@
+import 'package:flutter/material.dart';
+
+class CalculatorInputField extends StatefulWidget {
+  final String label;
+  final String prefix;
+  final double? initialValue;
+  final ValueChanged<double> onChanged;
+  final FormFieldValidator<String>? validator;
+
+  const CalculatorInputField({
+    super.key,
+    required this.label,
+    this.prefix = '₱',
+    this.initialValue,
+    required this.onChanged,
+    this.validator,
+  });
+
+  @override
+  State<CalculatorInputField> createState() => _CalculatorInputFieldState();
+}
+
+class _CalculatorInputFieldState extends State<CalculatorInputField> {
+  late TextEditingController _controller;
+  String _currentExpression = '0';
+
+  @override
+  void initState() {
+    super.initState();
+    _currentExpression = widget.initialValue?.toStringAsFixed(2) ?? '0';
+    if (_currentExpression.endsWith('.00')) {
+      _currentExpression = _currentExpression.substring(0, _currentExpression.length - 3);
+    }
+    _controller = TextEditingController(text: _currentExpression);
+  }
+
+  void _showCalculator() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CalculatorKeyboard(
+        initialValue: _currentExpression,
+        onChanged: (val) {
+          setState(() {
+            _currentExpression = val;
+            _controller.text = val;
+          });
+          // Try to evaluate and notify
+          try {
+            final result = _evaluate(_currentExpression);
+            widget.onChanged(result);
+          } catch (_) {}
+        },
+      ),
+    );
+  }
+
+  double _evaluate(String expression) {
+    try {
+      final match = RegExp(r'([0-9.]+)([+\-*/])([0-9.]+)').firstMatch(expression);
+      if (match == null) return double.tryParse(expression) ?? 0.0;
+
+      final n1 = double.parse(match.group(1)!);
+      final op = match.group(2)!;
+      final n2 = double.parse(match.group(3)!);
+
+      switch (op) {
+        case '+': return n1 + n2;
+        case '-': return n1 - n2;
+        case '*': return n1 * n2;
+        case '/': return n2 != 0 ? n1 / n2 : 0;
+        default: return n1;
+      }
+    } catch (_) {
+      return double.tryParse(expression) ?? 0.0;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(widget.label, style: theme.textTheme.titleMedium),
+        const SizedBox(height: 8),
+        InkWell(
+          onTap: _showCalculator,
+          borderRadius: BorderRadius.circular(12),
+          child: IgnorePointer(
+            child: TextFormField(
+              controller: _controller,
+              decoration: InputDecoration(
+                prefixText: '${widget.prefix} ',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                suffixIcon: Icon(Icons.calculate_outlined, color: theme.primaryColor),
+              ),
+              validator: widget.validator,
+              readOnly: true,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class CalculatorKeyboard extends StatefulWidget {
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  const CalculatorKeyboard({
+    super.key,
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  State<CalculatorKeyboard> createState() => _CalculatorKeyboardState();
+}
+
+class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
+  late String _buffer;
+
+  bool _hasOperator = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _buffer = widget.initialValue == '0' ? '0' : widget.initialValue;
+    _hasOperator = _buffer.contains(RegExp(r'[+\-*/]'));
+  }
+
+  void _onPress(String char) {
+    setState(() {
+      if (char == 'AC') {
+        _buffer = '0';
+        _hasOperator = false;
+      } else if (char == '⌫') {
+        if (_buffer.length > 1) {
+          _buffer = _buffer.substring(0, _buffer.length - 1);
+          _hasOperator = _buffer.contains(RegExp(r'[+\-*/]'));
+        } else {
+          _buffer = '0';
+          _hasOperator = false;
+        }
+      } else if (char == '=') {
+        _buffer = _calculateResult(_buffer);
+        _hasOperator = false;
+      } else if (RegExp(r'[+\-*/]').hasMatch(char)) {
+        if (_buffer == '0') return;
+        // If already has an operator at reaching end, replace it
+        if (RegExp(r'[+\-*/]$').hasMatch(_buffer)) {
+          _buffer = _buffer.substring(0, _buffer.length - 1) + char;
+        } else {
+          // If already has an operator middle, evaluate first
+          if (_hasOperator) {
+            _buffer = _calculateResult(_buffer);
+          }
+          _buffer += char;
+          _hasOperator = true;
+        }
+      } else {
+        // Number or Dot
+        if (_buffer == '0' && char != '.') {
+          _buffer = char;
+        } else {
+          _buffer += char;
+        }
+      }
+    });
+    // If it's just a number, notify parent
+    if (!_hasOperator && !RegExp(r'[+\-*/]$').hasMatch(_buffer)) {
+      widget.onChanged(_buffer);
+    }
+  }
+
+  String _calculateResult(String expression) {
+    try {
+      // Find the first operator
+      final match = RegExp(r'([0-9.]+)([+\-*/])([0-9.]+)').firstMatch(expression);
+      if (match == null) return expression;
+
+      final n1 = double.parse(match.group(1)!);
+      final op = match.group(2)!;
+      final n2 = double.parse(match.group(3)!);
+
+      double res = 0;
+      switch (op) {
+        case '+': res = n1 + n2; break;
+        case '-': res = n1 - n2; break;
+        case '*': res = n1 * n2; break;
+        case '/': res = n2 != 0 ? n1 / n2 : 0; break;
+      }
+      
+      String s = res.toStringAsFixed(2);
+      if (s.endsWith('.00')) s = s.substring(0, s.length - 3);
+      return s;
+    } catch (_) {
+      return expression;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 24),
+            decoration: BoxDecoration(
+              color: theme.dividerColor,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              reverse: true,
+              child: Text(
+                _buffer,
+                style: theme.textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.primaryColor,
+                  fontSize: _buffer.length > 10 ? 28 : 36,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          LayoutBuilder(builder: (context, constraints) {
+            final btnWidth = (constraints.maxWidth - 36) / 4;
+            return Column(
+              children: [
+                _buildRow(['AC', '⌫', '/', '*'], btnWidth),
+                _buildRow(['7', '8', '9', '-'], btnWidth),
+                _buildRow(['4', '5', '6', '+'], btnWidth),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        children: [
+                          _buildRow(['1', '2', '3'], btnWidth),
+                          _buildRow(['0', '.', '='], btnWidth, showThird: true),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: btnWidth,
+                      height: 132,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // Final evaluation before done
+                          final res = _calculateResult(_buffer);
+                          widget.onChanged(res);
+                          Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.primaryColor,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                        child: const Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_rounded, size: 32),
+                            SizedBox(height: 4),
+                            Text('DONE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRow(List<String> keys, double width, {bool showThird = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: keys.map((key) {
+          final isNumber = RegExp(r'[0-9.]').hasMatch(key);
+          final isOperator = RegExp(r'[+\-*/=]').hasMatch(key);
+          final isAC = key == 'AC' || key == '⌫';
+
+          return SizedBox(
+            width: width,
+            height: 60,
+            child: ElevatedButton(
+              onPressed: () => _onPress(key),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isNumber
+                    ? Theme.of(context).cardColor
+                    : (isAC ? Colors.orange.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1)),
+                foregroundColor: isNumber
+                    ? Theme.of(context).textTheme.bodyLarge?.color
+                    : (isAC ? Colors.orange : Theme.of(context).primaryColor),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: isNumber ? BorderSide(color: Theme.of(context).dividerColor, width: 0.5) : BorderSide.none,
+                ),
+              ),
+              child: Text(
+                key,
+                style: TextStyle(
+                  fontSize: isOperator ? 24 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+}

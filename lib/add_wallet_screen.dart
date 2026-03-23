@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'models/wallet.dart';
+import 'widgets/calculator_input.dart';
 
 class AddWalletScreen extends StatefulWidget {
   final int accountKey;
@@ -67,17 +68,11 @@ class _AddWalletScreenState extends State<AddWalletScreen> {
                 validator: (value) => value == null || value.isEmpty ? 'Enter name' : null,
               ),
               const SizedBox(height: 24),
-              Text('Initial Balance', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _balanceController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixText: '₱ ',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                validator: (value) => value == null || value.isEmpty ? 'Enter balance' : null,
+              CalculatorInputField(
+                label: 'Initial Balance',
+                initialValue: double.tryParse(_balanceController.text),
+                onChanged: (val) => setState(() => _balanceController.text = val.toStringAsFixed(2)),
+                validator: (value) => value == null || value == '0' || value.isEmpty ? 'Enter balance' : null,
               ),
               const SizedBox(height: 24),
               Text('Type', style: theme.textTheme.titleMedium),

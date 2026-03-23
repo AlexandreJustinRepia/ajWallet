@@ -30,4 +30,26 @@ class Goal extends HiveObject {
     this.targetDate,
     required this.colorValue,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'targetAmount': targetAmount,
+      'savedAmount': savedAmount,
+      'accountKey': accountKey,
+      'targetDate': targetDate?.toIso8601String(),
+      'colorValue': colorValue,
+    };
+  }
+
+  factory Goal.fromMap(Map<String, dynamic> map) {
+    return Goal(
+      name: map['name'],
+      targetAmount: map['targetAmount'],
+      savedAmount: map['savedAmount'],
+      accountKey: map['accountKey'],
+      targetDate: map['targetDate'] != null ? DateTime.parse(map['targetDate']) : null,
+      colorValue: map['colorValue'],
+    );
+  }
 }

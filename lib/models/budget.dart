@@ -26,4 +26,24 @@ class Budget extends HiveObject {
     required this.month,
     required this.year,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'category': category,
+      'amountLimit': amountLimit,
+      'accountKey': accountKey,
+      'month': month,
+      'year': year,
+    };
+  }
+
+  factory Budget.fromMap(Map<String, dynamic> map) {
+    return Budget(
+      category: map['category'],
+      amountLimit: map['amountLimit'],
+      accountKey: map['accountKey'],
+      month: map['month'],
+      year: map['year'],
+    );
+  }
 }

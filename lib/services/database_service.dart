@@ -130,9 +130,11 @@ class DatabaseService {
   }
 
   // Transaction Operations
-  static Future<int> saveTransaction(Transaction transaction) async {
+  static Future<int> saveTransaction(Transaction transaction, {bool silent = false}) async {
     final key = await _transactionBox.add(transaction);
-    await _applyTransactionEffect(transaction, isReversing: false);
+    if (!silent) {
+      await _applyTransactionEffect(transaction, isReversing: false);
+    }
     return key;
   }
 
@@ -266,6 +268,10 @@ class DatabaseService {
     return _goalBox.values.where((g) => g.accountKey == accountKey).toList();
   }
 
+  static List<Goal> getAllGoals() {
+    return _goalBox.values.toList();
+  }
+
   // Budget Operations
   static Future<int> saveBudget(Budget budget) async {
     return await _budgetBox.add(budget);
@@ -281,6 +287,10 @@ class DatabaseService {
 
   static List<Budget> getBudgets(int accountKey) {
     return _budgetBox.values.where((b) => b.accountKey == accountKey).toList();
+  }
+
+  static List<Budget> getAllBudgets() {
+    return _budgetBox.values.toList();
   }
 
   static Budget? getBudgetForCategory(int accountKey, String category, int month, int year) {
@@ -306,6 +316,10 @@ class DatabaseService {
 
   static List<Debt> getDebts(int accountKey) {
     return _debtBox.values.where((d) => d.accountKey == accountKey).toList();
+  }
+
+  static List<Debt> getAllDebts() {
+    return _debtBox.values.toList();
   }
 
   static Future<void> wipeAllData() async {

@@ -30,4 +30,26 @@ class Debt extends HiveObject {
     required this.isOwedToMe,
     this.dueDate,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'personName': personName,
+      'totalAmount': totalAmount,
+      'paidAmount': paidAmount,
+      'accountKey': accountKey,
+      'isOwedToMe': isOwedToMe,
+      'dueDate': dueDate?.toIso8601String(),
+    };
+  }
+
+  factory Debt.fromMap(Map<String, dynamic> map) {
+    return Debt(
+      personName: map['personName'],
+      totalAmount: map['totalAmount'],
+      paidAmount: map['paidAmount'],
+      accountKey: map['accountKey'],
+      isOwedToMe: map['isOwedToMe'],
+      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
+    );
+  }
 }

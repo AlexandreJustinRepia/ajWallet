@@ -169,7 +169,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
     if (pinConfirmed == true && pinController.text.length == 4) {
       if (isExport) {
-        final success = await BackupService.exportBackup(pinController.text);
+        final success = await BackupService.exportBackup(pinController.text, _account.key as int);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(success ? 'Backup exported successfully' : 'Export failed')),

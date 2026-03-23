@@ -3,29 +3,39 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 import '../models/account.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
+import '../models/goal.dart';
+import '../models/budget.dart';
+import '../models/debt.dart';
 import 'database_service.dart';
 
 class BackupService {
   static const String _magicHeader = "AJ_BACKUP_V1";
 
-  static Future<bool> exportBackup(String pin) async {
+  static Future<bool> exportBackup(String pin, int accountKey) async {
     try {
-      // 1. Collect Data
-      final accounts = DatabaseService.getAccounts();
-      final wallets = DatabaseService.getAllWallets();
-      final transactions = DatabaseService.getAllTransactions();
+      // 1. Collect Data (Filtered by accountKey)
+      final account = DatabaseService.getAccounts().firstWhere((a) => a.key == accountKey);
+      final wallets = DatabaseService.getWallets(accountKey);
+      final transactions = DatabaseService.getTransactions(accountKey);
+      final goals = DatabaseService.getGoals(accountKey);
+      final budgets = DatabaseService.getBudgets(accountKey);
+      final debts = DatabaseService.getDebts(accountKey);
 
       final dataMap = {
         'header': _magicHeader,
         'timestamp': DateTime.now().toIso8601String(),
-        'accounts': accounts.map((e) => e.toMap()).toList(),
-        'wallets': wallets.map((e) => e.toMap()).toList(),
-        'transactions': transactions.map((e) => e.toMap()).toList(),
+        'accounts': [
+          {...account.toMap(), 'key': account.key as int}
+        ],
+        'wallets': wallets.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'transactions': transactions.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'goals': goals.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'budgets': budgets.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'debts': debts.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
       };
 
       final jsonString = jsonEncode(dataMap);
@@ -46,22 +56,29 @@ class BackupService {
 
       // 4. Save File
       String? outputPath;
+      final fileName = 'aj_wallet_backup_${DateTime.now().millisecondsSinceEpoch}.ajb';
+
       if (Platform.isAndroid || Platform.isIOS) {
-        final directory = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-        outputPath = '${directory.path}/aj_wallet_backup_${DateTime.now().millisecondsSinceEpoch}.ajb';
-        final file = File(outputPath);
-        await file.writeAsBytes(combined.toBytes());
+        final selectedDirectory = await FilePicker.platform.getDirectoryPath(
+          dialogTitle: 'Select Export Directory',
+        );
+        
+        if (selectedDirectory != null) {
+          outputPath = '$selectedDirectory/$fileName';
+          final file = File(outputPath);
+          await file.writeAsBytes(combined.toBytes());
+        }
       } else {
-        // Desktop/Web fallback or use file_picker to save
-        final result = await FilePicker.platform.saveFile(
+        // Desktop/Web fallback
+        outputPath = await FilePicker.platform.saveFile(
           dialogTitle: 'Save Backup',
-          fileName: 'aj_wallet_backup.ajb',
+          fileName: fileName,
           type: FileType.any,
         );
-        if (result != null) {
-          final file = File(result);
+        
+        if (outputPath != null) {
+          final file = File(outputPath);
           await file.writeAsBytes(combined.toBytes());
-          outputPath = result;
         }
       }
 
@@ -91,29 +108,103 @@ class BackupService {
       final encryptedBytes = Uint8List.sublistView(bytes, 32);
 
       // 3. Decrypt
-      final key = _deriveKey(pin, salt);
-      final encrypter = enc.Encrypter(enc.AES(key));
+      final keyDerivation = _deriveKey(pin, salt);
+      final encrypter = enc.Encrypter(enc.AES(keyDerivation));
       
       final decrypted = encrypter.decrypt(enc.Encrypted(encryptedBytes), iv: iv);
       final dataMap = jsonDecode(decrypted);
 
       if (dataMap['header'] != _magicHeader) return false;
 
-      // 4. Restore Data
-      await DatabaseService.wipeAllData();
+      // 4. Restore Data (Merge Strategy with Key Mapping)
+      final accountKeyMap = <int, int>{};
+      final walletKeyMap = <int, int>{};
+      final goalKeyMap = <int, int>{};
+      final budgetKeyMap = <int, int>{};
+      final debtKeyMap = <int, int>{};
 
+      // Stage 1: Accounts
       final accountsJson = dataMap['accounts'] as List;
+      for (var aMap in accountsJson) {
+        final oldKey = aMap['key'] as int;
+        final account = Account.fromMap(aMap);
+        final newKey = await DatabaseService.saveAccount(account);
+        accountKeyMap[oldKey] = newKey;
+      }
+      
+      // Stage 2: Wallets
       final walletsJson = dataMap['wallets'] as List;
+      for (var wMap in walletsJson) {
+        final oldKey = wMap['key'] as int;
+        final oldAccountKey = wMap['accountKey'] as int;
+        final wallet = Wallet.fromMap(wMap);
+        wallet.accountKey = accountKeyMap[oldAccountKey]!;
+        final newKey = await DatabaseService.saveWallet(wallet);
+        walletKeyMap[oldKey] = newKey;
+      }
+      
+      // Stage 3: Goals, Budgets, Debts
+      if (dataMap.containsKey('goals')) {
+        final goalsJson = dataMap['goals'] as List;
+        for (var gMap in goalsJson) {
+          final oldKey = gMap['key'] as int;
+          final oldAccountKey = gMap['accountKey'] as int;
+          final goal = Goal.fromMap(gMap);
+          goal.accountKey = accountKeyMap[oldAccountKey]!;
+          final newKey = await DatabaseService.saveGoal(goal);
+          goalKeyMap[oldKey] = newKey;
+        }
+      }
+      
+      if (dataMap.containsKey('budgets')) {
+        final budgetsJson = dataMap['budgets'] as List;
+        for (var bMap in budgetsJson) {
+          final oldKey = bMap['key'] as int;
+          final oldAccountKey = bMap['accountKey'] as int;
+          final budget = Budget.fromMap(bMap);
+          budget.accountKey = accountKeyMap[oldAccountKey]!;
+          final newKey = await DatabaseService.saveBudget(budget);
+          budgetKeyMap[oldKey] = newKey;
+        }
+      }
+      
+      if (dataMap.containsKey('debts')) {
+        final debtsJson = dataMap['debts'] as List;
+        for (var dMap in debtsJson) {
+          final oldKey = dMap['key'] as int;
+          final oldAccountKey = dMap['accountKey'] as int;
+          final debt = Debt.fromMap(dMap);
+          debt.accountKey = accountKeyMap[oldAccountKey]!;
+          final newKey = await DatabaseService.saveDebt(debt);
+          debtKeyMap[oldKey] = newKey;
+        }
+      }
+      
+      // Stage 4: Transactions
       final transactionsJson = dataMap['transactions'] as List;
-
-      for (var a in accountsJson) {
-        await DatabaseService.saveAccount(Account.fromMap(a));
-      }
-      for (var w in walletsJson) {
-        await DatabaseService.saveWallet(Wallet.fromMap(w));
-      }
-      for (var t in transactionsJson) {
-        await DatabaseService.saveTransaction(Transaction.fromMap(t));
+      for (var tMap in transactionsJson) {
+        final oldAccountKey = tMap['accountKey'] as int;
+        final transaction = Transaction.fromMap(tMap);
+        transaction.accountKey = accountKeyMap[oldAccountKey]!;
+        
+        if (tMap['walletKey'] != null) {
+          transaction.walletKey = walletKeyMap[tMap['walletKey'] as int];
+        }
+        if (tMap['toWalletKey'] != null) {
+          transaction.toWalletKey = walletKeyMap[tMap['toWalletKey'] as int];
+        }
+        if (tMap['goalKey'] != null) {
+          transaction.goalKey = goalKeyMap[tMap['goalKey'] as int];
+        }
+        if (tMap['budgetKey'] != null) {
+          transaction.budgetKey = budgetKeyMap[tMap['budgetKey'] as int];
+        }
+        if (tMap['debtKey'] != null) {
+          transaction.debtKey = debtKeyMap[tMap['debtKey'] as int];
+        }
+        
+        // Save silently to avoid re-applying effects to already correct balances
+        await DatabaseService.saveTransaction(transaction, silent: true);
       }
 
       return true;

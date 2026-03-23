@@ -322,6 +322,53 @@ class DatabaseService {
     return _debtBox.values.toList();
   }
 
+  static Future<void> wipeAccountData(int accountKey) async {
+    // Delete wallets
+    final walletKeys = _walletBox.values
+        .where((w) => w.accountKey == accountKey)
+        .map((w) => w.key)
+        .toList();
+    for (var key in walletKeys) {
+      await _walletBox.delete(key);
+    }
+
+    // Delete transactions
+    final txKeys = _transactionBox.values
+        .where((t) => t.accountKey == accountKey)
+        .map((t) => t.key)
+        .toList();
+    for (var key in txKeys) {
+      await _transactionBox.delete(key);
+    }
+
+    // Delete goals
+    final goalKeys = _goalBox.values
+        .where((g) => g.accountKey == accountKey)
+        .map((g) => g.key)
+        .toList();
+    for (var key in goalKeys) {
+      await _goalBox.delete(key);
+    }
+
+    // Delete budgets
+    final budgetKeys = _budgetBox.values
+        .where((b) => b.accountKey == accountKey)
+        .map((b) => b.key)
+        .toList();
+    for (var key in budgetKeys) {
+      await _budgetBox.delete(key);
+    }
+
+    // Delete debts
+    final debtKeys = _debtBox.values
+        .where((d) => d.accountKey == accountKey)
+        .map((d) => d.key)
+        .toList();
+    for (var key in debtKeys) {
+      await _debtBox.delete(key);
+    }
+  }
+
   static Future<void> wipeAllData() async {
     await _box.clear();
     await _transactionBox.clear();

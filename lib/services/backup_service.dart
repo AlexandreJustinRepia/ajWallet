@@ -115,7 +115,9 @@ class BackupService {
 
       if (dataMap['header'] != _magicHeader) return false;
 
-      // 4. Restore Data (Populate targetAccountKey)
+      // 4. Restore Data (Clean Merge - Wipe account data first)
+      await DatabaseService.wipeAccountData(targetAccountKey);
+      
       final accountKeyMap = <int, int>{};
       final walletKeyMap = <int, int>{};
       final goalKeyMap = <int, int>{};

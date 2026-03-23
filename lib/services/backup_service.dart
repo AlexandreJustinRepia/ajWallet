@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
 import 'package:crypto/crypto.dart';
-import '../models/account.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
 import '../models/goal.dart';
@@ -89,7 +88,7 @@ class BackupService {
     }
   }
 
-  static Future<bool> importBackup(String pin) async {
+  static Future<bool> importBackup(String pin, int targetAccountKey) async {
     try {
       // 1. Pick File
       final result = await FilePicker.platform.pickFiles(
@@ -116,29 +115,36 @@ class BackupService {
 
       if (dataMap['header'] != _magicHeader) return false;
 
-      // 4. Restore Data (Merge Strategy with Key Mapping)
+      // 4. Restore Data (Populate targetAccountKey)
       final accountKeyMap = <int, int>{};
       final walletKeyMap = <int, int>{};
       final goalKeyMap = <int, int>{};
       final budgetKeyMap = <int, int>{};
       final debtKeyMap = <int, int>{};
 
-      // Stage 1: Accounts
+      // Stage 1: Account Mapping & Update
+      final targetAccount = DatabaseService.getAccounts().firstWhere((a) => a.key == targetAccountKey);
       final accountsJson = dataMap['accounts'] as List;
-      for (var aMap in accountsJson) {
+      if (accountsJson.isNotEmpty) {
+        final aMap = accountsJson.first; // Use the first account from backup as the source
         final oldKey = aMap['key'] as int;
-        final account = Account.fromMap(aMap);
-        final newKey = await DatabaseService.saveAccount(account);
-        accountKeyMap[oldKey] = newKey;
+        accountKeyMap[oldKey] = targetAccountKey;
+        
+        // Update current account settings (non-security) - NOT updating name as per user request
+        targetAccount.budget = aMap['budget'] ?? targetAccount.budget;
+        // Biometrics and Lock settings
+        targetAccount.isBiometricEnabled = aMap['isBiometricEnabled'] ?? targetAccount.isBiometricEnabled;
+        targetAccount.autoLockDurationSeconds = aMap['autoLockDurationSeconds'] ?? targetAccount.autoLockDurationSeconds;
+        
+        await targetAccount.save();
       }
       
       // Stage 2: Wallets
       final walletsJson = dataMap['wallets'] as List;
       for (var wMap in walletsJson) {
         final oldKey = wMap['key'] as int;
-        final oldAccountKey = wMap['accountKey'] as int;
         final wallet = Wallet.fromMap(wMap);
-        wallet.accountKey = accountKeyMap[oldAccountKey]!;
+        wallet.accountKey = targetAccountKey;
         final newKey = await DatabaseService.saveWallet(wallet);
         walletKeyMap[oldKey] = newKey;
       }
@@ -148,9 +154,8 @@ class BackupService {
         final goalsJson = dataMap['goals'] as List;
         for (var gMap in goalsJson) {
           final oldKey = gMap['key'] as int;
-          final oldAccountKey = gMap['accountKey'] as int;
           final goal = Goal.fromMap(gMap);
-          goal.accountKey = accountKeyMap[oldAccountKey]!;
+          goal.accountKey = targetAccountKey;
           final newKey = await DatabaseService.saveGoal(goal);
           goalKeyMap[oldKey] = newKey;
         }
@@ -160,9 +165,8 @@ class BackupService {
         final budgetsJson = dataMap['budgets'] as List;
         for (var bMap in budgetsJson) {
           final oldKey = bMap['key'] as int;
-          final oldAccountKey = bMap['accountKey'] as int;
           final budget = Budget.fromMap(bMap);
-          budget.accountKey = accountKeyMap[oldAccountKey]!;
+          budget.accountKey = targetAccountKey;
           final newKey = await DatabaseService.saveBudget(budget);
           budgetKeyMap[oldKey] = newKey;
         }
@@ -172,9 +176,8 @@ class BackupService {
         final debtsJson = dataMap['debts'] as List;
         for (var dMap in debtsJson) {
           final oldKey = dMap['key'] as int;
-          final oldAccountKey = dMap['accountKey'] as int;
           final debt = Debt.fromMap(dMap);
-          debt.accountKey = accountKeyMap[oldAccountKey]!;
+          debt.accountKey = targetAccountKey;
           final newKey = await DatabaseService.saveDebt(debt);
           debtKeyMap[oldKey] = newKey;
         }
@@ -183,9 +186,8 @@ class BackupService {
       // Stage 4: Transactions
       final transactionsJson = dataMap['transactions'] as List;
       for (var tMap in transactionsJson) {
-        final oldAccountKey = tMap['accountKey'] as int;
         final transaction = Transaction.fromMap(tMap);
-        transaction.accountKey = accountKeyMap[oldAccountKey]!;
+        transaction.accountKey = targetAccountKey;
         
         if (tMap['walletKey'] != null) {
           transaction.walletKey = walletKeyMap[tMap['walletKey'] as int];

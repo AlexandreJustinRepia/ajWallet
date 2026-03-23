@@ -3,7 +3,6 @@ import 'services/database_service.dart';
 import 'services/session_service.dart';
 import 'services/backup_service.dart';
 import 'models/account.dart';
-import 'login_screen.dart';
 import 'pin_setup_screen.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
@@ -168,29 +167,39 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     );
 
     if (pinConfirmed == true && pinController.text.length == 4) {
+      final enteredPin = pinController.text;
+
       if (isExport) {
-        final success = await BackupService.exportBackup(pinController.text, _account.key as int);
+        // Verification: If account has a PIN, it must match.
+        if (_account.pin != null && _account.pin != enteredPin) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Incorrect account PIN. Export aborted.')),
+            );
+          }
+          return;
+        }
+
+        final success = await BackupService.exportBackup(enteredPin, _account.key as int);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(success ? 'Backup exported successfully' : 'Export failed')),
           );
         }
       } else {
-        final success = await BackupService.importBackup(pinController.text);
+        // Import into current account
+        final success = await BackupService.importBackup(enteredPin, _account.key as int);
         if (mounted) {
           if (success) {
-            final restoredAccount = DatabaseService.getLatestAccount();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Data restored successfully.')),
+              const SnackBar(content: Text('Data restored successfully into this account.')),
             );
-            
-            if (restoredAccount != null) {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => LoginScreen(account: restoredAccount)),
-                (route) => false,
-              );
-            }
+            // Refresh to show updated data
+            setState(() {
+              _account = SessionService.activeAccount!;
+            });
+            // Signal success to parent for full refresh
+            if (mounted) Navigator.pop(context, true);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Import failed. Check your PIN or file integrity.')),

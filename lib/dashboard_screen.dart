@@ -55,7 +55,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         automaticallyImplyLeading: false,
         actions: [_buildProfileMenu(context, theme)],
       ),
-      body: pages[_selectedIndex],
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _refresh();
+          await Future.delayed(const Duration(milliseconds: 500));
+        },
+        child: pages[_selectedIndex],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _onFabPressed(context, accountKey),
         child: const Icon(Icons.add_rounded, size: 28),
@@ -172,7 +178,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  void _onMenuSelected(BuildContext context, String value) {
+  void _onMenuSelected(BuildContext context, String value) async {
     switch (value) {
       case 'theme':
         Navigator.push(
@@ -180,12 +186,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           MaterialPageRoute(builder: (context) => const ThemePickerScreen()),
         );
       case 'security':
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => const SecuritySettingsScreen(),
           ),
         );
+        if (result == true) _refresh();
       case 'logout':
         _showLogoutDialog(context);
     }

@@ -42,15 +42,15 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
       builder: (context) => CalculatorKeyboard(
         initialValue: _currentExpression,
         onChanged: (val) {
+          final result = _evaluate(val);
           setState(() {
             _currentExpression = val;
-            _controller.text = val;
+            _controller.text = result.toStringAsFixed(2);
+            if (_controller.text.endsWith('.00')) {
+              _controller.text = _controller.text.substring(0, _controller.text.length - 3);
+            }
           });
-          // Try to evaluate and notify
-          try {
-            final result = _evaluate(_currentExpression);
-            widget.onChanged(result);
-          } catch (_) {}
+          widget.onChanged(result);
         },
       ),
     );
@@ -58,20 +58,23 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
 
   double _evaluate(String expression) {
     try {
-      final match = RegExp(r'([0-9.]+)([+\-*/])([0-9.]+)').firstMatch(expression);
-      if (match == null) return double.tryParse(expression) ?? 0.0;
-
-      final n1 = double.parse(match.group(1)!);
-      final op = match.group(2)!;
-      final n2 = double.parse(match.group(3)!);
-
-      switch (op) {
-        case '+': return n1 + n2;
-        case '-': return n1 - n2;
-        case '*': return n1 * n2;
-        case '/': return n2 != 0 ? n1 / n2 : 0;
-        default: return n1;
+      final tokens = RegExp(r'([0-9.]+)|([+\-*/])').allMatches(expression).map((m) => m.group(0)!).toList();
+      if (tokens.isEmpty) return 0.0;
+      
+      double res = double.tryParse(tokens[0]) ?? 0;
+      for (int i = 1; i < tokens.length; i += 2) {
+        if (i + 1 >= tokens.length) break;
+        final op = tokens[i];
+        final val = double.tryParse(tokens[i+1]) ?? 0;
+        
+        switch (op) {
+          case '+': res += val; break;
+          case '-': res -= val; break;
+          case '*': res *= val; break;
+          case '/': res = val != 0 ? res / val : 0; break;
+        }
       }
+      return res;
     } catch (_) {
       return double.tryParse(expression) ?? 0.0;
     }
@@ -150,7 +153,7 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
         _buffer = _calculateResult(_buffer);
         _hasOperator = false;
       } else if (RegExp(r'[+\-*/]').hasMatch(char)) {
-        if (_buffer == '0') return;
+        if (_buffer == '0' || _buffer == '0.0' || _buffer == '0.00') return;
         // If already has an operator at reaching end, replace it
         if (RegExp(r'[+\-*/]$').hasMatch(_buffer)) {
           _buffer = _buffer.substring(0, _buffer.length - 1) + char;
@@ -164,7 +167,8 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
         }
       } else {
         // Number or Dot
-        if (_buffer == '0' && char != '.') {
+        final isZero = _buffer == '0' || _buffer == '0.0' || _buffer == '0.00';
+        if (isZero && char != '.') {
           _buffer = char;
         } else {
           _buffer += char;
@@ -179,22 +183,25 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
 
   String _calculateResult(String expression) {
     try {
-      // Find the first operator
-      final match = RegExp(r'([0-9.]+)([+\-*/])([0-9.]+)').firstMatch(expression);
-      if (match == null) return expression;
-
-      final n1 = double.parse(match.group(1)!);
-      final op = match.group(2)!;
-      final n2 = double.parse(match.group(3)!);
-
-      double res = 0;
-      switch (op) {
-        case '+': res = n1 + n2; break;
-        case '-': res = n1 - n2; break;
-        case '*': res = n1 * n2; break;
-        case '/': res = n2 != 0 ? n1 / n2 : 0; break;
-      }
+      // Very basic iterative evaluator
+      // 1. Separate tokens
+      final tokens = RegExp(r'([0-9.]+)|([+\-*/])').allMatches(expression).map((m) => m.group(0)!).toList();
+      if (tokens.isEmpty) return expression;
       
+      double res = double.tryParse(tokens[0]) ?? 0;
+      for (int i = 1; i < tokens.length; i += 2) {
+        if (i + 1 >= tokens.length) break;
+        final op = tokens[i];
+        final val = double.tryParse(tokens[i+1]) ?? 0;
+        
+        switch (op) {
+          case '+': res += val; break;
+          case '-': res -= val; break;
+          case '*': res *= val; break;
+          case '/': res = val != 0 ? res / val : 0; break;
+        }
+      }
+
       String s = res.toStringAsFixed(2);
       if (s.endsWith('.00')) s = s.substring(0, s.length - 3);
       return s;
@@ -230,19 +237,32 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.05),
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.primaryColor.withOpacity(0.3), width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.primaryColor.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               reverse: true,
-              child: Text(
-                _buffer,
-                style: theme.textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: theme.primaryColor,
-                  fontSize: _buffer.length > 10 ? 28 : 36,
-                ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Text(
+                    _buffer,
+                    style: theme.textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: theme.primaryColor,
+                      fontSize: _buffer.length > 10 ? 28 : 36,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

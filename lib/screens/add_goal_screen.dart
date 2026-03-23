@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/goal.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
+import '../widgets/calculator_input.dart';
 
 class AddGoalScreen extends StatefulWidget {
   final int accountKey;
@@ -87,20 +88,12 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                 validator: (val) => val == null || val.isEmpty ? 'Enter a name' : null,
               ),
               const SizedBox(height: 24),
-              Text('Target Amount', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _targetController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixText: "₱ ",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              CalculatorInputField(
+                label: 'Target Amount',
+                initialValue: double.tryParse(_targetController.text),
+                onChanged: (val) => setState(() => _targetController.text = val.toStringAsFixed(2)),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Enter amount';
-                  if (double.tryParse(val) == null) return 'Invalid amount';
+                  if (val == null || val == '0' || val.isEmpty) return 'Enter amount';
                   return null;
                 },
               ),

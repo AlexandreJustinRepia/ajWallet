@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/debt.dart';
+import '../widgets/calculator_input.dart';
 
 class AddDebtScreen extends StatefulWidget {
   final int accountKey;
@@ -120,20 +121,12 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                 validator: (val) => val == null || val.isEmpty ? 'Enter a name' : null,
               ),
               const SizedBox(height: 24),
-              Text('Total Amount', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixText: "₱ ",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              CalculatorInputField(
+                label: 'Total Amount',
+                initialValue: double.tryParse(_amountController.text),
+                onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Enter amount';
-                  if (double.tryParse(val) == null) return 'Invalid amount';
+                  if (val == null || val == '0' || val.isEmpty) return 'Enter amount';
                   return null;
                 },
               ),

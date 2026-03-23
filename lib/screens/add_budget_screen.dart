@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../models/budget.dart';
+import '../widgets/calculator_input.dart';
 
 class AddBudgetScreen extends StatefulWidget {
   final int accountKey;
@@ -74,20 +75,12 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              Text('Monthly Limit', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _amountController,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '0.00',
-                  prefixText: "₱ ",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
+              CalculatorInputField(
+                label: 'Monthly Limit',
+                initialValue: double.tryParse(_amountController.text),
+                onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Enter limit';
-                  if (double.tryParse(val) == null) return 'Invalid amount';
+                  if (val == null || val == '0' || val.isEmpty) return 'Enter limit';
                   return null;
                 },
               ),

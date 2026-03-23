@@ -18,10 +18,11 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   late Animation<double> _fadeAnimation;
 
   final List<String> _suggestions = [
-    "How much did I spend this week?",
-    "What is my biggest expense?",
-    "How long will my money last?",
-    "Show unusual transactions",
+    "How much did I earn this month?",
+    "Show my debt status",
+    "How is my savings goal going?",
+    "Give me financial advice",
+    "What is my savings rate?",
   ];
 
   @override
@@ -58,8 +59,18 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     final account = SessionService.activeAccount;
     if (account == null) return;
 
-    final transactions = DatabaseService.getTransactions(account.key as int);
-    final response = AIAssistantService.processQuery(query, transactions, account.budget);
+    final accountKey = account.key as int;
+    final transactions = DatabaseService.getTransactions(accountKey);
+    final goals = DatabaseService.getGoals(accountKey);
+    final debts = DatabaseService.getDebts(accountKey);
+
+    final response = AIAssistantService.processQuery(
+      query: query,
+      transactions: transactions,
+      balance: account.budget,
+      goals: goals,
+      debts: debts,
+    );
 
     if (mounted) {
       setState(() {

@@ -62,4 +62,10 @@ AJ Wallet is a professional, minimalist offline budget application built with Fl
 *(Add your screenshots here later)*
 
 ---
+## 📜 License
+
+Copyright © 2026 **Alexandre Justin Repia**. All rights reserved.
+
+This project and its source code are proprietary. Unauthorized use, reproduction, or distribution is strictly prohibited.
+
 Built with ❤️ for privacy-conscious budgeters.

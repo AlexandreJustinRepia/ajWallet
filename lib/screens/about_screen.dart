@@ -87,6 +87,20 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
 
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 32),
+            const Text(
+              'Legal & Copyright',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'This application and its source code are the exclusive property of Alexandre Justin Repia. All rights reserved. Unauthorized copying, modification, or distribution is strictly prohibited.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey, height: 1.5),
+            ),
+
             const SizedBox(height: 60),
 
             // Footer

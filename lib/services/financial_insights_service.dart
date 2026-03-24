@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/transaction_model.dart';
+import '../models/budget.dart';
 
 class Insight {
   final String message;
@@ -208,11 +209,91 @@ class FinancialInsightsService {
   }
 
   static List<String> getRecurringCategories(List<Transaction> expenses) {
+    if (expenses.isEmpty) return [];
     final categoryCounts = <String, int>{};
     for (var tx in expenses) {
       categoryCounts[tx.category] = (categoryCounts[tx.category] ?? 0) + 1;
     }
-    // Categories appearing more than 3 times are considered potential recurring
     return categoryCounts.entries.where((e) => e.value >= 3).map((e) => e.key).toList();
+  }
+
+  static List<Map<String, dynamic>> detectSubscriptions(List<Transaction> expenses) {
+    final groups = <String, List<Transaction>>{};
+    for (var tx in expenses) {
+      final key = '${tx.category}_${tx.amount.toStringAsFixed(0)}';
+      groups.putIfAbsent(key, () => []).add(tx);
+    }
+
+    final subscriptions = <Map<String, dynamic>>[];
+    for (var transactions in groups.values) {
+      if (transactions.length < 2) continue;
+      transactions.sort((a, b) => a.date.compareTo(b.date));
+      
+      int monthlyCount = 0;
+      for (int i = 0; i < transactions.length - 1; i++) {
+        final diff = transactions[i+1].date.difference(transactions[i].date).inDays;
+        if (diff >= 25 && diff <= 35) monthlyCount++;
+      }
+
+      if (monthlyCount >= 1) {
+        subscriptions.add({
+          'name': transactions.first.title,
+          'amount': transactions.first.amount,
+          'category': transactions.first.category,
+          'confidence': monthlyCount >= 2 ? 'high' : 'medium',
+        });
+      }
+    }
+    return subscriptions;
+  }
+
+  static Map<String, dynamic> projectCashflow(List<Transaction> expenses, double balance, List<Budget> budgets) {
+    if (expenses.isEmpty) return {'days': -1};
+
+    final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    final historyDays = DateTime.now().difference(firstDate).inDays + 1;
+    final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    final avgDaily = historyDays >= 3 ? totalExpense / historyDays : 0.0;
+
+    if (avgDaily <= 0) return {'days': -1};
+
+    final now = DateTime.now();
+    double remainingBudgeted = 0;
+    for (var budget in budgets.where((b) => b.month == now.month && b.year == now.year)) {
+      final spent = expenses.where((e) => e.category == budget.category && e.date.month == now.month).fold(0.0, (sum, e) => sum + e.amount);
+      if (budget.amountLimit > spent) remainingBudgeted += (budget.amountLimit - spent);
+    }
+
+    final simpleDays = (balance / avgDaily).floor();
+    if (remainingBudgeted > balance) {
+      return {'days': (balance / avgDaily).floor(), 'isRisky': true, 'warning': 'Your committed budgets exceed your current balance.'};
+    }
+
+    return {'days': simpleDays, 'isRisky': simpleDays < 10, 'remainingBudgeted': remainingBudgeted};
+  }
+
+  static double getTrendDirection(List<Transaction> expenses) {
+    final now = DateTime.now();
+    final thisWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    final lastWeekStart = thisWeekStart.subtract(const Duration(days: 7));
+    double thisWeekTotal = expenses.where((tx) => tx.date.isAfter(thisWeekStart)).fold(0.0, (sum, tx) => sum + tx.amount);
+    double lastWeekTotal = expenses.where((tx) => tx.date.isAfter(lastWeekStart) && tx.date.isBefore(thisWeekStart)).fold(0.0, (sum, tx) => sum + tx.amount);
+    if (lastWeekTotal == 0) return 0.0;
+    return ((thisWeekTotal - lastWeekTotal) / lastWeekTotal) * 100;
+  }
+
+  static Map<int, double> getDailyAveragesByDayOfWeek(List<Transaction> expenses) {
+    if (expenses.isEmpty) return {};
+    final dayTotals = <int, double>{};
+    final dayCounts = <int, Set<String>>{};
+    for (var tx in expenses) {
+      final dow = tx.date.weekday;
+      final dateStr = '${tx.date.year}-${tx.date.month}-${tx.date.day}';
+      dayTotals[dow] = (dayTotals[dow] ?? 0.0) + tx.amount;
+      dayCounts.putIfAbsent(dow, () => {}).add(dateStr);
+    }
+    final avgs = <int, double>{};
+    for (var dow in dayTotals.keys) avgs[dow] = dayTotals[dow]! / dayCounts[dow]!.length;
+    return avgs;
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/transaction_model.dart';
 import '../models/goal.dart';
 import '../models/debt.dart';
+import '../models/budget.dart';
 import 'financial_insights_service.dart';
 
 enum AIIntent {
@@ -16,7 +17,23 @@ enum AIIntent {
   debtStatus,
   goalProgress,
   financialAdvice,
+  subscriptions,
   unknown
+}
+
+enum AIActionType {
+  createGoal,
+  setLimit,
+  viewTransactions,
+  manageSubscription
+}
+
+class AIAction {
+  final String label;
+  final AIActionType type;
+  final dynamic payload;
+
+  AIAction({required this.label, required this.type, this.payload});
 }
 
 class AIResponse {
@@ -24,12 +41,14 @@ class AIResponse {
   final String insight;
   final AIIntent intent;
   final bool isPositive;
+  final List<AIAction>? actions;
 
   AIResponse({
     required this.result,
     required this.insight,
     required this.intent,
     this.isPositive = true,
+    this.actions,
   });
 }
 
@@ -40,10 +59,12 @@ class AIAssistantService {
     required double balance,
     List<Goal>? goals,
     List<Debt>? debts,
+    List<Budget>? budgets,
   }) {
     final lowerQuery = query.toLowerCase();
     final expenses = transactions.where((t) => t.type == TransactionType.expense).toList();
     final income = transactions.where((t) => t.type == TransactionType.income).toList();
+    final allBudgets = budgets ?? [];
 
     // 1. Detect Intent
     final intent = _detectIntent(lowerQuery);
@@ -52,13 +73,15 @@ class AIAssistantService {
 
     switch (intent) {
       case AIIntent.runway:
-        return _processRunway(expenses, balance);
+        return _processRunway(expenses, balance, allBudgets);
       case AIIntent.largestExpense:
         return _processLargest(expenses, range);
       case AIIntent.anomalies:
         return _processAnomalies(expenses);
       case AIIntent.recurring:
         return _processRecurring(expenses);
+      case AIIntent.subscriptions:
+        return _processSubscriptions(expenses);
       case AIIntent.incomeTotal:
         return _processIncome(income, range, timeframe);
       case AIIntent.spendingTotal:
@@ -67,11 +90,11 @@ class AIAssistantService {
       case AIIntent.savingsRate:
         return _processSavingsRate(expenses, income, range);
       case AIIntent.goalProgress:
-        return _processGoals(goals ?? []);
+        return _processGoals(goals ?? [], income, expenses);
       case AIIntent.debtStatus:
         return _processDebts(debts ?? []);
       case AIIntent.financialAdvice:
-        return _processAdvice(expenses, income, balance);
+        return _processAdvice(expenses, income, balance, allBudgets);
       case AIIntent.unknown:
         return AIResponse(
           result: "I'm not quite sure how to analyze that yet.",
@@ -90,6 +113,7 @@ class AIAssistantService {
     if (query.contains('income') || query.contains('salary') || query.contains('earn') || query.contains('received')) return AIIntent.incomeTotal;
     if (query.contains('save') || query.contains('saving') || query.contains('savings rate')) return query.contains('goal') ? AIIntent.goalProgress : AIIntent.savingsRate;
     if (query.contains('goal') || query.contains('target')) return AIIntent.goalProgress;
+    if (query.contains('subscription') || query.contains('netflix') || query.contains('spotify') || query.contains('monthly bill')) return AIIntent.subscriptions;
     if (query.contains('debt') || query.contains('owe') || query.contains('borrow') || query.contains('lent')) return AIIntent.debtStatus;
     if (query.contains('advice') || query.contains('tip') || query.contains('help') || query.contains('improve')) return AIIntent.financialAdvice;
     if (query.contains('spent') || query.contains('spending') || query.contains('total') || query.contains('cost')) return AIIntent.spendingTotal;
@@ -135,29 +159,35 @@ class AIAssistantService {
     }
   }
 
-  static AIResponse _processRunway(List<Transaction> expenses, double balance) {
-    final firstDate = expenses.isEmpty ? DateTime.now() : expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
-    final days = DateTime.now().difference(firstDate).inDays + 1;
-    final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
-    final avgDaily = days >= 3 ? totalExpense / days : 0.0;
+  static AIResponse _processRunway(List<Transaction> expenses, double balance, List<Budget> budgets) {
+    final projection = FinancialInsightsService.projectCashflow(expenses, balance, budgets);
+    final daysRemaining = projection['days'] as int;
 
-    if (avgDaily <= 0) {
+    if (daysRemaining <= 0) {
       return AIResponse(
-        result: "Insufficient data",
-        insight: "I need at least 3 days of transactions to project your runway.",
+        result: "Critical Balance",
+        insight: "Your balance is extremely low relative to your spending history.",
         intent: AIIntent.runway,
         isPositive: false,
       );
     }
 
-    final daysRemaining = (balance / avgDaily).floor();
+    String insight = "Based on your current burn rate, your balance is healthy.";
+    bool isPositive = true;
+
+    if (daysRemaining < 7) {
+      insight = "Critical: You might run out of money in $daysRemaining days if spending continues.";
+      isPositive = false;
+    } else if (projection['isRisky'] == true) {
+      insight = projection['warning'] ?? "Your upcoming budgets exceed your current balance.";
+      isPositive = false;
+    }
+
     return AIResponse(
       result: "$daysRemaining Days",
-      insight: daysRemaining < 7 
-          ? "Your balance is depleting faster than usual. Consider pacing your outflows." 
-          : "Based on your current burn rate, your balance is healthy.",
+      insight: insight,
       intent: AIIntent.runway,
-      isPositive: daysRemaining >= 7,
+      isPositive: isPositive,
     );
   }
 
@@ -216,6 +246,29 @@ class AIAssistantService {
       insight: "You spend frequently on ${categories.first}. This appears to be a recurring pattern.",
       intent: AIIntent.recurring,
       isPositive: false,
+    );
+  }
+
+  static AIResponse _processSubscriptions(List<Transaction> expenses) {
+    final subs = FinancialInsightsService.detectSubscriptions(expenses);
+    if (subs.isEmpty) {
+      return AIResponse(
+        result: "No subscriptions",
+        insight: "I haven't detected any monthly recurring subscription patterns in your ledger.",
+        intent: AIIntent.subscriptions,
+        isPositive: true,
+      );
+    }
+
+    final first = subs.first;
+    return AIResponse(
+      result: "${subs.length} Subscriptions",
+      insight: "Detected ${first['name']} (₱${first['amount'].toStringAsFixed(0)}) as a monthly recurring expense.",
+      intent: AIIntent.subscriptions,
+      isPositive: false,
+      actions: [
+        AIAction(label: "View All", type: AIActionType.viewTransactions, payload: {'category': first['category']}),
+      ],
     );
   }
 
@@ -289,24 +342,36 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _processGoals(List<Goal> goals) {
+  static AIResponse _processGoals(List<Goal> goals, List<Transaction> income, List<Transaction> expenses) {
     if (goals.isEmpty) {
       return AIResponse(
         result: "No active goals",
         insight: "You haven't set any savings goals yet. Setting one can help you stay focused!",
         intent: AIIntent.goalProgress,
         isPositive: false,
+        actions: [AIAction(label: "Create Goal", type: AIActionType.createGoal)],
       );
     }
 
-    final completed = goals.where((g) => g.savedAmount >= g.targetAmount).length;
     final onTrack = goals.firstWhere((g) => g.savedAmount < g.targetAmount, orElse: () => goals.first);
+    final percent = (onTrack.savedAmount / onTrack.targetAmount * 100).toStringAsFixed(0);
+    
+    // Calculate time to reach
+    final lastMonth = DateTime.now().subtract(const Duration(days: 30));
+    final monthlyIncome = income.where((e) => e.date.isAfter(lastMonth)).fold(0.0, (sum, e) => sum + e.amount);
+    final monthlyExpense = expenses.where((e) => e.date.isAfter(lastMonth)).fold(0.0, (sum, e) => sum + e.amount);
+    final monthlySavings = monthlyIncome - monthlyExpense;
+
+    String prediction = "";
+    if (monthlySavings > 0) {
+      final remaining = onTrack.targetAmount - onTrack.savedAmount;
+      final months = (remaining / monthlySavings).toStringAsFixed(1);
+      prediction = "\n\nAt your current savings rate, you'll reach this in $months months.";
+    }
 
     return AIResponse(
-      result: "${goals.length} Goals",
-      insight: completed > 0 
-          ? "You've completed $completed goals! '${onTrack.name}' is currently at ${(onTrack.savedAmount / onTrack.targetAmount * 100).toStringAsFixed(0)}%." 
-          : "Your goal '${onTrack.name}' is ${(onTrack.savedAmount / onTrack.targetAmount * 100).toStringAsFixed(0)}% complete.",
+      result: "$percent% Complete",
+      insight: "Your goal '${onTrack.name}' is $percent% complete.$prediction",
       intent: AIIntent.goalProgress,
       isPositive: true,
     );
@@ -335,12 +400,26 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _processAdvice(List<Transaction> expenses, List<Transaction> income, double balance) {
+  static AIResponse _processAdvice(List<Transaction> expenses, List<Transaction> income, double balance, List<Budget> budgets) {
     if (expenses.isEmpty) {
       return AIResponse(
         result: "Keep going!",
         insight: "Start tracking your expenses to get personalized financial advice.",
         intent: AIIntent.financialAdvice,
+      );
+    }
+
+    final dailyAvgs = FinancialInsightsService.getDailyAveragesByDayOfWeek(expenses);
+    final combinedWeekdays = (dailyAvgs[1] ?? 0 + (dailyAvgs[2] ?? 0) + (dailyAvgs[3] ?? 0) + (dailyAvgs[4] ?? 0)) / 4;
+    final fridaySpend = dailyAvgs[5] ?? 0;
+
+    if (fridaySpend > (combinedWeekdays * 1.5) && fridaySpend > 0) {
+      return AIResponse(
+        result: "Friday Spikes",
+        insight: "You tend to spend ${((fridaySpend/combinedWeekdays - 1) * 100).toStringAsFixed(0)}% more on Fridays. Consider a weekend budget cap?",
+        intent: AIIntent.financialAdvice,
+        isPositive: false,
+        actions: [AIAction(label: "Set Weekend Cap", type: AIActionType.setLimit)],
       );
     }
 
@@ -350,8 +429,6 @@ class AIAssistantService {
     String tip = "Your biggest expense category is ${topCat.first.key}. Try to see if you can find alternatives there.";
     if (balance < 1000) {
       tip = "Your balance is getting low. It might be a good time to review non-essential expenses.";
-    } else if (topCat.first.key.toLowerCase() == 'food') {
-      tip = "Dining out seems to be a major expense. Meal prepping could save you a significant amount each month.";
     }
 
     return AIResponse(

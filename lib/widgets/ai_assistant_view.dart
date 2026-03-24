@@ -63,6 +63,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     final transactions = DatabaseService.getTransactions(accountKey);
     final goals = DatabaseService.getGoals(accountKey);
     final debts = DatabaseService.getDebts(accountKey);
+    final budgets = DatabaseService.getBudgets(accountKey);
 
     final response = AIAssistantService.processQuery(
       query: query,
@@ -70,6 +71,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       balance: account.budget,
       goals: goals,
       debts: debts,
+      budgets: budgets,
     );
 
     if (mounted) {
@@ -78,6 +80,24 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         _isProcessing = false;
       });
       _animationController.forward(from: 0);
+    }
+  }
+
+  void _handleAction(AIAction action) {
+    switch (action.type) {
+      case AIActionType.createGoal:
+        // Navigator.push(context, MaterialPageRoute(builder: (context) => const GoalFormScreen()));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label} (Not implemented yet - would open Goal Form)')));
+        break;
+      case AIActionType.setLimit:
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label} (Not implemented yet - would open Budget Form)')));
+        break;
+      case AIActionType.viewTransactions:
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label} (Filtering results...)')));
+        break;
+      case AIActionType.manageSubscription:
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label}')));
+        break;
     }
   }
 
@@ -277,6 +297,29 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
               ),
             ],
           ),
+          if (_response!.actions != null && _response!.actions!.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: _response!.actions!.map((action) {
+                return ElevatedButton(
+                  onPressed: () => _handleAction(action),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: color.withOpacity(0.1),
+                    foregroundColor: color,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: BorderSide(color: color.withOpacity(0.3)),
+                    ),
+                  ),
+                  child: Text(action.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );

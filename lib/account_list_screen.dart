@@ -180,6 +180,10 @@ class _AccountListScreenState extends State<AccountListScreen> {
                                 ),
                               ),
                               IconButton(
+                                icon: Icon(Icons.edit_outlined, color: hintColor),
+                                onPressed: () => _showEditAccountDialog(account),
+                              ),
+                              IconButton(
                                 icon: Icon(Icons.delete_outline, color: hintColor),
                                 onPressed: () => _confirmDelete(account),
                               ),
@@ -207,6 +211,58 @@ class _AccountListScreenState extends State<AccountListScreen> {
         backgroundColor: theme.primaryColor,
         icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
         label: Text('Add Account', style: TextStyle(color: theme.colorScheme.onPrimary)),
+      ),
+    );
+  }
+
+  void _showEditAccountDialog(Account account) {
+    final theme = Theme.of(context);
+    final controller = TextEditingController(text: account.name);
+    final _editFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Edit Account Name'),
+        content: Form(
+          key: _editFormKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            decoration: InputDecoration(
+              labelText: 'Account Name',
+              hintText: 'e.g. My Savings',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (_editFormKey.currentState!.validate()) {
+                account.name = controller.text.trim();
+                await DatabaseService.updateAccount(account);
+                if (mounted) {
+                  Navigator.pop(context);
+                  _loadAccounts();
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              foregroundColor: theme.colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Save Changes'),
+          ),
+        ],
       ),
     );
   }

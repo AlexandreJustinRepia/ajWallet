@@ -4,7 +4,6 @@ import '../services/session_service.dart';
 import '../services/ai_assistant_service.dart';
 import '../services/achievement_service.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import '../models/debt.dart';
 
 class AIAssistantView extends StatefulWidget {
   const AIAssistantView({super.key});
@@ -204,12 +203,27 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.help_outline, size: 18, color: Colors.grey),
-                      onPressed: () => setState(() => _showTutorial = true),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
+                        InkWell(
+                          onTap: () => setState(() => _showTutorial = true),
+                          borderRadius: BorderRadius.circular(20),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.help_outline, size: 14, color: theme.primaryColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Help',
+                                  style: TextStyle(fontSize: 10, color: theme.primaryColor, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                   ],
                 ),
                 const Text(
@@ -323,7 +337,14 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+        border: Border.all(color: theme.primaryColor.withOpacity(0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: theme.primaryColor.withOpacity(0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -351,7 +372,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
               onPressed: _dismissTutorial,
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text('Get Started'),

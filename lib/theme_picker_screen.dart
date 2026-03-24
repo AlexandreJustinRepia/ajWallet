@@ -55,6 +55,23 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     });
   }
 
+  void _applyTheme(AppTheme theme) {
+    if (theme.isDark) {
+      ThemeService.setDarkTheme(theme);
+    } else {
+      ThemeService.setLightTheme(theme);
+    }
+    _loadFromState(theme);
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Applied "${theme.name}" as ${theme.isDark ? 'Dark' : 'Light'} Palette'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+
   void _pickColor(String title, Color current, ValueChanged<Color> onSelected) {
     showDialog(
       context: context,
@@ -88,7 +105,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       cardColor: _card.value,
       incomeColor: _income.value,
       expenseColor: _expense.value,
-      name: overrideName ?? 'Custom Settings',
+      name: overrideName ?? 'Custom Lab Look',
     );
   }
 
@@ -97,10 +114,10 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     final name = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Save Theme'),
+        title: const Text('Save Local Preset'),
         content: TextField(
           controller: controller,
-          decoration: const InputDecoration(hintText: 'Theme Name (e.g., Cyberpunk)'),
+          decoration: const InputDecoration(hintText: 'Theme Name (e.g., Midnight Blue)'),
           autofocus: true,
         ),
         actions: [
@@ -113,9 +130,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     if (name != null && name.trim().isNotEmpty) {
       final newTheme = _getCurrentThemeObj(overrideId: const Uuid().v4(), overrideName: name.trim());
       await ThemeService.saveCustomTheme(newTheme);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Theme "$name" saved!')));
-      }
+      _applyTheme(newTheme);
     }
   }
 
@@ -126,94 +141,164 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     return Theme(
       data: themeData,
       child: Scaffold(
+        backgroundColor: themeData.scaffoldBackgroundColor,
         appBar: AppBar(
           title: const Text('Theme Settings'),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(60),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: SegmentedButton<ThemeMode>(
-                segments: const [
-                  ButtonSegment(value: ThemeMode.system, label: Text('System')),
-                  ButtonSegment(value: ThemeMode.light, label: Text('Light')),
-                  ButtonSegment(value: ThemeMode.dark, label: Text('Dark')),
-                ],
-                selected: {ThemeService.themeNotifier.value.themeMode},
-                onSelectionChanged: (set) {
-                  final newMode = set.first;
-                  ThemeService.setThemeMode(newMode);
-                  _loadActiveTheme();
-                },
-              ),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          foregroundColor: themeData.textTheme.bodyLarge?.color,
+        ),
+        body: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+          physics: const BouncingScrollPhysics(),
+          children: [
+            _buildSectionHeader('DISPLAY MODE', Icons.brightness_6_rounded),
+            const SizedBox(height: 16),
+            _buildModeSwitcher(themeData),
+            
+            const SizedBox(height: 40),
+            _buildSectionHeader('PRESET PALETTES', Icons.palette_rounded),
+            const SizedBox(height: 16),
+            _buildPresetsGrid(context),
+
+            const SizedBox(height: 40),
+            _buildSectionHeader('LAB PREVIEW', Icons.remove_red_eye_rounded),
+            const SizedBox(height: 16),
+            _buildPreviewCard(themeData),
+
+            const SizedBox(height: 40),
+            _buildAdvancedSection(themeData),
+            const SizedBox(height: 60),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: Colors.grey),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+            letterSpacing: 2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModeSwitcher(ThemeData themeData) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: themeData.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: themeData.dividerColor),
+      ),
+      child: ValueListenableBuilder<ThemeState>(
+        valueListenable: ThemeService.themeNotifier,
+        builder: (context, state, _) {
+          return Row(
+            children: [
+              _modeButton('System', ThemeMode.system, state.themeMode, themeData),
+              _modeButton('Light', ThemeMode.light, state.themeMode, themeData),
+              _modeButton('Dark', ThemeMode.dark, state.themeMode, themeData),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _modeButton(String label, ThemeMode mode, ThemeMode current, ThemeData theme) {
+    final isSelected = mode == current;
+    return Expanded(
+      child: InkWell(
+        onTap: () {
+          ThemeService.setThemeMode(mode);
+          _loadActiveTheme();
+        },
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? theme.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: isSelected ? Colors.white : Colors.grey,
             ),
           ),
         ),
-        body: CustomScrollView(
-          physics: const BouncingScrollPhysics(),
-          slivers: [
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SAVED PRESETS', style: themeData.textTheme.labelLarge?.copyWith(letterSpacing: 1.5)),
-                    const SizedBox(height: 16),
-                    _buildPresetsList(context),
-                    const SizedBox(height: 32),
+      ),
+    );
+  }
 
-                    Text('CUSTOMIZE', style: themeData.textTheme.labelLarge?.copyWith(letterSpacing: 1.5)),
-                    const SizedBox(height: 16),
-                    _colorTile('Primary Color', _primary, (c) => setState(() => _primary = c)),
-                    _colorTile('Background Color', _background, (c) => setState(() => _background = c)),
-                    _colorTile('Text Color', _text, (c) => setState(() => _text = c)),
-                    _colorTile('Card Color', _card, (c) => setState(() => _card = c)),
-                    const Divider(height: 32),
-                    _colorTile('Income / Success', _income, (c) => setState(() => _income = c)),
-                    _colorTile('Expense / Error', _expense, (c) => setState(() => _expense = c)),
-                    
-                    const SizedBox(height: 32),
-                    Text('LIVE PREVIEW', style: themeData.textTheme.labelLarge?.copyWith(letterSpacing: 1.5)),
-                    const SizedBox(height: 16),
-                    _buildPreviewCard(themeData),
-                    const SizedBox(height: 40),
+  Widget _buildPresetsGrid(BuildContext context) {
+    return ValueListenableBuilder<List<AppTheme>>(
+      valueListenable: ThemeService.savedThemesNotifier,
+      builder: (context, themes, _) {
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: themes.map((t) => _buildPresetItem(t)).toList(),
+        );
+      },
+    );
+  }
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton.icon(
-                            onPressed: _saveAsNewTheme,
-                            icon: const Icon(Icons.save),
-                            label: const Text('Save Preset'),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: themeData.colorScheme.primary,
-                              foregroundColor: themeData.colorScheme.onPrimary,
-                            ),
-                            onPressed: () {
-                              final current = _getCurrentThemeObj();
-                              if (current.isDark) {
-                                ThemeService.setDarkTheme(current);
-                              } else {
-                                ThemeService.setLightTheme(current);
-                              }
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Applied as ${current.isDark ? 'Dark' : 'Light'} Theme')),
-                              );
-                            },
-                            icon: const Icon(Icons.check),
-                            label: const Text('Apply Global'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+  Widget _buildPresetItem(AppTheme t) {
+    return InkWell(
+      onTap: () => _applyTheme(t),
+      onLongPress: () {
+        if (t.id != 'default_light' && t.id != 'default_dark') {
+          _showDeleteDialog(t);
+        }
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: (MediaQuery.of(context).size.width - 60) / 2,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Color(t.cardColor),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Color(t.textColor).withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _miniDot(Color(t.primaryColor)),
+                const SizedBox(width: 8),
+                _miniDot(Color(t.backgroundColor)),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              t.name,
+              style: TextStyle(color: Color(t.textColor), fontSize: 13, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Text(
+              t.isDark ? 'Dark Palette' : 'Light Palette',
+              style: TextStyle(color: Color(t.textColor).withOpacity(0.5), fontSize: 10),
             ),
           ],
         ),
@@ -221,99 +306,86 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  Widget _buildPresetsList(BuildContext context) {
-    return ValueListenableBuilder<List<AppTheme>>(
-      valueListenable: ThemeService.savedThemesNotifier,
-      builder: (context, themes, _) {
-        return SizedBox(
-          height: 90,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            physics: const BouncingScrollPhysics(),
-            itemCount: themes.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              final t = themes[index];
-              return InkWell(
-                onTap: () => _loadFromState(t),
-                onLongPress: () {
-                  if (t.id != 'default_light' && t.id != 'default_dark') {
-                    showDialog(
-                      context: context,
-                      builder: (c) => AlertDialog(
-                        title: const Text('Delete Preset?'),
-                        content: Text('Remove "${t.name}"?'),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
-                          TextButton(
-                            onPressed: () {
-                              ThemeService.deleteCustomTheme(t);
-                              Navigator.pop(c);
-                            },
-                            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                },
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  width: 100,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(t.cardColor),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Color(t.textColor).withOpacity(0.1)),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _miniDot(Color(t.primaryColor)),
-                          const SizedBox(width: 4),
-                          _miniDot(Color(t.backgroundColor)),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        t.name,
-                        style: TextStyle(color: Color(t.textColor), fontSize: 10, fontWeight: FontWeight.bold),
-                        textAlign: TextAlign.center,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              );
+  void _showDeleteDialog(AppTheme t) {
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text('Delete Preset?'),
+        content: Text('Remove "${t.name}"?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              ThemeService.deleteCustomTheme(t);
+              Navigator.pop(c);
             },
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
   Widget _miniDot(Color c) {
     return Container(
-      width: 16, height: 16,
-      decoration: BoxDecoration(color: c, shape: BoxShape.circle, border: Border.all(color: Colors.grey.withOpacity(0.5))),
+      width: 20, height: 20,
+      decoration: BoxDecoration(
+        color: c, 
+        shape: BoxShape.circle, 
+        border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1.5)
+      ),
+    );
+  }
+
+  Widget _buildAdvancedSection(ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.cardColor.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: ExpansionTile(
+        title: const Text('Advanced Custom Lab', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        subtitle: const Text('Manually tweak every color', style: TextStyle(fontSize: 10, color: Colors.grey)),
+        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+        children: [
+          _colorTile('Primary', _primary, (c) => setState(() => _primary = c)),
+          _colorTile('Background', _background, (c) => setState(() => _background = c)),
+          _colorTile('Text', _text, (c) => setState(() => _text = c)),
+          _colorTile('Card', _card, (c) => setState(() => _card = c)),
+          const Divider(height: 24),
+          _colorTile('Income', _income, (c) => setState(() => _income = c)),
+          _colorTile('Expense', _expense, (c) => setState(() => _expense = c)),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _saveAsNewTheme,
+              icon: const Icon(Icons.add_task),
+              label: const Text('Save as New Preset'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _colorTile(String title, Color color, ValueChanged<Color> onTap) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(title, style: const TextStyle(fontSize: 14)),
       trailing: Container(
-        width: 32,
-        height: 32,
+        width: 28, height: 28,
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.withOpacity(0.3), width: 2),
+          border: Border.all(color: Colors.grey.withOpacity(0.3)),
         ),
       ),
       onTap: () => _pickColor(title, color, onTap),
@@ -322,17 +394,13 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
 
   Widget _buildPreviewCard(ThemeData t) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: t.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: t.dividerColor),
+        border: Border.all(color: t.dividerColor, width: 1.5),
         boxShadow: [
-          BoxShadow(
-            color: t.colorScheme.primary.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          )
+          BoxShadow(color: t.primaryColor.withOpacity(0.05), blurRadius: 30, offset: const Offset(0, 15)),
         ],
       ),
       child: Column(
@@ -341,59 +409,53 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Total Balance', style: t.textTheme.labelLarge),
-              Icon(Icons.more_horiz, color: t.textTheme.labelLarge?.color),
+              Text('Available Balance', style: t.textTheme.labelLarge?.copyWith(letterSpacing: 1)),
+              Icon(Icons.shield_moon_outlined, color: t.primaryColor, size: 20),
             ],
           ),
           const SizedBox(height: 8),
-          Text('\$12,450.00', style: t.textTheme.headlineMedium),
-          const SizedBox(height: 16),
+          Text('\$12,450.00', style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 24),
           Row(
             children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: t.colorScheme.tertiary.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Row(
-                    children: [
-                      Icon(Icons.arrow_downward, color: t.colorScheme.tertiary, size: 16),
-                      const SizedBox(width: 8),
-                      Text('Income', style: TextStyle(color: t.colorScheme.tertiary, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
+              _previewChip('Income', t.colorScheme.tertiary, Icons.add, t),
               const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(color: t.colorScheme.error.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
-                  child: Row(
-                    children: [
-                      Icon(Icons.arrow_upward, color: t.colorScheme.error, size: 16),
-                      const SizedBox(width: 8),
-                      Text('Expense', style: TextStyle(color: t.colorScheme.error, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ),
+              _previewChip('Spent', t.colorScheme.error, Icons.remove, t),
             ],
           ),
-          const SizedBox(height: 24),
-          SizedBox(
+          const SizedBox(height: 32),
+          Container(
             width: double.infinity,
-            height: 48,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: t.colorScheme.primary,
-                foregroundColor: t.colorScheme.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              onPressed: () {},
-              child: const Text('Add Transaction'),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+            decoration: BoxDecoration(
+              color: t.primaryColor,
+              borderRadius: BorderRadius.circular(14),
             ),
-          )
+            child: const Center(
+              child: Text('Simulated Action', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _previewChip(String label, Color color, IconData icon, ThemeData t) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+          ],
+        ),
       ),
     );
   }

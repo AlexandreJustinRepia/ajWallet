@@ -29,7 +29,10 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
     super.initState();
     _currentExpression = widget.initialValue?.toStringAsFixed(2) ?? '0';
     if (_currentExpression.endsWith('.00')) {
-      _currentExpression = _currentExpression.substring(0, _currentExpression.length - 3);
+      _currentExpression = _currentExpression.substring(
+        0,
+        _currentExpression.length - 3,
+      );
     }
     _controller = TextEditingController(text: _currentExpression);
   }
@@ -47,7 +50,10 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
             _currentExpression = val;
             _controller.text = result.toStringAsFixed(2);
             if (_controller.text.endsWith('.00')) {
-              _controller.text = _controller.text.substring(0, _controller.text.length - 3);
+              _controller.text = _controller.text.substring(
+                0,
+                _controller.text.length - 3,
+              );
             }
           });
           widget.onChanged(result);
@@ -58,20 +64,30 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
 
   double _evaluate(String expression) {
     try {
-      final tokens = RegExp(r'([0-9.]+)|([+\-*/])').allMatches(expression).map((m) => m.group(0)!).toList();
+      final tokens = RegExp(
+        r'([0-9.]+)|([+\-*/])',
+      ).allMatches(expression).map((m) => m.group(0)!).toList();
       if (tokens.isEmpty) return 0.0;
-      
+
       double res = double.tryParse(tokens[0]) ?? 0;
       for (int i = 1; i < tokens.length; i += 2) {
         if (i + 1 >= tokens.length) break;
         final op = tokens[i];
-        final val = double.tryParse(tokens[i+1]) ?? 0;
-        
+        final val = double.tryParse(tokens[i + 1]) ?? 0;
+
         switch (op) {
-          case '+': res += val; break;
-          case '-': res -= val; break;
-          case '*': res *= val; break;
-          case '/': res = val != 0 ? res / val : 0; break;
+          case '+':
+            res += val;
+            break;
+          case '-':
+            res -= val;
+            break;
+          case '*':
+            res *= val;
+            break;
+          case '/':
+            res = val != 0 ? res / val : 0;
+            break;
         }
       }
       return res;
@@ -96,8 +112,54 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
               controller: _controller,
               decoration: InputDecoration(
                 prefixText: '${widget.prefix} ',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                suffixIcon: Icon(Icons.calculate_outlined, color: theme.primaryColor),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: theme.dividerColor, width: 0.5),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: theme.dividerColor, width: 0.5),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide(color: theme.primaryColor, width: 1.5),
+                ),
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.calculate_outlined,
+                              size: 16,
+                              color: theme.primaryColor,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Calc',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: theme.primaryColor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
               validator: widget.validator,
               readOnly: true,
@@ -185,20 +247,30 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
     try {
       // Very basic iterative evaluator
       // 1. Separate tokens
-      final tokens = RegExp(r'([0-9.]+)|([+\-*/])').allMatches(expression).map((m) => m.group(0)!).toList();
+      final tokens = RegExp(
+        r'([0-9.]+)|([+\-*/])',
+      ).allMatches(expression).map((m) => m.group(0)!).toList();
       if (tokens.isEmpty) return expression;
-      
+
       double res = double.tryParse(tokens[0]) ?? 0;
       for (int i = 1; i < tokens.length; i += 2) {
         if (i + 1 >= tokens.length) break;
         final op = tokens[i];
-        final val = double.tryParse(tokens[i+1]) ?? 0;
-        
+        final val = double.tryParse(tokens[i + 1]) ?? 0;
+
         switch (op) {
-          case '+': res += val; break;
-          case '-': res -= val; break;
-          case '*': res *= val; break;
-          case '/': res = val != 0 ? res / val : 0; break;
+          case '+':
+            res += val;
+            break;
+          case '-':
+            res -= val;
+            break;
+          case '*':
+            res *= val;
+            break;
+          case '/':
+            res = val != 0 ? res / val : 0;
+            break;
         }
       }
 
@@ -239,7 +311,10 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
             decoration: BoxDecoration(
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.primaryColor.withOpacity(0.3), width: 2),
+              border: Border.all(
+                color: theme.primaryColor.withOpacity(0.3),
+                width: 2,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: theme.primaryColor.withOpacity(0.05),
@@ -267,62 +342,76 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
             ),
           ),
           const SizedBox(height: 24),
-          LayoutBuilder(builder: (context, constraints) {
-            final btnWidth = (constraints.maxWidth - 36) / 4;
-            return Column(
-              children: [
-                _buildRow(['AC', '⌫', '/', '*'], btnWidth),
-                _buildRow(['7', '8', '9', '-'], btnWidth),
-                _buildRow(['4', '5', '6', '+'], btnWidth),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: Column(
-                        children: [
-                          _buildRow(['1', '2', '3'], btnWidth),
-                          _buildRow(['0', '.', '='], btnWidth, showThird: true),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    SizedBox(
-                      width: btnWidth,
-                      height: 132,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Final evaluation before done
-                          final res = _calculateResult(_buffer);
-                          widget.onChanged(res);
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                        ),
-                        child: const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final btnWidth = (constraints.maxWidth - 36) / 4;
+              return Column(
+                children: [
+                  _buildRow(['AC', '⌫', '/', '*'], btnWidth),
+                  _buildRow(['7', '8', '9', '-'], btnWidth),
+                  _buildRow(['4', '5', '6', '+'], btnWidth),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 3,
+                        child: Column(
                           children: [
-                            Icon(Icons.check_rounded, size: 32),
-                            SizedBox(height: 4),
-                            Text('DONE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                            _buildRow(['1', '2', '3'], btnWidth),
+                            _buildRow(
+                              ['0', '.', '='],
+                              btnWidth,
+                              showThird: true,
+                            ),
                           ],
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
-            );
-          }),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: btnWidth,
+                        height: 132,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Final evaluation before done
+                            final res = _calculateResult(_buffer);
+                            widget.onChanged(res);
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            elevation: 4,
+                            shadowColor: theme.primaryColor.withOpacity(0.4),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              side: BorderSide(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                          child: const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.check_rounded, size: 32),
+                              SizedBox(height: 4),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
         ],
       ),
     );
   }
 
   Widget _buildRow(List<String> keys, double width, {bool showThird = false}) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -339,15 +428,22 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
               onPressed: () => _onPress(key),
               style: ElevatedButton.styleFrom(
                 backgroundColor: isNumber
-                    ? Theme.of(context).cardColor
-                    : (isAC ? Colors.orange.withOpacity(0.1) : Theme.of(context).primaryColor.withOpacity(0.1)),
+                    ? theme.cardColor
+                    : (isAC
+                          ? Colors.orange.withOpacity(0.1)
+                          : theme.primaryColor.withOpacity(0.1)),
                 foregroundColor: isNumber
-                    ? Theme.of(context).textTheme.bodyLarge?.color
-                    : (isAC ? Colors.orange : Theme.of(context).primaryColor),
+                    ? theme.textTheme.bodyLarge?.color ??
+                          (theme.brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black87)
+                    : (isAC ? Colors.orange : theme.primaryColor),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: isNumber ? BorderSide(color: Theme.of(context).dividerColor, width: 0.5) : BorderSide.none,
+                  side: isNumber
+                      ? BorderSide(color: theme.dividerColor, width: 0.5)
+                      : BorderSide.none,
                 ),
               ),
               child: Text(

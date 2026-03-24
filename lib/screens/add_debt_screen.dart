@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/debt.dart';
+import '../models/wallet.dart';
+import '../models/transaction_model.dart';
 import '../widgets/calculator_input.dart';
 
 class AddDebtScreen extends StatefulWidget {
@@ -18,19 +20,68 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   final _amountController = TextEditingController();
   bool _isOwedToMe = true;
   DateTime? _dueDate;
+  int? _selectedWalletKey;
+  List<Wallet> _wallets = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWallets();
+  }
+
+  void _loadWallets() {
+    final wallets = DatabaseService.getWallets(widget.accountKey);
+    setState(() {
+      _wallets = wallets.where((w) => !w.isExcluded).toList();
+      if (_wallets.isNotEmpty) {
+        try {
+          _selectedWalletKey = _wallets.firstWhere((w) => w.name.toLowerCase() == 'cash').key as int;
+        } catch (_) {
+          _selectedWalletKey = _wallets.first.key as int;
+        }
+      }
+    });
+  }
 
   void _saveDebt() async {
     if (_formKey.currentState!.validate()) {
-      final dept = Debt(
+      if (_selectedWalletKey == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a wallet')),
+        );
+        return;
+      }
+
+      final amount = double.parse(_amountController.text);
+
+      // 1. Create the Debt object with 0.0 total amount.
+      // The transaction effect will increment it to the correct total.
+      final debt = Debt(
         personName: _personController.text.trim(),
-        totalAmount: double.parse(_amountController.text),
+        totalAmount: 0.0, 
         paidAmount: 0.0,
         accountKey: widget.accountKey,
         isOwedToMe: _isOwedToMe,
         dueDate: _dueDate,
       );
 
-      await DatabaseService.saveDebt(dept);
+      final debtKey = await DatabaseService.saveDebt(debt);
+
+      // 2. Create the initial Transaction
+      final transaction = Transaction(
+        title: _isOwedToMe ? 'Lent to ${debt.personName}' : 'Borrowed from ${debt.personName}',
+        amount: amount,
+        date: DateTime.now(),
+        category: _isOwedToMe ? 'Lent Money' : 'Borrowed Money',
+        description: 'Initial transaction for debt record',
+        type: _isOwedToMe ? TransactionType.expense : TransactionType.income,
+        accountKey: widget.accountKey,
+        walletKey: _selectedWalletKey,
+        debtKey: debtKey,
+      );
+
+      await DatabaseService.saveTransaction(transaction);
+
       if (mounted) Navigator.pop(context, true);
     }
   }
@@ -129,6 +180,34 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                   if (val == null || val == '0' || val.isEmpty) return 'Enter amount';
                   return null;
                 },
+              ),
+              const SizedBox(height: 24),
+              Text('Select Wallet', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  border: Border.all(color: theme.dividerColor),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int>(
+                    value: _selectedWalletKey,
+                    isExpanded: true,
+                    hint: const Text('Select Wallet'),
+                    dropdownColor: theme.cardColor,
+                    items: _wallets.map((wallet) {
+                      return DropdownMenuItem<int>(
+                        value: wallet.key as int,
+                        child: Text(
+                          '${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})',
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (val) => setState(() => _selectedWalletKey = val),
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               Text('Due Date (Optional)', style: theme.textTheme.titleMedium),

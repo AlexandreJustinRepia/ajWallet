@@ -39,6 +39,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _descriptionController = TextEditingController();
   final _chargeController = TextEditingController();
 
+  // Tutorial Keys
+  final _typeKey = GlobalKey();
+  final _walletKey = GlobalKey();
+  final _amountKey = GlobalKey();
+  final _categoryKey = GlobalKey();
+  final _saveKey = GlobalKey();
+
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
   bool _isManualDate = false;
@@ -54,10 +61,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int? _selectedBudgetKey;
   int? _selectedDebtKey;
 
+  // Tutorial State
+  bool _showTutorial = false;
+  int _tutorialStep = 0;
+
   @override
   void initState() {
     super.initState();
     _loadPlanningEntities();
+    _checkTutorial();
     
     if (widget.existingTransaction != null) {
       final tx = widget.existingTransaction!;
@@ -92,6 +104,20 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedBudgetKey = widget.initialBudgetKey;
       _selectedDebtKey = widget.initialDebtKey;
     }
+  }
+
+  void _checkTutorial() async {
+    final box = await Hive.openBox('settings');
+    final hasSeen = box.get('has_seen_tx_tutorial', defaultValue: false);
+    if (!hasSeen && widget.existingTransaction == null) {
+      setState(() => _showTutorial = true);
+    }
+  }
+
+  void _dismissTutorial() async {
+    final box = await Hive.openBox('settings');
+    await box.put('has_seen_tx_tutorial', true);
+    setState(() => _showTutorial = false);
   }
 
   void _loadPlanningEntities() {
@@ -167,6 +193,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           return;
         }
       }
+
+      // Mark tutorial as seen if saved
+      if (_showTutorial) _dismissTutorial();
 
       if (widget.existingTransaction != null) {
         final existing = widget.existingTransaction!;
@@ -252,300 +281,427 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           title: Text(widget.existingTransaction == null
               ? 'Add Transaction'
               : 'Edit Transaction'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => setState(() {
+                _showTutorial = true;
+                _tutorialStep = 0;
+              }),
+            ),
+          ],
           elevation: 0),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Transaction Type Selector
-              Row(
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(24.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _typeButton('Income', TransactionType.income, Colors.green),
-                  const SizedBox(width: 8),
-                  _typeButton('Expense', TransactionType.expense, Colors.red),
-                  const SizedBox(width: 8),
-                  _typeButton(
-                    'Transfer',
-                    TransactionType.transfer,
-                    Colors.blue,
+                  // Transaction Type Selector
+                  Row(
+                    key: _typeKey,
+                    children: [
+                      _typeButton('Income', TransactionType.income, Colors.green),
+                      const SizedBox(width: 8),
+                      _typeButton('Expense', TransactionType.expense, Colors.red),
+                      const SizedBox(width: 8),
+                      _typeButton(
+                        'Transfer',
+                        TransactionType.transfer,
+                        Colors.blue,
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-              // Wallet Selector (Source)
-              Text(
-                _selectedType == TransactionType.transfer ? 'From' : 'Wallet',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              _buildWalletDropdown(
-                _selectedType == TransactionType.transfer
-                    ? DatabaseService.getWallets(
+                  // Wallet Selector (Source)
+                  Text(
+                    _selectedType == TransactionType.transfer ? 'From' : 'Wallet',
+                    style: theme.textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    key: _walletKey,
+                    child: _buildWalletDropdown(
+                      _selectedType == TransactionType.transfer
+                          ? DatabaseService.getWallets(
+                              widget.accountKey,
+                            ) // All wallets for transfer
+                          : DatabaseService.getWallets(widget.accountKey)
+                                .where((w) => !w.isExcluded)
+                                .toList(), // Spendable only for others
+                      _selectedWalletKey,
+                      (val) => setState(() => _selectedWalletKey = val),
+                    ),
+                  ),
+
+                  // Destination Wallet (For Transfers)
+                  if (_selectedType == TransactionType.transfer) ...[
+                    Center(
+                      child: IconButton(
+                        icon: Icon(Icons.swap_vert_rounded, color: theme.primaryColor, size: 32),
+                        onPressed: () {
+                          setState(() {
+                            final temp = _selectedWalletKey;
+                            _selectedWalletKey = _selectedToWalletKey;
+                            _selectedToWalletKey = temp;
+                          });
+                        },
+                      ),
+                    ),
+                    Text('To', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    _buildWalletDropdown(
+                      DatabaseService.getWallets(
                         widget.accountKey,
-                      ) // All wallets for transfer
-                    : DatabaseService.getWallets(widget.accountKey)
-                          .where((w) => !w.isExcluded)
-                          .toList(), // Spendable only for others
-                _selectedWalletKey,
-                (val) => setState(() => _selectedWalletKey = val),
-              ),
+                      ), // All wallets for destination
+                      _selectedToWalletKey,
+                      (val) => setState(() => _selectedToWalletKey = val),
+                    ),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    const SizedBox(height: 24),
+                  ],
 
-              // Destination Wallet (For Transfers)
-              if (_selectedType == TransactionType.transfer) ...[
-                Center(
-                  child: IconButton(
-                    icon: Icon(Icons.swap_vert_rounded, color: theme.primaryColor, size: 32),
-                    onPressed: () {
-                      setState(() {
-                        final temp = _selectedWalletKey;
-                        _selectedWalletKey = _selectedToWalletKey;
-                        _selectedToWalletKey = temp;
-                      });
-                    },
-                  ),
-                ),
-                Text('To', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                _buildWalletDropdown(
-                  DatabaseService.getWallets(
-                    widget.accountKey,
-                  ), // All wallets for destination
-                  _selectedToWalletKey,
-                  (val) => setState(() => _selectedToWalletKey = val),
-                ),
-                const SizedBox(height: 24),
-              ] else ...[
-                const SizedBox(height: 24),
-              ],
-
-              // Amount Field
-              CalculatorInputField(
-                label: 'Amount',
-                initialValue: double.tryParse(_amountController.text),
-                onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
-                validator: (value) {
-                  if (value == null || value == '0' || value.isEmpty) return 'Enter amount';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 24),
-
-              // Charge Field (Optional, for Transfers)
-              if (_selectedType == TransactionType.transfer) ...[
-                CalculatorInputField(
-                  label: 'Transfer Charge (Optional)',
-                  initialValue: double.tryParse(_chargeController.text),
-                  onChanged: (val) => setState(() => _chargeController.text = val.toStringAsFixed(2)),
-                ),
-                const SizedBox(height: 24),
-              ],
-
-              const SizedBox(height: 24),
-
-              // Category Picker (Hidden for transfers as it's just moving money)
-              if (_selectedType != TransactionType.transfer) ...[
-                Text('Category', style: theme.textTheme.titleMedium),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: theme.cardColor,
-                    border: Border.all(color: theme.dividerColor),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _currentCategories.containsKey(_selectedCategory) 
-                          ? _selectedCategory 
-                          : _currentCategories.keys.first,
-                      isExpanded: true,
-                      dropdownColor: theme.cardColor,
-                      items: _currentCategories.keys.map((String category) {
-                        return DropdownMenuItem<String>(
-                          value: category,
-                          child: Row(
-                            children: [
-                              Icon(_currentCategories[category], size: 20, color: theme.primaryColor),
-                              const SizedBox(width: 12),
-                              Text(category),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (String? newValue) {
-                        if (newValue != null) {
-                          setState(() => _selectedCategory = newValue);
-                        }
+                  // Amount Field
+                  Container(
+                    key: _amountKey,
+                    child: CalculatorInputField(
+                      label: 'Amount',
+                      initialValue: double.tryParse(_amountController.text),
+                      onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
+                      validator: (value) {
+                        if (value == null || value == '0' || value.isEmpty) return 'Enter amount';
+                        return null;
                       },
                     ),
                   ),
-                ),
-                const SizedBox(height: 24),
-              ],
+                  const SizedBox(height: 24),
 
-              // Description Field
-              Text(
-                'Description (Optional)',
-                style: theme.textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _descriptionController,
-                maxLines: 2,
-                decoration: InputDecoration(
-                  hintText: 'Add a note...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  // Charge Field (Optional, for Transfers)
+                  if (_selectedType == TransactionType.transfer) ...[
+                    CalculatorInputField(
+                      label: 'Transfer Charge (Optional)',
+                      initialValue: double.tryParse(_chargeController.text),
+                      onChanged: (val) => setState(() => _chargeController.text = val.toStringAsFixed(2)),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  const SizedBox(height: 24),
+
+                  // Category Picker (Hidden for transfers as it's just moving money)
+                  if (_selectedType != TransactionType.transfer) ...[
+                    Text('Category', style: theme.textTheme.titleMedium),
+                    const SizedBox(height: 8),
+                    Container(
+                      key: _categoryKey,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        border: Border.all(color: theme.dividerColor),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _currentCategories.containsKey(_selectedCategory) 
+                              ? _selectedCategory 
+                              : _currentCategories.keys.first,
+                          isExpanded: true,
+                          dropdownColor: theme.cardColor,
+                          items: _currentCategories.keys.map((String category) {
+                            return DropdownMenuItem<String>(
+                              value: category,
+                              child: Row(
+                                children: [
+                                  Icon(_currentCategories[category], size: 20, color: theme.primaryColor),
+                                  const SizedBox(width: 12),
+                                  Text(category),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            if (newValue != null) {
+                              setState(() => _selectedCategory = newValue);
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Description Field
+                  Text(
+                    'Description (Optional)',
+                    style: theme.textTheme.titleMedium,
                   ),
-                ),
-              ),
-              const SizedBox(height: 32),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _descriptionController,
+                    maxLines: 2,
+                    decoration: InputDecoration(
+                      hintText: 'Add a note...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
 
-              // ── Planning Linkage ──────────────────────────────────────────
-              Text('Link to Planning (Optional)', style: theme.textTheme.titleMedium?.copyWith(color: theme.primaryColor)),
-              const SizedBox(height: 16),
-              
-              // Goal Selector
-              _buildPlanningDropdown<Goal>(
-                label: 'Savings Goal',
-                items: _goals,
-                value: _selectedGoalKey,
-                itemLabel: (g) => '${g.name} (₱${g.savedAmount.toStringAsFixed(0)}/₱${g.targetAmount.toStringAsFixed(0)})',
-                onChanged: (val) => setState(() => _selectedGoalKey = val),
-                icon: Icons.flag_rounded,
-              ),
-              const SizedBox(height: 16),
+                  // ── Planning Linkage ──────────────────────────────────────────
+                  Text('Link to Planning (Optional)', style: theme.textTheme.titleMedium?.copyWith(color: theme.primaryColor)),
+                  const SizedBox(height: 16),
+                  
+                  // Goal Selector
+                  _buildPlanningDropdown<Goal>(
+                    label: 'Savings Goal',
+                    items: _goals,
+                    value: _selectedGoalKey,
+                    itemLabel: (g) => '${g.name} (₱${g.savedAmount.toStringAsFixed(0)}/₱${g.targetAmount.toStringAsFixed(0)})',
+                    onChanged: (val) => setState(() => _selectedGoalKey = val),
+                    icon: Icons.flag_rounded,
+                  ),
+                  const SizedBox(height: 16),
 
-              // Budget Selector
-              _buildPlanningDropdown<Budget>(
-                label: 'Category Budget',
-                items: _budgets,
-                value: _selectedBudgetKey,
-                itemLabel: (b) => '${b.category} (${DateFormat('MMM').format(DateTime(2026, b.month))} - ₱${b.amountLimit.toStringAsFixed(0)})',
-                onChanged: (val) => setState(() => _selectedBudgetKey = val),
-                icon: Icons.pie_chart_rounded,
-              ),
-              const SizedBox(height: 16),
+                  // Budget Selector
+                  _buildPlanningDropdown<Budget>(
+                    label: 'Category Budget',
+                    items: _budgets,
+                    value: _selectedBudgetKey,
+                    itemLabel: (b) => '${b.category} (${DateFormat('MMM').format(DateTime(2026, b.month))} - ₱${b.amountLimit.toStringAsFixed(0)})',
+                    onChanged: (val) => setState(() => _selectedBudgetKey = val),
+                    icon: Icons.pie_chart_rounded,
+                  ),
+                  const SizedBox(height: 16),
 
-              // Debt Selector
-              _buildPlanningDropdown<Debt>(
-                label: 'Debt / Loan',
-                items: _debts,
-                value: _selectedDebtKey,
-                itemLabel: (d) => '${d.personName} (${d.isOwedToMe ? 'Owed to me' : 'Borrowed'})',
-                onChanged: (val) => setState(() => _selectedDebtKey = val),
-                icon: Icons.handshake_rounded,
-              ),
+                  // Debt Selector
+                  _buildPlanningDropdown<Debt>(
+                    label: 'Debt / Loan',
+                    items: _debts,
+                    value: _selectedDebtKey,
+                    itemLabel: (d) => '${d.personName} (${d.isOwedToMe ? 'Owed to me' : 'Borrowed'})',
+                    onChanged: (val) => setState(() => _selectedDebtKey = val),
+                    icon: Icons.handshake_rounded,
+                  ),
 
-              const SizedBox(height: 32),
+                  const SizedBox(height: 32),
 
-              // Manual Date Toggle
-              Row(
-                children: [
-                  const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
-                  const SizedBox(width: 12),
-                  const Text('Manual Date Entry', style: TextStyle(fontWeight: FontWeight.w500)),
-                  const Spacer(),
-                  Switch(
-                    value: _isManualDate,
-                    onChanged: (val) {
-                      setState(() {
-                        _isManualDate = val;
-                        if (!val) _selectedDate = DateTime.now();
-                      });
-                    },
-                    activeColor: theme.primaryColor,
+                  // Manual Date Toggle
+                  Row(
+                    children: [
+                      const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
+                      const SizedBox(width: 12),
+                      const Text('Manual Date Entry', style: TextStyle(fontWeight: FontWeight.w500)),
+                      const Spacer(),
+                      Switch(
+                        value: _isManualDate,
+                        onChanged: (val) {
+                          setState(() {
+                            _isManualDate = val;
+                            if (!val) _selectedDate = DateTime.now();
+                          });
+                        },
+                        activeColor: theme.primaryColor,
+                      ),
+                    ],
+                  ),
+                  
+                  if (_isManualDate) ...[
+                    const SizedBox(height: 12),
+                    InkWell(
+                      onTap: () async {
+                        final pickedDate = await showDatePicker(
+                          context: context,
+                          initialDate: _selectedDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now(),
+                        );
+                        if (pickedDate != null) {
+                          final pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: TimeOfDay.fromDateTime(_selectedDate),
+                          );
+                          if (pickedTime != null) {
+                            setState(() {
+                              _selectedDate = DateTime(
+                                pickedDate.year,
+                                pickedDate.month,
+                                pickedDate.day,
+                                pickedTime.hour,
+                                pickedTime.minute,
+                              );
+                            });
+                          }
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          border: Border.all(color: theme.dividerColor),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.event, size: 20, color: Colors.grey),
+                            const SizedBox(width: 12),
+                            Text(
+                              DateFormat('EEEE, MMM dd, yyyy • hh:mm a').format(_selectedDate),
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const Spacer(),
+                            const Icon(Icons.edit_rounded, size: 16, color: Colors.grey),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        'Recorded as Today, ${DateFormat('hh:mm a').format(_selectedDate)}',
+                        style: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 12),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 40),
+
+                  // Save Button
+                  SizedBox(
+                    key: _saveKey,
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton(
+                      onPressed: _saveTransaction,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      child: Text(
+                        'Save Transaction',
+                        style: TextStyle(
+                          color: theme.scaffoldBackgroundColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
-              
-              if (_isManualDate) ...[
-                const SizedBox(height: 12),
-                InkWell(
-                  onTap: () async {
-                    final pickedDate = await showDatePicker(
-                      context: context,
-                      initialDate: _selectedDate,
-                      firstDate: DateTime(2020),
-                      lastDate: DateTime.now(),
-                    );
-                    if (pickedDate != null) {
-                      final pickedTime = await showTimePicker(
-                        context: context,
-                        initialTime: TimeOfDay.fromDateTime(_selectedDate),
-                      );
-                      if (pickedTime != null) {
-                        setState(() {
-                          _selectedDate = DateTime(
-                            pickedDate.year,
-                            pickedDate.month,
-                            pickedDate.day,
-                            pickedTime.hour,
-                            pickedTime.minute,
-                          );
-                        });
-                      }
-                    }
-                  },
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: theme.cardColor,
-                      border: Border.all(color: theme.dividerColor),
-                      borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          if (_showTutorial) _buildTutorialOverlay(theme),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTutorialOverlay(ThemeData theme) {
+    String message = '';
+    GlobalKey? targetKey;
+
+    switch (_tutorialStep) {
+      case 0:
+        message = "Income, Expense, or Transfer? Pick how your money is moving.";
+        targetKey = _typeKey;
+        break;
+      case 1:
+        message = "Choose the wallet you're using for this transaction.";
+        targetKey = _walletKey;
+        break;
+      case 2:
+        message = "Tap to enter the amount. Use the built-in calculator for math!";
+        targetKey = _amountKey;
+        break;
+      case 3:
+        if (_selectedType == TransactionType.transfer) {
+          _tutorialStep++; // Skip category for transfers
+          return _buildTutorialOverlay(theme);
+        }
+        message = "Tag it with a category to track where your money goes.";
+        targetKey = _categoryKey;
+        break;
+      case 4:
+        message = "All set? Hit save to update your balances instantly!";
+        targetKey = _saveKey;
+        break;
+    }
+
+    return Container(
+      color: Colors.black.withOpacity(0.7),
+      width: double.infinity,
+      height: double.infinity,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: theme.primaryColor.withOpacity(0.5), width: 2),
+                  boxShadow: [
+                    BoxShadow(color: theme.primaryColor.withOpacity(0.2), blurRadius: 40),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.auto_awesome_rounded, color: theme.primaryColor, size: 40),
+                    const SizedBox(height: 16),
+                    Text(
+                      message,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
                     ),
-                    child: Row(
+                    const SizedBox(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.event, size: 20, color: Colors.grey),
-                        const SizedBox(width: 12),
-                        Text(
-                          DateFormat('EEEE, MMM dd, yyyy • hh:mm a').format(_selectedDate),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        TextButton(
+                          onPressed: _dismissTutorial,
+                          child: const Text('Skip'),
                         ),
-                        const Spacer(),
-                        const Icon(Icons.edit_rounded, size: 16, color: Colors.grey),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {
+                              if (_tutorialStep < 4) {
+                                _tutorialStep++;
+                                // Scroll to target if needed (simplified here)
+                              } else {
+                                _dismissTutorial();
+                              }
+                            });
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: theme.primaryColor,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                          child: Text(_tutorialStep < 4 ? 'Next' : 'Got it!'),
+                        ),
                       ],
                     ),
-                  ),
+                  ],
                 ),
-              ] else ...[
-                const SizedBox(height: 8),
-                Padding(
-                  padding: const EdgeInsets.only(left: 4),
-                  child: Text(
-                    'Recorded as Today, ${DateFormat('hh:mm a').format(_selectedDate)}',
-                    style: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 12),
-                  ),
-                ),
-              ],
-              const SizedBox(height: 40),
-
-              // Save Button
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _saveTransaction,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: theme.primaryColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    'Save Transaction',
-                    style: TextStyle(
-                      color: theme.scaffoldBackgroundColor,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                  "Step ${_tutorialStep + 1} of 5",
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
             ],
           ),

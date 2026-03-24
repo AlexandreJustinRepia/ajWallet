@@ -18,7 +18,14 @@ enum AIIntent {
   goalProgress,
   financialAdvice,
   subscriptions,
+  simulation,
   unknown
+}
+
+enum AITone {
+  calm,
+  strict,
+  encouraging
 }
 
 enum AIActionType {
@@ -42,6 +49,7 @@ class AIResponse {
   final AIIntent intent;
   final bool isPositive;
   final List<AIAction>? actions;
+  final AITone tone;
 
   AIResponse({
     required this.result,
@@ -49,6 +57,7 @@ class AIResponse {
     required this.intent,
     this.isPositive = true,
     this.actions,
+    this.tone = AITone.calm,
   });
 }
 
@@ -71,9 +80,14 @@ class AIAssistantService {
     final timeframe = _detectTimeframe(lowerQuery);
     final range = _getRangeForTimeframe(timeframe);
 
+    final response = _process(intent, lowerQuery, expenses, income, range, timeframe, balance, goals, debts, allBudgets);
+    return _applyAdaptiveTone(response, balance, expenses, allBudgets);
+  }
+
+  static AIResponse _process(AIIntent intent, String lowerQuery, List<Transaction> expenses, List<Transaction> income, DateTimeRange range, String timeframe, double balance, List<Goal>? goals, List<Debt>? debts, List<Budget> budgets) {
     switch (intent) {
       case AIIntent.runway:
-        return _processRunway(expenses, balance, allBudgets);
+        return _processRunway(expenses, balance, budgets);
       case AIIntent.largestExpense:
         return _processLargest(expenses, range);
       case AIIntent.anomalies:
@@ -82,10 +96,15 @@ class AIAssistantService {
         return _processRecurring(expenses);
       case AIIntent.subscriptions:
         return _processSubscriptions(expenses);
+      case AIIntent.simulation:
+        return _processSimulation(lowerQuery, expenses, balance, goals ?? []);
       case AIIntent.incomeTotal:
         return _processIncome(income, range, timeframe);
       case AIIntent.spendingTotal:
       case AIIntent.spendingCategory:
+        if (lowerQuery.contains('budget for') || lowerQuery.contains('suggest budget')) {
+          return _processBudgetSuggestion(lowerQuery, expenses);
+        }
         return _processSpending(lowerQuery, expenses, range, timeframe);
       case AIIntent.savingsRate:
         return _processSavingsRate(expenses, income, range);
@@ -94,18 +113,18 @@ class AIAssistantService {
       case AIIntent.debtStatus:
         return _processDebts(debts ?? []);
       case AIIntent.financialAdvice:
-        return _processAdvice(expenses, income, balance, allBudgets);
+        return _processAdvice(expenses, income, balance, budgets);
       case AIIntent.unknown:
         return AIResponse(
           result: "I'm not quite sure how to analyze that yet.",
-          insight: "Try asking about your income, spending habits, savings goals, or for some financial advice.",
+          insight: "Try asking about your 'spending', 'runway', 'goals', or ask a simulation like 'What if I save ₱100 more per day?'",
           intent: AIIntent.unknown,
-          isPositive: false,
         );
     }
   }
 
   static AIIntent _detectIntent(String query) {
+    if (query.contains('what if') || query.contains('if i ') || query.contains('simulate')) return AIIntent.simulation;
     if (query.contains('runway') || query.contains('how long') || query.contains('last')) return AIIntent.runway;
     if (query.contains('largest') || query.contains('biggest') || query.contains('highest') || query.contains('most expensive')) return AIIntent.largestExpense;
     if (query.contains('unusual') || query.contains('anomaly') || query.contains('spike')) return AIIntent.anomalies;
@@ -115,9 +134,46 @@ class AIAssistantService {
     if (query.contains('goal') || query.contains('target')) return AIIntent.goalProgress;
     if (query.contains('subscription') || query.contains('netflix') || query.contains('spotify') || query.contains('monthly bill')) return AIIntent.subscriptions;
     if (query.contains('debt') || query.contains('owe') || query.contains('borrow') || query.contains('lent')) return AIIntent.debtStatus;
+    if (query.contains('budget for') || query.contains('suggest budget')) return AIIntent.spendingCategory;
     if (query.contains('advice') || query.contains('tip') || query.contains('help') || query.contains('improve')) return AIIntent.financialAdvice;
     if (query.contains('spent') || query.contains('spending') || query.contains('total') || query.contains('cost')) return AIIntent.spendingTotal;
     return AIIntent.unknown;
+  }
+
+  static AIResponse _processBudgetSuggestion(String query, List<Transaction> transactions) {
+    String? category;
+    final categories = ['food', 'shopping', 'transfers', 'housing', 'bills', 'entertainment', 'health', 'travel', 'transport', 'others'];
+    for (var cat in categories) {
+      if (query.contains(cat)) {
+        category = cat;
+        break;
+      }
+    }
+
+    if (category == null) {
+      return AIResponse(
+        result: "Select a Category",
+        insight: "Which category would you like me to suggest a budget for? (e.g., 'Budget for Food')",
+        intent: AIIntent.spendingCategory,
+      );
+    }
+
+    final suggested = FinancialInsightsService.suggestBudget(category, transactions);
+    if (suggested <= 0) {
+      return AIResponse(
+        result: "Insufficient Data",
+        insight: "I don't have enough history for '$category' to suggest a realistic budget yet.",
+        intent: AIIntent.spendingCategory,
+        isPositive: false,
+      );
+    }
+
+    return AIResponse(
+      result: "₱${suggested.toStringAsFixed(0)} Suggested",
+      insight: "Based on your last 3 months, a healthy budget for $category would be ₱${suggested.toStringAsFixed(0)} per month.",
+      intent: AIIntent.spendingCategory,
+      actions: [AIAction(label: "Set This Budget", type: AIActionType.setLimit)],
+    );
   }
 
   static String _detectTimeframe(String query) {
@@ -227,6 +283,61 @@ class AIAssistantService {
       insight: "Detected transactions significantly higher than your average spend.",
       intent: AIIntent.anomalies,
       isPositive: false,
+    );
+  }
+
+  static AIResponse _processSimulation(String query, List<Transaction> expenses, double balance, List<Goal> goals) {
+    double? dailyIncrease;
+    double? catReduction;
+    String? reductionCat;
+
+    // Very basic extraction
+    final saveMatch = RegExp(r'save (?:₱|p)?(\d+)').firstMatch(query);
+    if (saveMatch != null) {
+      dailyIncrease = double.tryParse(saveMatch.group(1)!);
+    }
+
+    final redMatch = RegExp(r'reduce (\w+) by (?:₱|p)?(\d+)').firstMatch(query);
+    if (redMatch != null) {
+      reductionCat = redMatch.group(1);
+      catReduction = double.tryParse(redMatch.group(2)!);
+    }
+
+    if (dailyIncrease == null && catReduction == null) {
+      return AIResponse(
+        result: "Simulation Ready",
+        insight: "Try asking: 'What if I save ₱100 more per day?' or 'What if I reduce food by ₱1,000?'",
+        intent: AIIntent.simulation,
+      );
+    }
+
+    final impact = FinancialInsightsService.simulateImpact(
+      expenses: expenses,
+      balance: balance,
+      goals: goals,
+      dailySavingsIncrease: dailyIncrease,
+      categoryReductionAmount: catReduction,
+      reductionCategory: reductionCat,
+    );
+
+    if (impact.containsKey('error')) {
+      return AIResponse(result: "Error", insight: impact['error'], intent: AIIntent.simulation, isPositive: false);
+    }
+
+    final runway = impact['runwayExtension'] as int;
+    final goalImpacts = impact['goalImpacts'] as List<Map<String, dynamic>>;
+    
+    String msg = "If you make those changes:";
+    if (runway != 0) msg += "\n• Your runway increases by $runway days.";
+    for (var gi in goalImpacts) {
+      if (gi['daysSaved'] > 0) msg += "\n• You'll reach '${gi['goalName']}' ${gi['daysSaved']} days sooner!";
+    }
+
+    return AIResponse(
+      result: "Simulation Result",
+      insight: msg,
+      intent: AIIntent.simulation,
+      actions: [AIAction(label: "Apply Changes", type: AIActionType.setLimit)],
     );
   }
 
@@ -366,7 +477,13 @@ class AIAssistantService {
     if (monthlySavings > 0) {
       final remaining = onTrack.targetAmount - onTrack.savedAmount;
       final months = (remaining / monthlySavings).toStringAsFixed(1);
-      prediction = "\n\nAt your current savings rate, you'll reach this in $months months.";
+      
+      // Strategy B Suggestion
+      final fasterSavings = monthlySavings * 1.25;
+      final fasterMonths = (remaining / fasterSavings).toStringAsFixed(1);
+      final daysSaved = (double.parse(months) * 30 - double.parse(fasterMonths) * 30).floor();
+
+      prediction = "\n\n• Current: Reach in $months months.\n• Strategy B: Increase savings by 25% → reach $daysSaved days sooner!";
     }
 
     return AIResponse(
@@ -374,6 +491,7 @@ class AIAssistantService {
       insight: "Your goal '${onTrack.name}' is $percent% complete.$prediction",
       intent: AIIntent.goalProgress,
       isPositive: true,
+      actions: [AIAction(label: "Switch Strategy", type: AIActionType.setLimit)],
     );
   }
 
@@ -435,6 +553,35 @@ class AIAssistantService {
       result: "Smart Tip",
       insight: tip,
       intent: AIIntent.financialAdvice,
+    );
+  }
+
+  static AIResponse _applyAdaptiveTone(AIResponse response, double balance, List<Transaction> expenses, List<Budget> budgets) {
+    AITone tone = AITone.calm;
+    
+    // Determine Tone
+    final runway = FinancialInsightsService.projectCashflow(expenses, balance, budgets);
+    int days = runway['days'] as int;
+
+    if (days < 5 && days > 0) {
+      tone = AITone.strict;
+    } else if (response.isPositive && balance > 5000) {
+      tone = AITone.encouraging;
+    }
+
+    // Add Payday Context if applicable
+    String extra = "";
+    if (tone == AITone.strict) {
+      extra = "\n\nStay alert—funds are tight until your usual income patterns reappear.";
+    }
+
+    return AIResponse(
+      result: response.result,
+      insight: response.insight + extra,
+      intent: response.intent,
+      isPositive: response.isPositive,
+      actions: response.actions,
+      tone: tone,
     );
   }
 }

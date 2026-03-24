@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/session_service.dart';
 import '../services/ai_assistant_service.dart';
+import '../services/achievement_service.dart';
 
 class AIAssistantView extends StatefulWidget {
   const AIAssistantView({super.key});
@@ -80,6 +81,33 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         _isProcessing = false;
       });
       _animationController.forward(from: 0);
+
+      // Check Achievements
+      final newAchievements = AchievementService.checkStreaks(transactions, budgets);
+      if (newAchievements.isNotEmpty) {
+        for (var ach in newAchievements) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  Text(ach.icon, style: const TextStyle(fontSize: 24)),
+                  const SizedBox(width: 12),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('UNLOCKED: ${ach.title}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(ach.description, style: const TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green.shade700,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
     }
   }
 
@@ -260,8 +288,13 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   Widget _buildResponseArea(ThemeData theme) {
     final emerald = const Color(0xFF2E7D32);
     final crimson = const Color(0xFFB71C1C);
+    final cobalt = const Color(0xFF1976D2);
     
-    final color = _response!.isPositive ? emerald : crimson;
+    Color color = _response!.isPositive ? emerald : crimson;
+    if (_response!.tone == AITone.strict) color = crimson;
+    if (_response!.tone == AITone.encouraging) color = cobalt;
+
+    final result = _response!.result;
 
     return Container(
       width: double.infinity,

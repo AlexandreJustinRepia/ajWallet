@@ -10,16 +10,24 @@ AJ Wallet is a professional, minimalist offline budget application built with Fl
 - **Biometric Authentication:** Optional Fingerprint or Face ID login for supported devices.
 - **Security Lockout:** Automatic temporary lockout after 5 failed PIN attempts.
 
-### 💼 Account Management
-- **Multi-Account Support:** Create and manage multiple budget accounts independently.
-- **Account Listing:** A clean dashboard to view and switch between your wallets.
-- **Easy Setup:** Streamlined first-time experience for new users.
-- **Account Deletion:** Safely remove accounts with full data wipe confirmation.
+### 🧠 Proactive AI Financial Coach
+- **Predictive Insights:** Forecasts your **Cashflow Runway** (detects when you might run out of money).
+- **Scenario Simulation:** Ask "What if...?" questions to model the impact of savings or spending changes.
+- **Debt Risk Awareness:** Warns you if debt payments threaten your near-term cashflow.
+- **Payoff Optimization:** Suggests strategies to become debt-free faster based on spare cash.
+- **Adaptive Tone:** The AI shifts its personality (Calm, Strict, Encouraging) based on your financial health.
+- **Guided Onboarding:** Interactive tutorial for first-time users to discover AI features.
 
-### 🎨 Personalization
-- **Dynamic Theming:** Instant switching between Light and Dark modes.
-- **Custom Themes:** Create your own professional look by picking custom colors for Primary, Background, Text, and Card elements.
-- **Theme Preview:** Real-time preview of your custom theme before applying.
+### 🎯 Planning Hub & Goals
+- **Savings Strategy:** Track multiple goals with different strategies (Default vs. Aggressive).
+- **Debt Management:** Specialized tools for tracking money owed and money borrowed.
+- **Quick Shortcuts:** Instant transaction entry directly from the Planning Hub for goals and debts.
+- **Gamified Achievements:** Unlock badges like 'AI Explorer' and 'Debt Slayer' as you progress.
+
+### 🎨 Premium Personalization
+- **Simplified Theme Engine:** Modern 'System / Light / Dark' toggle with auto-applying preset palettes.
+- **Advanced Custom Lab:** Tweak every color (Primary, Background, etc.) for a truly unique look.
+- **Tactile UI:** Rounded layouts, subtle shadows, and a "Bottom-Up" chat-inspired AI assistant.
 
 ### 📱 User Experience
 - **Minimalist Design:** Clean, professional aesthetic using black, white, and gray tones.

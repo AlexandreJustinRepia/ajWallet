@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/theme_service.dart';
 import 'services/session_service.dart';
+import 'services/update_service.dart';
 import 'services/achievement_service.dart';
 import 'splash_screen.dart';
 import 'models/app_theme.dart';
@@ -21,6 +22,9 @@ void main() async {
 
   // Initialize Achievement Service
   await AchievementService.init();
+
+  // Initialize Update Service
+  await UpdateService.init();
 
   runApp(const MyApp());
 }

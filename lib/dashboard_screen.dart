@@ -11,6 +11,7 @@ import 'views/wallets_view.dart';
 import 'views/planning_view.dart';
 import 'widgets/ai_assistant_view.dart';
 import 'screens/about_screen.dart';
+import 'services/update_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -56,12 +57,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         automaticallyImplyLeading: false,
         actions: [_buildProfileMenu(context, theme)],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _refresh();
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
-        child: pages[_selectedIndex],
+      body: Column(
+        children: [
+          _buildUpdateBanner(theme),
+          Expanded(
+            child: RefreshIndicator(
+              onRefresh: () async {
+                _refresh();
+                await Future.delayed(const Duration(milliseconds: 500));
+              },
+              child: pages[_selectedIndex],
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _onFabPressed(context, accountKey),
@@ -322,6 +330,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Update Banner
+  // ---------------------------------------------------------------------------
+
+  Widget _buildUpdateBanner(ThemeData theme) {
+    return ValueListenableBuilder<UpdateInfo?>(
+      valueListenable: UpdateService.updateNotifier,
+      builder: (context, info, _) {
+        if (info == null) return const SizedBox.shrink();
+
+        return Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            boxShadow: [
+              BoxShadow(
+                color: theme.primaryColor.withOpacity(0.3),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.system_update_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Update Available (${info.latestVersion})',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                    Text(
+                      info.releaseNotes,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 11,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              TextButton(
+                onPressed: () => UpdateService.launchDownload(),
+                style: TextButton.styleFrom(
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text(
+                  'UPDATE',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(
+                  Icons.close_rounded,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                onPressed: () => UpdateService.updateNotifier.value = null,
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

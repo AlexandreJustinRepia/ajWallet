@@ -32,6 +32,7 @@ class AchievementService {
       Achievement(id: 'streak_3', title: 'On a Roll', description: 'Stayed under budget for 3 days', icon: '🔥'),
       Achievement(id: 'debt_slayer', title: 'Debt Slayer', description: 'Paid off your first debt', icon: '⚔️'),
       Achievement(id: 'goal_getter', title: 'Goal Getter', description: 'Reached 25% of a savings goal', icon: '🏆'),
+      Achievement(id: 'explorer', title: 'AI Explorer', description: 'Completed the AI onboarding tour', icon: '🧭'),
     ];
 
     return all.map((a) {

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'services/session_service.dart';
+import 'services/database_service.dart';
+import 'models/account.dart';
 import 'account_list_screen.dart';
 import 'theme_picker_screen.dart';
 import 'add_transaction_screen.dart';
@@ -174,6 +176,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildPopupHeader(context, account?.name ?? 'User'),
           const PopupMenuDivider(),
           _buildPopupItem(Icons.palette_outlined, 'Theme Settings', 'theme'),
+          _buildPopupItem(Icons.account_circle_outlined, 'Account', 'account'),
           _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
           _buildPopupItem(Icons.info_outline_rounded, 'About AJ Wallet', 'about'),
           const PopupMenuDivider(),
@@ -189,7 +192,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   void _onMenuSelected(BuildContext context, String value) async {
+    final account = SessionService.activeAccount;
     switch (value) {
+      case 'account':
+        if (account != null) _showEditAccountDialog(context, account);
       case 'theme':
         Navigator.push(
           context,
@@ -211,6 +217,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case 'logout':
         _showLogoutDialog(context);
     }
+  }
+
+  void _showEditAccountDialog(BuildContext context, Account account) {
+    final theme = Theme.of(context);
+    final controller = TextEditingController(text: account.name);
+    final editFormKey = GlobalKey<FormState>();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Edit Account Name'),
+        content: Form(
+          key: editFormKey,
+          child: TextFormField(
+            controller: controller,
+            autofocus: true,
+            style: theme.textTheme.bodyLarge,
+            decoration: InputDecoration(
+              labelText: 'Account Name',
+              hintText: 'e.g. My Savings',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (editFormKey.currentState!.validate()) {
+                account.name = controller.text.trim();
+                await DatabaseService.updateAccount(account);
+                if (mounted) {
+                  Navigator.pop(context);
+                  _refresh();
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              foregroundColor: theme.colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
   }
 
   PopupMenuItem<String> _buildPopupItem(

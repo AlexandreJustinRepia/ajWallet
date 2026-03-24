@@ -111,7 +111,7 @@ class AIAssistantService {
       case AIIntent.goalProgress:
         return _processGoals(goals ?? [], income, expenses);
       case AIIntent.debtStatus:
-        return _processDebts(debts ?? []);
+        return _processDebts(debts ?? [], expenses + income, balance, budgets);
       case AIIntent.financialAdvice:
         return _processAdvice(expenses, income, balance, budgets);
       case AIIntent.unknown:
@@ -495,7 +495,7 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _processDebts(List<Debt> debts) {
+  static AIResponse _processDebts(List<Debt> debts, List<Transaction> transactions, double balance, List<Budget> budgets) {
     if (debts.isEmpty) {
       return AIResponse(
         result: "Debt Free",
@@ -505,16 +505,48 @@ class AIAssistantService {
       );
     }
 
-    final iOwe = debts.where((d) => !d.isOwedToMe).fold(0.0, (sum, d) => sum + (d.totalAmount - d.paidAmount));
+    final iOweDebts = debts.where((d) => !d.isOwedToMe).toList();
+    final iOwe = iOweDebts.fold(0.0, (sum, d) => sum + (d.totalAmount - d.paidAmount));
     final owedMe = debts.where((d) => d.isOwedToMe).fold(0.0, (sum, d) => sum + (d.totalAmount - d.paidAmount));
+
+    String insight = owedMe > 0 
+        ? "You owe ₱${iOwe.toStringAsFixed(0)}, while others owe you ₱${owedMe.toStringAsFixed(0)}." 
+        : "Your total outstanding debt to others is ₱${iOwe.toStringAsFixed(0)}.";
+
+    List<AIAction> actions = [];
+    bool isPositive = iOwe < owedMe;
+
+    // 1. Check for Risk Warning (Protective Logic)
+    if (iOwe > 0 && balance > 0) {
+      final impact = FinancialInsightsService.getDebtPaymentImpact(
+        amount: iOwe > 500 ? 500 : iOwe, // Check impact of a typical 500 payment
+        balance: balance,
+        expenses: transactions.where((t) => t.type == TransactionType.expense).toList(),
+        budgets: budgets,
+      );
+
+      if (impact['isRisky'] == true) {
+        insight += "\n\n⚠️ RISK: Paying just ₱500 toward this debt today will leave you with only ${impact['newRunway']} days of runway.";
+        isPositive = false;
+      }
+    }
+
+    // 2. Check for Payoff Optimization
+    if (iOweDebts.isNotEmpty) {
+      final opt = FinancialInsightsService.suggestDebtOptimizations(iOweDebts.first, transactions);
+      if (opt != null) {
+        insight += "\n\n💡 OPTIMIZATION: If you pay ₱${(opt['extraAmount'] as double).toStringAsFixed(0)} extra per month, you could be debt-free ${opt['monthsSaved']} months sooner.";
+        actions.add(AIAction(label: "Optimize Payoff", type: AIActionType.setLimit));
+      }
+    }
 
     return AIResponse(
       result: "₱${iOwe.toStringAsFixed(0)} Due",
-      insight: owedMe > 0 
-          ? "You owe ₱${iOwe.toStringAsFixed(0)}, while others owe you ₱${owedMe.toStringAsFixed(0)}." 
-          : "Your total outstanding debt to others is ₱${iOwe.toStringAsFixed(0)}.",
+      insight: insight,
       intent: AIIntent.debtStatus,
-      isPositive: iOwe < owedMe,
+      isPositive: isPositive,
+      actions: actions.isNotEmpty ? actions : null,
+      tone: !isPositive ? AITone.strict : AITone.calm,
     );
   }
 

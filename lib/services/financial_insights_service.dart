@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/transaction_model.dart';
 import '../models/budget.dart';
 import '../models/goal.dart';
+import '../models/debt.dart';
 
 class Insight {
   final String message;
@@ -376,5 +377,42 @@ class FinancialInsightsService {
     // Suggest the median of monthly spending
     final values = monthlyTotals.values.toList()..sort();
     return values[values.length ~/ 2];
+  }
+
+  static Map<String, dynamic> getDebtPaymentImpact({
+    required double amount,
+    required double balance,
+    required List<Transaction> expenses,
+    required List<Budget> budgets,
+  }) {
+    final currentRunway = projectCashflow(expenses, balance, budgets)['days'] as int;
+    final newRunway = projectCashflow(expenses, balance - amount, budgets)['days'] as int;
+    
+    return {
+      'currentRunway': currentRunway,
+      'newRunway': newRunway,
+      'isRisky': newRunway < 3 && currentRunway >= 3,
+      'daysLost': currentRunway - newRunway,
+    };
+  }
+
+  static Map<String, dynamic>? suggestDebtOptimizations(Debt debt, List<Transaction> transactions) {
+    if (debt.isOwedToMe) return null; // Only optimize debts I OWE
+    
+    final remaining = debt.totalAmount - debt.paidAmount;
+    if (remaining <= 0) return null;
+
+    // Calculate spare monthly cashflow (last 30 days)
+    final lastMonth = transactions.where((t) => t.date.isAfter(DateTime.now().subtract(const Duration(days: 30))));
+    final income = lastMonth.where((t) => t.type == TransactionType.income).fold(0.0, (sum, t) => sum + t.amount);
+    final expense = lastMonth.where((t) => t.type == TransactionType.expense).fold(0.0, (sum, t) => sum + t.amount);
+    final spare = (income - expense) * 0.2; // Use 20% of spare cash for extra payoff
+
+    if (spare <= 50) return null; // Too little spare cash to suggest
+
+    return {
+      'extraAmount': spare,
+      'monthsSaved': (remaining / spare).toStringAsFixed(1), // Simplified
+    };
   }
 }

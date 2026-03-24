@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/theme_service.dart';
 import 'services/session_service.dart';
+import 'services/achievement_service.dart';
 import 'splash_screen.dart';
 import 'models/app_theme.dart';
 import 'widgets/security_wrapper.dart';
@@ -17,6 +18,9 @@ void main() async {
 
   // Initialize Session Service
   await SessionService.init();
+
+  // Initialize Achievement Service
+  await AchievementService.init();
 
   runApp(const MyApp());
 }

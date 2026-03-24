@@ -1,6 +1,7 @@
 import 'package:hive/hive.dart';
 import '../models/transaction_model.dart';
 import '../models/budget.dart';
+import '../models/debt.dart';
 
 class Achievement {
   final String id;
@@ -76,5 +77,24 @@ class AchievementService {
     }
 
     return unlocked;
+  }
+
+  static List<Achievement> checkDebtCompletion(List<Debt> debts) {
+    if (debts.isEmpty) return [];
+    
+    final box = Hive.box(_boxName);
+    final newlyUnlocked = <Achievement>[];
+
+    // Check if any debt is fully paid
+    for (var debt in debts) {
+      if (!debt.isOwedToMe && debt.paidAmount >= debt.totalAmount && debt.totalAmount > 0) {
+        if (!box.containsKey('debt_slayer')) {
+          unlock('debt_slayer');
+          newlyUnlocked.add(getAchievements().firstWhere((a) => a.id == 'debt_slayer'));
+        }
+      }
+    }
+
+    return newlyUnlocked;
   }
 }

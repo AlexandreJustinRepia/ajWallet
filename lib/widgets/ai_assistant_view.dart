@@ -83,9 +83,15 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       _animationController.forward(from: 0);
 
       // Check Achievements
-      final newAchievements = AchievementService.checkStreaks(transactions, budgets);
-      if (newAchievements.isNotEmpty) {
-        for (var ach in newAchievements) {
+      // Assuming 'transactions' can be directly passed to checkStreaks as it was before,
+      // or that 'expenses' and 'income' would be derived from it if needed by the service.
+      // For now, keeping 'transactions' as the argument for checkStreaks.
+      final newMilestones = AchievementService.checkStreaks(transactions, budgets);
+      final debtMilestones = AchievementService.checkDebtCompletion(debts);
+      final allNew = [...newMilestones, ...debtMilestones];
+
+      if (allNew.isNotEmpty && mounted) {
+        for (var ach in allNew) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
@@ -294,7 +300,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     if (_response!.tone == AITone.strict) color = crimson;
     if (_response!.tone == AITone.encouraging) color = cobalt;
 
-    final result = _response!.result;
 
     return Container(
       width: double.infinity,

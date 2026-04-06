@@ -14,12 +14,25 @@ class AIAssistantView extends StatefulWidget {
   State<AIAssistantView> createState() => _AIAssistantViewState();
 }
 
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final AIResponse? response;
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.response,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
+
 class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProviderStateMixin {
   final TextEditingController _queryController = TextEditingController();
-  AIResponse? _response;
+  final ScrollController _scrollController = ScrollController();
+  final List<ChatMessage> _messages = [];
   bool _isProcessing = false;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
   bool _showTutorial = false;
 
   // Tutorial GlobalKeys
@@ -43,8 +56,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _fadeAnimation = CurvedAnimation(parent: _animationController, curve: Curves.easeOut);
     _checkTutorial();
   }
 
@@ -67,18 +78,34 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   @override
   void dispose() {
     _queryController.dispose();
-    _animationController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _handleQuery(String query) async {
     if (query.trim().isEmpty) return;
     
+    final userText = query.trim();
+    _queryController.clear();
+
     setState(() {
+      _messages.insert(0, ChatMessage(text: userText, isUser: true));
       _isProcessing = true;
-      _response = null;
     });
 
+    _scrollToBottom();
     FocusScope.of(context).unfocus();
 
     // Subtle delay for "processing" feel
@@ -94,7 +121,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     final budgets = DatabaseService.getBudgets(accountKey);
 
     final response = AIAssistantService.processQuery(
-      query: query,
+      query: userText,
       transactions: transactions,
       balance: account.budget,
       goals: goals,
@@ -104,13 +131,13 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
 
     if (mounted) {
       setState(() {
-        _response = response;
+        _messages.insert(0, ChatMessage(text: response.insight, isUser: false, response: response));
         _isProcessing = false;
         if (_showTutorial) _dismissTutorial();
       });
-      _animationController.forward(from: 0);
-
-      // Check Achievements
+      _scrollToBottom();
+      
+      // Check Achievements (Keep existing achievement logic)
       final newMilestones = AchievementService.checkStreaks(transactions, budgets);
       final debtMilestones = AchievementService.checkDebtCompletion(debts);
       final allNew = [...newMilestones, ...debtMilestones];
@@ -170,13 +197,12 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       
       if (mounted) {
         setState(() {
-          _response = AIResponse(
-            result: "Saved! ✅",
-            insight: "Successfully recorded ₱${transaction.amount.toStringAsFixed(0)} to your ${transaction.category} history.",
-            intent: AIIntent.unknown,
-            isPositive: true,
-          );
+          _messages.insert(0, ChatMessage(
+            text: "Saved! ✅ Successfully recorded ₱${transaction.amount.toStringAsFixed(0)} to your ${transaction.category} history.",
+            isUser: false,
+          ));
         });
+        _scrollToBottom();
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction Added Successfully')));
       }
       return;
@@ -206,34 +232,68 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           children: [
             _buildHeader(theme),
             Expanded(
-              child: ListView(
-                reverse: true, 
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                children: [
-                  const SizedBox(height: 24),
-                  Container(key: _suggestionsKey, child: _buildSuggestions()),
-                  
-                  const SizedBox(height: 40),
-                
-                if (_response != null)
-                  FadeTransition(
-                    opacity: _fadeAnimation,
-                    child: _buildResponseArea(theme),
-                  )
-                else if (_isProcessing)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey)),
-                  )
-                else
-                  Container(key: _analyticsKey, child: _buildQuickInsights(theme)),
-              ],
+              child: _messages.isEmpty && !_isProcessing
+                ? _buildEmptyState(theme)
+                : ListView.builder(
+                    controller: _scrollController,
+                    reverse: true,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+                    itemCount: _messages.length + (_isProcessing ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (_isProcessing && index == 0) {
+                         return _buildProcessingIndicator();
+                      }
+                      final msgIndex = _isProcessing ? index - 1 : index;
+                      final message = _messages[msgIndex];
+                      return _buildMessageBubble(message, theme);
+                    },
+                  ),
             ),
-          ),
-          Container(key: _inputKey, child: _buildInputSection(theme)),
-        ],
+            _buildInputSection(theme),
+          ],
+        ),
       ),
-    ),
+    );
+  }
+
+  Widget _buildEmptyState(ThemeData theme) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 40),
+        Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.auto_awesome, size: 48, color: theme.primaryColor),
+          ),
+        ),
+        const SizedBox(height: 24),
+        Text(
+          'How can I help you today?',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Ask about your spending, runway, or simulate financial scenarios.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+        const SizedBox(height: 40),
+        Container(key: _analyticsKey, child: _buildQuickInsights(theme)),
+        const SizedBox(height: 40),
+      ],
+    );
+  }
+
+  Widget _buildProcessingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.symmetric(vertical: 24),
+      child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey)),
     );
   }
 
@@ -313,33 +373,59 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
 
   Widget _buildInputSection(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
-        border: Border(top: BorderSide(color: theme.dividerColor, width: 0.5)),
       ),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: theme.dividerColor),
-        ),
-        child: Row(
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: TextField(
-                controller: _queryController,
-                onSubmitted: _handleQuery,
-                decoration: const InputDecoration(
-                  hintText: 'Ask about your finances...',
-                  border: InputBorder.none,
-                ),
+            Container(key: _suggestionsKey, child: _buildSuggestions()),
+            const SizedBox(height: 12),
+            Container(
+              key: _inputKey,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: theme.dividerColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
-            ),
-            IconButton(
-              onPressed: () => _handleQuery(_queryController.text),
-              icon: Icon(Icons.auto_awesome, color: theme.primaryColor),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _queryController,
+                      onSubmitted: _handleQuery,
+                      decoration: const InputDecoration(
+                        hintText: 'Ask about your finances...',
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: IconButton(
+                      onPressed: () => _handleQuery(_queryController.text),
+                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -348,113 +434,200 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   }
 
   Widget _buildSuggestions() {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: _suggestions.map((s) => _buildSuggestionChip(s)).toList(),
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _suggestions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) => _buildSuggestionChip(_suggestions[index]),
+      ),
     );
   }
 
   Widget _buildSuggestionChip(String label) {
     final theme = Theme.of(context);
     return InkWell(
-      onTap: () {
-        _queryController.text = label;
-        _handleQuery(label);
-      },
-      borderRadius: BorderRadius.circular(12),
+      onTap: () => _handleQuery(label),
+      borderRadius: BorderRadius.circular(18),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
+          color: theme.cardColor,
           border: Border.all(color: theme.dividerColor),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(18),
         ),
-        child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 12, color: theme.primaryColor, fontWeight: FontWeight.w500),
+        ),
       ),
     );
   }
 
-  Widget _buildResponseArea(ThemeData theme) {
-    final emerald = const Color(0xFF2E7D32);
-    final crimson = const Color(0xFFB71C1C);
-    final cobalt = const Color(0xFF1976D2);
-    
-    Color color = _response!.isPositive ? emerald : crimson;
-    if (_response!.tone == AITone.strict) color = crimson;
-    if (_response!.tone == AITone.encouraging) color = cobalt;
+  Widget _buildMessageBubble(ChatMessage message, ThemeData theme) {
+    if (message.isUser) {
+      return Align(
+        alignment: Alignment.centerRight,
+        child: Container(
+          margin: const EdgeInsets.only(left: 64, bottom: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(20),
+              topRight: Radius.circular(20),
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(4),
+            ),
+          ),
+          child: Text(
+            message.text,
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      );
+    } else {
+      final response = message.response;
+      if (response == null) {
+        // Simple AI text message (e.g. "Saved!")
+        return Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.only(right: 64, bottom: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+                bottomLeft: Radius.circular(4),
+              ),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Text(
+              message.text,
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+            ),
+          ),
+        );
+      }
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            _response!.result,
-            style: theme.textTheme.displayMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: theme.textTheme.bodyLarge?.color,
+      final emerald = const Color(0xFF2E7D32);
+      final crimson = const Color(0xFFB71C1C);
+      final cobalt = const Color(0xFF1976D2);
+      
+      Color accentColor = response.isPositive ? emerald : crimson;
+      if (response.tone == AITone.strict) accentColor = crimson;
+      if (response.tone == AITone.encouraging) accentColor = cobalt;
+
+      return Align(
+        alignment: Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.only(right: 32, bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(24),
+              topRight: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+              bottomLeft: Radius.circular(4),
             ),
-          ),
-          if (_response!.intent == AIIntent.quickAddTransaction) ...[
-            const SizedBox(height: 16),
-            _buildQuickAddPreview(theme, color),
-          ],
-          const SizedBox(height: 12),
-          Text(
-            _response!.insight,
-            style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
-          ),
-          if (_response!.seriesData != null && _response!.seriesData!.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            _MiniSparkLine(data: _response!.seriesData!, color: color),
-            const SizedBox(height: 8),
-            const Text(
-              '7-Day Spending Trend',
-              style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1),
-            ),
-          ],
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Icon(Icons.check_circle_outline, size: 14, color: color),
-              const SizedBox(width: 8),
-              Text(
-                'Proprietary Intelligence Engine',
-                style: TextStyle(fontSize: 10, color: color, fontWeight: FontWeight.bold),
+            border: Border.all(color: accentColor.withValues(alpha: 0.15), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: accentColor.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          if (_response!.actions != null && _response!.actions!.isNotEmpty) ...[
-            const SizedBox(height: 32),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: _response!.actions!.map((action) {
-                return ElevatedButton(
-                  onPressed: () => _handleAction(action),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: color.withValues(alpha: 0.1),
-                    foregroundColor: color,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: color.withValues(alpha: 0.3)),
-                    ),
-                  ),
-                  child: Text(action.label, style: const TextStyle(fontWeight: FontWeight.bold)),
-                );
-              }).toList(),
-            ),
-          ],
-        ],
-      ),
-    );
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(6),
+                     decoration: BoxDecoration(
+                       color: accentColor.withValues(alpha: 0.1),
+                       shape: BoxShape.circle,
+                     ),
+                     child: Icon(Icons.auto_awesome, size: 14, color: accentColor),
+                   ),
+                   const SizedBox(width: 8),
+                   Text(
+                     response.result,
+                     style: theme.textTheme.titleMedium?.copyWith(
+                       fontWeight: FontWeight.bold,
+                       color: accentColor,
+                     ),
+                   ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (response.intent == AIIntent.quickAddTransaction) ...[
+                _buildQuickAddPreview(theme, accentColor, response),
+                const SizedBox(height: 12),
+              ],
+              Text(
+                response.insight,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontSize: 14,
+                  height: 1.5,
+                ),
+              ),
+              if (response.seriesData != null && response.seriesData!.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _MiniSparkLine(data: response.seriesData!, color: accentColor),
+                const SizedBox(height: 8),
+                const Text(
+                  '7-Day Spending Trend',
+                  style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                ),
+              ],
+              if (response.actions != null && response.actions!.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: response.actions!.map((action) {
+                    return Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () => _handleAction(action),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: accentColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: accentColor.withValues(alpha: 0.2)),
+                          ),
+                          child: Text(
+                            action.label,
+                            style: TextStyle(
+                              color: accentColor,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+    }
   }
 
   Widget _buildQuickInsights(ThemeData theme) {
@@ -497,7 +670,14 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: theme.textTheme.bodyLarge?.color,
+                  ),
+                ),
                 Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
@@ -507,8 +687,8 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     );
   }
 
-  Widget _buildQuickAddPreview(ThemeData theme, Color color) {
-    final payload = _response!.payload;
+  Widget _buildQuickAddPreview(ThemeData theme, Color color, AIResponse response) {
+    final payload = response.payload;
     if (payload == null) return const SizedBox.shrink();
 
     return Container(

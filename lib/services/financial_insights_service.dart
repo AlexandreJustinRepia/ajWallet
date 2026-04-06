@@ -157,7 +157,7 @@ class FinancialInsightsService {
           ? "Pacing your outflows may extend your runway" 
           : "Your current runway is approximately $daysRemaining days",
       icon: Icons.hourglass_bottom_rounded,
-      color: daysRemaining < 7 ? Colors.orange.withOpacity(0.7) : Colors.grey,
+      color: daysRemaining < 7 ? Colors.orange.withValues(alpha: 0.7) : Colors.grey,
     );
   }
 
@@ -295,7 +295,9 @@ class FinancialInsightsService {
       dayCounts.putIfAbsent(dow, () => {}).add(dateStr);
     }
     final avgs = <int, double>{};
-    for (var dow in dayTotals.keys) avgs[dow] = dayTotals[dow]! / dayCounts[dow]!.length;
+    for (var dow in dayTotals.keys) {
+      avgs[dow] = dayTotals[dow]! / dayCounts[dow]!.length;
+    }
     return avgs;
   }
 

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
@@ -83,7 +84,7 @@ class BackupService {
 
       return outputPath != null;
     } catch (e) {
-      print('Export error: $e');
+      debugPrint('Export error: $e');
       return false;
     }
   }
@@ -213,7 +214,7 @@ class BackupService {
 
       return true;
     } catch (e) {
-      print('Import error: $e');
+      debugPrint('Import error: $e');
       return false;
     }
   }

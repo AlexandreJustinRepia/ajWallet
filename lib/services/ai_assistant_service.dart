@@ -312,7 +312,8 @@ class AIAssistantService {
       );
     }
 
-    final impact = FinancialInsightsService.simulateImpact(
+    // --- OPTION A: The User's Request ---
+    final impactA = FinancialInsightsService.simulateImpact(
       expenses: expenses,
       balance: balance,
       goals: goals,
@@ -321,21 +322,80 @@ class AIAssistantService {
       reductionCategory: reductionCat,
     );
 
-    if (impact.containsKey('error')) {
-      return AIResponse(result: "Error", insight: impact['error'], intent: AIIntent.simulation, isPositive: false);
+    if (impactA.containsKey('error')) {
+      return AIResponse(result: "Error", insight: impactA['error'], intent: AIIntent.simulation, isPositive: false);
     }
 
-    final runway = impact['runwayExtension'] as int;
-    final goalImpacts = impact['goalImpacts'] as List<Map<String, dynamic>>;
+    final runwayA = impactA['runwayExtension'] as int;
     
-    String msg = "If you make those changes:";
-    if (runway != 0) msg += "\n• Your runway increases by $runway days.";
-    for (var gi in goalImpacts) {
-      if (gi['daysSaved'] > 0) msg += "\n• You'll reach '${gi['goalName']}' ${gi['daysSaved']} days sooner!";
+    String msg = "**Option A (Your Request):**\n";
+    if (dailyIncrease != null) {
+      msg += "Save ₱${dailyIncrease.toStringAsFixed(0)}/day → ";
+    } else {
+      msg += "Reduce $reductionCat by ₱${catReduction!.toStringAsFixed(0)}/month → ";
+    }
+    msg += "${runwayA > 0 ? '+' : ''}$runwayA days runway\n";
+    
+    final goalImpactsA = impactA['goalImpacts'] as List<Map<String, dynamic>>;
+    for (var gi in goalImpactsA) {
+      if (gi['daysSaved'] > 0) msg += "↳ Reach '${gi['goalName']}' ${gi['daysSaved']} days sooner!\n";
+    }
+
+    // --- OPTION B: The AI Counter-Proposal ---
+    String optionBMsg = "\n**Option B (AI Strategy):**\n";
+    int runwayB = 0;
+    
+    if (dailyIncrease != null) {
+      // Counter strategy: Reduce worst category by equivalent monthly amount
+      final monthlyEquivalent = dailyIncrease * 30;
+      final topCat = FinancialInsightsService.getCategoryData(expenses).entries.toList();
+      topCat.sort((a, b) => b.value.compareTo(a.value));
+      final worstCat = topCat.isNotEmpty ? topCat.first.key : 'Others';
+      
+      final impactB = FinancialInsightsService.simulateImpact(
+        expenses: expenses,
+        balance: balance,
+        goals: goals,
+        categoryReductionAmount: monthlyEquivalent,
+        reductionCategory: worstCat,
+      );
+      
+      runwayB = impactB['runwayExtension'] ?? 0;
+      optionBMsg += "Reduce '$worstCat' by ₱${monthlyEquivalent.toStringAsFixed(0)}/mo → ${runwayB > 0 ? '+' : ''}$runwayB days runway\n";
+      final goalImpactsB = impactB['goalImpacts'] as List<Map<String, dynamic>>;
+      for (var gi in goalImpactsB) {
+        if (gi['daysSaved'] > 0) optionBMsg += "↳ Reach '${gi['goalName']}' ${gi['daysSaved']} days sooner!\n";
+      }
+    } else if (catReduction != null) {
+      // Counter strategy: Simply enforce a flat daily savings equivalent
+      final dailyEquivalent = catReduction / 30;
+      final impactB = FinancialInsightsService.simulateImpact(
+        expenses: expenses,
+        balance: balance,
+        goals: goals,
+        dailySavingsIncrease: dailyEquivalent,
+      );
+      
+      runwayB = impactB['runwayExtension'] ?? 0;
+      optionBMsg += "Save ₱${dailyEquivalent.toStringAsFixed(0)}/day universally → ${runwayB > 0 ? '+' : ''}$runwayB days runway\n";
+      final goalImpactsB = impactB['goalImpacts'] as List<Map<String, dynamic>>;
+      for (var gi in goalImpactsB) {
+        if (gi['daysSaved'] > 0) optionBMsg += "↳ Reach '${gi['goalName']}' ${gi['daysSaved']} days sooner!\n";
+      }
+    }
+
+    msg += optionBMsg;
+    
+    if (runwayB > runwayA) {
+      msg += "\n**Verdict:** Option B yields superior cashflow durability.";
+    } else if (runwayA > runwayB) {
+      msg += "\n**Verdict:** Your strategy (Option A) maximizes the runway extension most effectively.";
+    } else {
+      msg += "\n**Verdict:** Both strategies yield equal mathematical impact. Choose the one easier for your lifestyle.";
     }
 
     return AIResponse(
-      result: "Simulation Result",
+      result: "Scenario Matrix",
       insight: msg,
       intent: AIIntent.simulation,
       actions: [AIAction(label: "Apply Changes", type: AIActionType.setLimit)],
@@ -644,13 +704,13 @@ class AIAssistantService {
     final warnings = FinancialInsightsService.getEarlyWarnings(expenses, balance, budgets);
     String warningPrefix = "";
     if (warnings.isNotEmpty) {
-      warningPrefix = warnings.join("\n\n") + "\n\n---\n\n";
+      warningPrefix = "${warnings.join("\n\n")}\n\n---\n\n";
       tone = AITone.strict; // Force strict tone due to early warnings
     }
 
     return AIResponse(
       result: response.result,
-      insight: warningPrefix + response.insight + extra,
+      insight: "$warningPrefix${response.insight}$extra",
       intent: response.intent,
       isPositive: warningPrefix.isEmpty ? response.isPositive : false,
       actions: response.actions,

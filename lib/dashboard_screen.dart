@@ -60,6 +60,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  void _scrollTo(GlobalKey key, double alignment) {
+    final context = key.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+        alignment: alignment,
+      );
+    }
+  }
+
   void _refresh() => setState(() {});
 
   // ---------------------------------------------------------------------------
@@ -98,22 +110,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         targetKey: _balanceKey,
         title: 'Total Balance',
         description: 'This is your Total Balance — it shows how much money you currently have across your wallets.',
+        onStepEnter: () => _scrollTo(_balanceKey, 0.1),
       ),
       OnboardingStep(
         targetKey: _quickAddKey,
         title: 'Quick Add',
         description: 'Use Quick Add to instantly record a transaction without leaving the home screen.',
-        onStepEnter: () {
-          final context = _quickAddKey.currentContext;
-          if (context != null) {
-            Scrollable.ensureVisible(
-              context,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              alignment: 0.3,
-            );
-          }
-        },
+        onStepEnter: () => _scrollTo(_quickAddKey, 0.3),
       ),
       OnboardingStep(
         targetKey: _quickAddKey,
@@ -121,31 +124,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
         description: 'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
         onStepEnter: () {
           _quickAddKey.currentState?.simulateTyping('250 Food');
-          final context = _quickAddKey.currentContext;
-          if (context != null) {
-            Scrollable.ensureVisible(
-              context,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeInOut,
-              alignment: 0.3,
-            );
-          }
+          _scrollTo(_quickAddKey, 0.3);
         },
       ),
       OnboardingStep(
         targetKey: _balanceKey,
         title: 'Automatic Updates',
         description: 'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
+        onStepEnter: () => _scrollTo(_balanceKey, 0.1),
       ),
       OnboardingStep(
         targetKey: _activityHeaderKey,
         title: 'Recent Activity',
         description: 'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
+        onStepEnter: () => _scrollTo(_activityHeaderKey, 0.5),
       ),
       OnboardingStep(
         targetKey: _sampleTransactionKey,
         title: 'Transaction Details',
         description: 'Each entry shows the amount, category, and type of transaction. Tap any item to see more details.',
+        onStepEnter: () => _scrollTo(_sampleTransactionKey, 0.6),
       ),
       OnboardingStep(
         title: 'All Set!',

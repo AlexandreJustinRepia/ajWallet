@@ -219,10 +219,10 @@ class DatabaseService {
       final goal = _goalBox.get(tx.goalKey);
       if (goal != null) {
         double adjustment = isReversing ? -tx.amount : tx.amount;
-        if (tx.type == TransactionType.income) {
-          goal.savedAmount += adjustment;
-        } else if (tx.type == TransactionType.expense) {
-          goal.savedAmount -= adjustment;
+        if (tx.type == TransactionType.expense) {
+          goal.savedAmount += adjustment; // Deduct from wallet, add to goal
+        } else if (tx.type == TransactionType.income) {
+          goal.savedAmount -= adjustment; // Add to wallet, deduct from goal
         }
         await goal.save();
       }

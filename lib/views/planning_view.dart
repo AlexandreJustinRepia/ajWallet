@@ -7,6 +7,7 @@ import '../screens/add_goal_screen.dart';
 import '../screens/add_debt_screen.dart';
 import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
+import '../screens/fund_goal_screen.dart';
 
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
@@ -108,10 +109,19 @@ class PlanningView extends StatelessWidget {
                       progressColor: Colors.green,
                       primaryActionLabel: 'Save',
                       onPrimaryAction: () async {
-                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
+                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
                           accountKey: accountKey,
-                          initialType: TransactionType.income,
-                          initialGoalKey: g.key as int,
+                          goal: g,
+                          isWithdrawing: false,
+                        )));
+                        if (res == true) onRefresh();
+                      },
+                      secondaryActionLabel: 'Withdraw',
+                      onSecondaryAction: () async {
+                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
+                          accountKey: accountKey,
+                          goal: g,
+                          isWithdrawing: true,
                         )));
                         if (res == true) onRefresh();
                       },
@@ -184,6 +194,8 @@ class _PlanningItem extends StatelessWidget {
   final Color progressColor;
   final String? primaryActionLabel;
   final VoidCallback? onPrimaryAction;
+  final String? secondaryActionLabel;
+  final VoidCallback? onSecondaryAction;
   final VoidCallback onDelete;
 
   const _PlanningItem({
@@ -194,6 +206,8 @@ class _PlanningItem extends StatelessWidget {
     required this.progressColor,
     this.primaryActionLabel,
     this.onPrimaryAction,
+    this.secondaryActionLabel,
+    this.onSecondaryAction,
     required this.onDelete,
   });
 
@@ -242,20 +256,41 @@ class _PlanningItem extends StatelessWidget {
                 '${(progress * 100).toStringAsFixed(0)}%',
                 style: TextStyle(fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
               ),
-              if (onPrimaryAction != null)
-                TextButton.icon(
-                  onPressed: onPrimaryAction,
-                  icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: progressColor),
-                  label: Text(
-                    primaryActionLabel ?? 'Add',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor),
-                  ),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    backgroundColor: progressColor.withOpacity(0.05),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onSecondaryAction != null) ...[
+                    TextButton.icon(
+                      onPressed: onSecondaryAction,
+                      icon: Icon(Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
+                      label: Text(
+                        secondaryActionLabel ?? 'Remove',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withOpacity(0.7)),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        backgroundColor: progressColor.withOpacity(0.05),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  if (onPrimaryAction != null)
+                    TextButton.icon(
+                      onPressed: onPrimaryAction,
+                      icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: progressColor),
+                      label: Text(
+                        primaryActionLabel ?? 'Add',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        backgroundColor: progressColor.withOpacity(0.1),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ],

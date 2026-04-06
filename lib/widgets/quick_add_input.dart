@@ -179,7 +179,9 @@ class _QuickAddInputState extends State<QuickAddInput> {
                     onSubmitted: (_) => _submit(),
                     decoration: InputDecoration(
                       hintText: 'Quick add: "250 food"',
-                      hintStyle: theme.textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                      hintStyle: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                      ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 20),
                     ),

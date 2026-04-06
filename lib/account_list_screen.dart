@@ -68,7 +68,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final textColor = theme.colorScheme.onSurface;
     final hintColor = textColor.withOpacity(0.5);
 
     return Scaffold(

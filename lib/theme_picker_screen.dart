@@ -136,38 +136,39 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final activeTheme = Theme.of(context);
     final themeData = _getCurrentThemeObj().toThemeData();
 
     return Theme(
       data: themeData,
       child: Scaffold(
-        backgroundColor: themeData.scaffoldBackgroundColor,
+        backgroundColor: activeTheme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: const Text('Theme Settings'),
+          title: Text('Theme Settings', style: TextStyle(color: activeTheme.colorScheme.onSurface)),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          foregroundColor: themeData.textTheme.bodyLarge?.color,
+          foregroundColor: activeTheme.colorScheme.onSurface,
         ),
         body: ListView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           physics: const BouncingScrollPhysics(),
           children: [
-            _buildSectionHeader('DISPLAY MODE', Icons.brightness_6_rounded),
+            _buildSectionHeader('DISPLAY MODE', Icons.brightness_6_rounded, activeTheme),
             const SizedBox(height: 16),
-            _buildModeSwitcher(themeData),
+            _buildModeSwitcher(activeTheme),
             
             const SizedBox(height: 40),
-            _buildSectionHeader('PRESET PALETTES', Icons.palette_rounded),
+            _buildSectionHeader('PRESET PALETTES', Icons.palette_rounded, activeTheme),
             const SizedBox(height: 16),
-            _buildPresetsGrid(context),
+            _buildPresetsGrid(context, activeTheme),
 
             const SizedBox(height: 40),
-            _buildSectionHeader('LAB PREVIEW', Icons.remove_red_eye_rounded),
+            _buildSectionHeader('LAB PREVIEW', Icons.remove_red_eye_rounded, activeTheme),
             const SizedBox(height: 16),
-            _buildPreviewCard(themeData),
+            _buildPreviewCard(themeData), // Keep preview card using the new themeData
 
             const SizedBox(height: 40),
-            _buildAdvancedSection(themeData),
+            _buildAdvancedSection(activeTheme),
             const SizedBox(height: 60),
           ],
         ),
@@ -175,17 +176,17 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: Colors.grey),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: Colors.grey,
+            color: theme.colorScheme.onSurface.withOpacity(0.5),
             letterSpacing: 2,
           ),
         ),
@@ -238,7 +239,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
-              color: isSelected ? Colors.white : Colors.grey,
+              color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ),
@@ -246,7 +247,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  Widget _buildPresetsGrid(BuildContext context) {
+  Widget _buildPresetsGrid(BuildContext context, ThemeData theme) {
     return ValueListenableBuilder<List<AppTheme>>(
       valueListenable: ThemeService.savedThemesNotifier,
       builder: (context, themes, _) {
@@ -357,7 +358,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           _colorTile('Income', _income, (c) => setState(() => _income = c)),
           _colorTile('Expense', _expense, (c) => setState(() => _expense = c)),
           const SizedBox(height: 24),
-          SizedBox(
+            SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: _saveAsNewTheme,
@@ -365,7 +366,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
               label: const Text('Save as New Preset'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.primaryColor,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -431,8 +432,13 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
               color: t.primaryColor,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Center(
-              child: Text('Simulated Action', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            child: Center(
+              child: Text('Simulated Action', 
+                style: TextStyle(
+                  color: t.colorScheme.onPrimary, 
+                  fontWeight: FontWeight.bold
+                )
+              ),
             ),
           ),
         ],

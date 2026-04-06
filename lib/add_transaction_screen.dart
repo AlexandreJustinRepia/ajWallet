@@ -446,6 +446,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     maxLines: 2,
                     decoration: InputDecoration(
                       hintText: 'Add a note...',
+                      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -496,7 +497,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     children: [
                       const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
                       const SizedBox(width: 12),
-                      const Text('Manual Date Entry', style: TextStyle(fontWeight: FontWeight.w500)),
+                      Text('Manual Date Entry', 
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w500
+                        )
+                      ),
                       const Spacer(),
                       Switch(
                         value: _isManualDate,
@@ -765,10 +771,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     int? selectedKey,
     ValueChanged<int?> onChanged,
   ) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey),
+        border: Border.all(color: theme.dividerColor),
         borderRadius: BorderRadius.circular(12),
       ),
       child: DropdownButtonHideUnderline(

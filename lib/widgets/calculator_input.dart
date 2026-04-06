@@ -433,10 +433,7 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
                           ? Colors.orange.withOpacity(0.1)
                           : theme.primaryColor.withOpacity(0.1)),
                 foregroundColor: isNumber
-                    ? theme.textTheme.bodyLarge?.color ??
-                          (theme.brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black87)
+                    ? theme.colorScheme.onSurface
                     : (isAC ? Colors.orange : theme.primaryColor),
                 elevation: 0,
                 shape: RoundedRectangleBorder(

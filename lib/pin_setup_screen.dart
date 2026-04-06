@@ -244,7 +244,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   Widget _buildPinField(String hint, TextEditingController controller) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final textColor = theme.colorScheme.onSurface;
     final hintColor = textColor.withOpacity(0.5);
 
     return Column(

@@ -256,9 +256,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text('PIN Required'),
-        content: const Text(
+        title: Text('PIN Required', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
           'A backup PIN must be set before you can enable biometric login. This ensures you can always access your vault.',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
         ),
         actions: [
           TextButton(

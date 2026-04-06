@@ -3,6 +3,7 @@ import 'services/database_service.dart';
 import 'services/session_service.dart';
 import 'services/security_service.dart';
 import 'dashboard_screen.dart';
+import 'pin_setup_screen.dart';
 import 'models/account.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -123,19 +124,128 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _showForgotPinDialog() {
+    final theme = Theme.of(context);
+    final textColor = theme.colorScheme.onSurface;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: Colors.white,
-        title: const Text('Forgot PIN?'),
-        content: const Text(
-          'For security, offline data cannot be recovered without the PIN. '
-          'You may need to delete this account and start over if you cannot remember it.',
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: Text('Forgot PIN?', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Security Notice:',
+              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'For your protection, all data is stored locally and encrypted. If you cannot remember your PIN, you must prove your identity or reset the account.',
+              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 13),
+            ),
+          ],
+        ),
+        actions: [
+          Column(
+            children: [
+              if (widget.account.isBiometricEnabled && _canCheckBiometrics)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        final success = await SecurityService.authenticateWithBiometrics(
+                          reason: 'Verify your identity to reset your PIN.',
+                        );
+                        if (success) {
+                          if (mounted) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const PinSetupScreen(isFromSettings: true),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.fingerprint),
+                      label: const Text('Reset PIN via Biometrics'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _showDeleteAccountConfirmation();
+                    },
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Reset Account (Wipe Data)'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: theme.colorScheme.error,
+                      side: BorderSide(color: theme.colorScheme.error),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountConfirmation() {
+    final theme = Theme.of(context);
+    final textColor = theme.colorScheme.onSurface;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Wipe Account Data?', style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold)),
+        content: Text(
+          'This will permanently delete all transactions, wallets, and settings for "${widget.account.name}". This action cannot be undone.',
+          style: TextStyle(color: textColor),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Colors.black)),
+            child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await DatabaseService.wipeAccountData(widget.account.key as int);
+              await DatabaseService.deleteAccount(widget.account);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Account wiped and deleted.')),
+                );
+                Navigator.pop(context, true); // Return true to signal list refresh
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Wipe & Delete'),
           ),
         ],
       ),
@@ -145,7 +255,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
+    final textColor = theme.colorScheme.onSurface;
     final hintColor = textColor.withOpacity(0.5);
 
     return Scaffold(

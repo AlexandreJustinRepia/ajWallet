@@ -3,9 +3,7 @@ import 'package:intl/intl.dart';
 import 'services/database_service.dart';
 import 'models/transaction_model.dart';
 import '../models/wallet.dart';
-import '../models/goal.dart';
 import '../models/budget.dart';
-import '../models/debt.dart';
 import 'package:hive/hive.dart';
 import 'widgets/calculator_input.dart';
 
@@ -53,9 +51,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int? _selectedWalletKey;
   int? _selectedToWalletKey; // For Transfers
 
-  List<Goal> _goals = [];
   List<Budget> _budgets = [];
-  List<Debt> _debts = [];
+  List<Transaction> _transactions = [];
 
   int? _selectedGoalKey;
   int? _selectedBudgetKey;
@@ -68,7 +65,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
-    _loadPlanningEntities();
+    _budgets = DatabaseService.getBudgets(widget.accountKey);
+    _transactions = DatabaseService.getTransactions(widget.accountKey);
     _checkTutorial();
     
     if (widget.existingTransaction != null) {
@@ -120,12 +118,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     setState(() => _showTutorial = false);
   }
 
-  void _loadPlanningEntities() {
-    _goals = DatabaseService.getGoals(widget.accountKey);
-    _budgets = DatabaseService.getBudgets(widget.accountKey);
-    _debts = DatabaseService.getDebts(widget.accountKey);
-  }
-
   final Map<String, IconData> _expenseCategories = {
     'Food & Drinks': Icons.fastfood,
     'Transportation': Icons.directions_car,
@@ -148,6 +140,26 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Map<String, IconData> get _currentCategories => 
     _selectedType == TransactionType.income ? _incomeCategories : _expenseCategories;
+
+  String? _getBudgetStatus(String category) {
+    if (_selectedType != TransactionType.expense) return null;
+    
+    final now = DateTime.now();
+    try {
+      final budget = _budgets.firstWhere(
+        (b) => b.category == category && b.month == now.month && b.year == now.year
+      );
+      
+      final spent = _transactions
+          .where((tx) => tx.type == TransactionType.expense && tx.category == category && tx.date.month == now.month && tx.date.year == now.year)
+          .fold(0.0, (sum, tx) => sum + tx.amount);
+          
+      final remaining = budget.amountLimit - spent;
+      return ' (₱${remaining.toStringAsFixed(0)} left)';
+    } catch (_) {
+      return null;
+    }
+  }
 
   void _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
@@ -413,13 +425,34 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           isExpanded: true,
                           dropdownColor: theme.cardColor,
                           items: _currentCategories.keys.map((String category) {
+                            final budgetStat = _getBudgetStatus(category);
                             return DropdownMenuItem<String>(
                               value: category,
                               child: Row(
                                 children: [
                                   Icon(_currentCategories[category], size: 20, color: theme.primaryColor),
                                   const SizedBox(width: 12),
-                                  Text(category),
+                                  Expanded(
+                                    child: Row(
+                                      children: [
+                                        Text(category),
+                                        if (budgetStat != null) ...[
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              budgetStat,
+                                              style: TextStyle(
+                                                color: budgetStat.contains('-') ? Colors.red : Colors.grey,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        ],
+                                      ],
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -454,43 +487,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ),
                   const SizedBox(height: 32),
 
-                  // ── Planning Linkage ──────────────────────────────────────────
-                  Text('Link to Planning (Optional)', style: theme.textTheme.titleMedium?.copyWith(color: theme.primaryColor)),
-                  const SizedBox(height: 16),
-                  
-                  // Goal Selector
-                  _buildPlanningDropdown<Goal>(
-                    label: 'Savings Goal',
-                    items: _goals,
-                    value: _selectedGoalKey,
-                    itemLabel: (g) => '${g.name} (₱${g.savedAmount.toStringAsFixed(0)}/₱${g.targetAmount.toStringAsFixed(0)})',
-                    onChanged: (val) => setState(() => _selectedGoalKey = val),
-                    icon: Icons.flag_rounded,
-                  ),
-                  const SizedBox(height: 16),
 
-                  // Budget Selector
-                  _buildPlanningDropdown<Budget>(
-                    label: 'Category Budget',
-                    items: _budgets,
-                    value: _selectedBudgetKey,
-                    itemLabel: (b) => '${b.category} (${DateFormat('MMM').format(DateTime(2026, b.month))} - ₱${b.amountLimit.toStringAsFixed(0)})',
-                    onChanged: (val) => setState(() => _selectedBudgetKey = val),
-                    icon: Icons.pie_chart_rounded,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Debt Selector
-                  _buildPlanningDropdown<Debt>(
-                    label: 'Debt / Loan',
-                    items: _debts,
-                    value: _selectedDebtKey,
-                    itemLabel: (d) => '${d.personName} (${d.isOwedToMe ? 'Owed to me' : 'Borrowed'})',
-                    onChanged: (val) => setState(() => _selectedDebtKey = val),
-                    icon: Icons.handshake_rounded,
-                  ),
-
-                  const SizedBox(height: 32),
 
                   // Manual Date Toggle
                   Row(
@@ -716,55 +713,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
-  Widget _buildPlanningDropdown<T extends HiveObject>({
-    required String label,
-    required List<T> items,
-    required int? value,
-    required String Function(T) itemLabel,
-    required ValueChanged<int?> onChanged,
-    required IconData icon,
-  }) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: theme.textTheme.labelMedium?.copyWith(color: Colors.grey)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            border: Border.all(color: theme.dividerColor),
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: value,
-              isExpanded: true,
-              hint: Text('None', style: TextStyle(color: Colors.grey.withOpacity(0.5))),
-              dropdownColor: theme.cardColor,
-              items: [
-                const DropdownMenuItem<int>(value: null, child: Text('None')),
-                ...items.map((item) {
-                  return DropdownMenuItem<int>(
-                    value: item.key as int,
-                    child: Row(
-                      children: [
-                        Icon(icon, size: 16, color: theme.primaryColor.withOpacity(0.5)),
-                        const SizedBox(width: 12),
-                        Expanded(child: Text(itemLabel(item), overflow: TextOverflow.ellipsis)),
-                      ],
-                    ),
-                  );
-                }).toList(),
-              ],
-              onChanged: onChanged,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildWalletDropdown(
     List<Wallet> wallets,

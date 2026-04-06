@@ -40,14 +40,41 @@ class _HomeViewState extends State<HomeView> {
   bool _isNetWorthMode = false;
 
   final List<Transaction> _tutorialTransactions = [];
-  late final List<Wallet> _tutorialWallets = [
-    Wallet(
-      name: 'Demo Wallet', 
-      balance: 10000.0, 
-      type: 'E-Wallet',
-      accountKey: 999,
-    )
-  ];
+  late List<Wallet> _tutorialWallets;
+
+  @override
+  void initState() {
+    super.initState();
+    _initTutorialWallets();
+  }
+
+  void _initTutorialWallets() {
+    final account = SessionService.activeAccount;
+    final realWallets = account != null ? DatabaseService.getWallets(account.key as int) : <Wallet>[];
+    
+    if (realWallets.isNotEmpty) {
+      _tutorialWallets = realWallets.map((w) => Wallet(
+        name: 'Demo ${w.name}',
+        balance: w.balance,
+        // If initial balance is too small for a 250 deduction, use 10,000
+        type: w.type,
+        accountKey: 999,
+      )).toList();
+      
+      if (_tutorialWallets[0].balance < 250) {
+        _tutorialWallets[0].balance = 10000.0;
+      }
+    } else {
+      _tutorialWallets = [
+        Wallet(
+          name: 'Demo Wallet', 
+          balance: 10000.0, 
+          type: 'E-Wallet',
+          accountKey: 999,
+        )
+      ];
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -397,12 +424,15 @@ class _HomeViewState extends State<HomeView> {
           return buildDateHeader(context, item);
         }
         final tx = item as Transaction;
+        
+        final isFirstTx = topTx.isNotEmpty && tx == topTx.first;
+        
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: SlideInListItem(
             index: index,
             child: TransactionCard(
-              key: index == 0 ? widget.sampleTransactionKey : null,
+              key: isFirstTx ? widget.sampleTransactionKey : null,
               tx: tx, 
               onRefresh: widget.onRefresh
             ),

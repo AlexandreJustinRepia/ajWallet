@@ -19,6 +19,7 @@ enum AIIntent {
   financialAdvice,
   subscriptions,
   simulation,
+  quickAddTransaction,
   unknown
 }
 
@@ -32,7 +33,8 @@ enum AIActionType {
   createGoal,
   setLimit,
   viewTransactions,
-  manageSubscription
+  manageSubscription,
+  confirmQuickAdd
 }
 
 class AIAction {
@@ -50,6 +52,8 @@ class AIResponse {
   final bool isPositive;
   final List<AIAction>? actions;
   final AITone tone;
+  final List<double>? seriesData;
+  final Map<String, dynamic>? payload;
 
   AIResponse({
     required this.result,
@@ -58,6 +62,8 @@ class AIResponse {
     this.isPositive = true,
     this.actions,
     this.tone = AITone.calm,
+    this.seriesData,
+    this.payload,
   });
 }
 
@@ -74,6 +80,14 @@ class AIAssistantService {
     final expenses = transactions.where((t) => t.type == TransactionType.expense).toList();
     final income = transactions.where((t) => t.type == TransactionType.income).toList();
     final allBudgets = budgets ?? [];
+
+    // 0. Quick Add Detection (Prioritize this if it starts with a number)
+    if (RegExp(r'^\d+').hasMatch(lowerQuery)) {
+      final res = _processQuickAdd(lowerQuery, transactions, balance, allBudgets);
+      if (res != null) {
+        return _applyAdaptiveTone(res, balance, transactions.where((t) => t.type == TransactionType.expense).toList(), transactions.where((t) => t.type == TransactionType.income).toList(), allBudgets);
+      }
+    }
 
     // 1. Detect Intent
     final intent = _detectIntent(lowerQuery);
@@ -96,6 +110,9 @@ class AIAssistantService {
         return _processRecurring(expenses);
       case AIIntent.subscriptions:
         return _processSubscriptions(expenses);
+      case AIIntent.quickAddTransaction:
+        // Already handled by early return in processQuery, but adding for completeness
+        return _processQuickAdd(lowerQuery, expenses, balance, budgets) ?? _processUnknown();
       case AIIntent.simulation:
         return _processSimulation(lowerQuery, expenses, balance, goals ?? []);
       case AIIntent.incomeTotal:
@@ -473,6 +490,7 @@ class AIAssistantService {
         result: "₱${total.toStringAsFixed(2)}",
         insight: "Total spent on ${foundCategory.toUpperCase()} $timeframe.",
         intent: AIIntent.spendingCategory,
+        seriesData: FinancialInsightsService.getWeeklyTrendLineData(expenses),
       );
     } else {
       final total = FinancialInsightsService.getTotalSpending(expenses, range);
@@ -480,6 +498,7 @@ class AIAssistantService {
         result: "₱${total.toStringAsFixed(2)}",
         insight: "Your total outflows for $timeframe.",
         intent: AIIntent.spendingTotal,
+        seriesData: FinancialInsightsService.getWeeklyTrendLineData(expenses),
       );
     }
   }
@@ -633,6 +652,7 @@ class AIAssistantService {
         result: "Diagnostic Report",
         insight: layeredMessage,
         intent: AIIntent.financialAdvice,
+        seriesData: FinancialInsightsService.getWeeklyTrendLineData(expenses),
       );
     }
 
@@ -659,10 +679,21 @@ class AIAssistantService {
       tip = "Your balance is getting low. It might be a good time to review non-essential expenses.";
     }
 
+    final breakdown = FinancialInsightsService.getSummaryBreakdown(expenses);
+    final burn = (breakdown['dailyBurn'] as double).toStringAsFixed(0);
+    final trend = (breakdown['trend'] as double).toStringAsFixed(0);
+    final trendIcon = (breakdown['trend'] as double) >= 0 ? "📈" : "📉";
+
+    String visualBreakdown = "\n\n---\n📊 **Breakdown**\n"
+        "• Daily Burn: ₱$burn/day\n"
+        "• Top Category: ${breakdown['topCategory']}\n"
+        "• Trend: $trendIcon $trend% vs last week";
+
     return AIResponse(
       result: "Smart Tip",
-      insight: tip,
+      insight: "$tip$visualBreakdown",
       intent: AIIntent.financialAdvice,
+      seriesData: FinancialInsightsService.getWeeklyTrendLineData(expenses),
     );
   }
 
@@ -715,6 +746,83 @@ class AIAssistantService {
       isPositive: warningPrefix.isEmpty ? response.isPositive : false,
       actions: response.actions,
       tone: tone,
+      seriesData: response.seriesData,
+      payload: response.payload,
+    );
+  }
+
+  static AIResponse _processUnknown() {
+    return AIResponse(
+      result: "I'm not quite sure how to analyze that yet.",
+      insight: "Try asking about your 'spending', 'runway', 'goals', or ask a simulation like 'What if I save ₱100 more per day?'",
+      intent: AIIntent.unknown,
+    );
+  }
+
+  static AIResponse? _processQuickAdd(String query, List<Transaction> transactions, double balance, List<Budget> budgets) {
+    // Regex to match: [Amount] [Category (Multi-word)] [Description (Optional)]
+    // Example: "500 food and drinks mcdo" or "1000 salary"
+    final reg = RegExp(r'^(\d+)\s+(.+?)(?:\s+(.*))?$');
+    final match = reg.firstMatch(query);
+    if (match == null) return null;
+
+    final amount = double.tryParse(match.group(1)!) ?? 0.0;
+    String rawCat = match.group(2)!.toLowerCase();
+    String desc = match.group(3) ?? "";
+
+    // Map raw input to official categories
+    final expenseCats = ['food & drinks', 'transportation', 'shopping', 'entertainment', 'health', 'utilities', 'education', 'others'];
+    final incomeCats = ['salary', 'bonus', 'dividend', 'gift', 'investment', 'others'];
+
+    String? category;
+    TransactionType type = TransactionType.expense;
+
+    // Check income first
+    for (var cat in incomeCats) {
+      if (rawCat.contains(cat.replaceAll(' & ', ' and ').toLowerCase())) {
+        category = cat == 'food & drinks' ? 'Food & Drinks' : cat[0].toUpperCase() + cat.substring(1);
+        type = TransactionType.income;
+        break;
+      }
+    }
+
+    if (category == null) {
+      for (var cat in expenseCats) {
+        if (rawCat.contains(cat.replaceAll(' & ', ' and ').toLowerCase())) {
+          category = cat == 'food & drinks' ? 'Food & Drinks' : cat[0].toUpperCase() + cat.substring(1);
+          type = TransactionType.expense;
+          break;
+        }
+      }
+    }
+
+    if (category == null) return null;
+
+    final insight = "I've detected a ${type == TransactionType.income ? 'deposit' : 'spend'} of ₱${amount.toStringAsFixed(0)} for **$category**.";
+    
+    return AIResponse(
+      result: "Drafting Record",
+      insight: desc.isNotEmpty ? "$insight\nNote: \"$desc\"" : insight,
+      intent: AIIntent.quickAddTransaction,
+      isPositive: type == TransactionType.income,
+      actions: [
+        AIAction(
+          label: "Confirm Add", 
+          type: AIActionType.confirmQuickAdd,
+          payload: {
+            'amount': amount,
+            'category': category,
+            'description': desc,
+            'type': type.index,
+          }
+        )
+      ],
+      payload: {
+        'amount': amount,
+        'category': category,
+        'description': desc,
+        'type': type.index,
+      }
     );
   }
 }

@@ -624,5 +624,32 @@ class FinancialInsightsService {
 
     return warnings;
   }
+
+  static double getDailyBurn(List<Transaction> expenses) {
+    if (expenses.isEmpty) return 0.0;
+    final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    final days = DateTime.now().difference(firstDate).inDays + 1;
+    final totalExpense = expenses.fold(0.0, (sum, e) => sum + e.amount);
+    return days > 0 ? (totalExpense / days) : totalExpense;
+  }
+
+  static Map<String, dynamic> getSummaryBreakdown(List<Transaction> expenses) {
+    if (expenses.isEmpty) return {};
+    
+    final dailyBurn = getDailyBurn(expenses);
+    
+    final categoryData = getCategoryData(expenses);
+    final topCat = categoryData.isNotEmpty 
+        ? categoryData.entries.reduce((a, b) => a.value > b.value ? a : b).key 
+        : 'None';
+        
+    final trend = getTrendDirection(expenses);
+    
+    return {
+      'dailyBurn': dailyBurn,
+      'topCategory': topCat,
+      'trend': trend,
+    };
+  }
 }
 

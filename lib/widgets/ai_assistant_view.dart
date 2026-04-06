@@ -3,6 +3,7 @@ import '../services/database_service.dart';
 import '../services/session_service.dart';
 import '../services/ai_assistant_service.dart';
 import '../services/achievement_service.dart';
+import '../models/transaction_model.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class AIAssistantView extends StatefulWidget {
@@ -131,8 +132,56 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     }
   }
 
-  void _handleAction(AIAction action) {
+  void _handleAction(AIAction action) async {
+    if (action.type == AIActionType.confirmQuickAdd) {
+      final payload = action.payload as Map<String, dynamic>;
+      final account = SessionService.activeAccount;
+      if (account == null) return;
+
+      final walletKey = _findDefaultWallet(account.key as int);
+      if (walletKey == null) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No wallet found to add transaction to.')));
+        return;
+      }
+
+      final transaction = Transaction(
+        title: payload['category'],
+        amount: payload['amount'],
+        date: DateTime.now(),
+        category: payload['category'],
+        description: payload['description'] ?? "",
+        type: TransactionType.values[payload['type']],
+        accountKey: account.key as int,
+        walletKey: walletKey,
+      );
+
+      await DatabaseService.saveTransaction(transaction);
+      
+      if (mounted) {
+        setState(() {
+          _response = AIResponse(
+            result: "Saved! ✅",
+            insight: "Successfully recorded ₱${transaction.amount.toStringAsFixed(0)} to your ${transaction.category} history.",
+            intent: AIIntent.unknown,
+            isPositive: true,
+          );
+        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Transaction Added Successfully')));
+      }
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label}')));
+  }
+
+  int? _findDefaultWallet(int accountKey) {
+    final wallets = DatabaseService.getWallets(accountKey);
+    try {
+      // Prefer "Cash"
+      return wallets.firstWhere((w) => w.name.toLowerCase() == 'cash').key as int;
+    } catch (_) {
+      if (wallets.isNotEmpty) return wallets.first.key as int;
+    }
+    return null;
   }
 
   @override
@@ -209,7 +258,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: theme.primaryColor.withOpacity(0.1),
+                              color: theme.primaryColor.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -243,7 +292,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.1),
+        color: Colors.grey.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
       ),
       child: const Row(
@@ -332,15 +381,15 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [theme.primaryColor.withOpacity(0.1), theme.primaryColor.withOpacity(0.05)],
+          colors: [theme.primaryColor.withValues(alpha: 0.1), theme.primaryColor.withValues(alpha: 0.05)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.primaryColor.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: theme.primaryColor.withOpacity(0.05),
+            color: theme.primaryColor.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -420,7 +469,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,11 +481,24 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
               color: theme.textTheme.bodyLarge?.color,
             ),
           ),
+          if (_response!.intent == AIIntent.quickAddTransaction) ...[
+            const SizedBox(height: 16),
+            _buildQuickAddPreview(theme, color),
+          ],
           const SizedBox(height: 12),
           Text(
             _response!.insight,
             style: const TextStyle(fontSize: 16, color: Colors.grey, height: 1.5),
           ),
+          if (_response!.seriesData != null && _response!.seriesData!.isNotEmpty) ...[
+            const SizedBox(height: 32),
+            _MiniSparkLine(data: _response!.seriesData!, color: color),
+            const SizedBox(height: 8),
+            const Text(
+              '7-Day Spending Trend',
+              style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold, letterSpacing: 1),
+            ),
+          ],
           const SizedBox(height: 24),
           Row(
             children: [
@@ -457,12 +519,12 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                 return ElevatedButton(
                   onPressed: () => _handleAction(action),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: color.withOpacity(0.1),
+                    backgroundColor: color.withValues(alpha: 0.1),
                     foregroundColor: color,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: color.withOpacity(0.3)),
+                      side: BorderSide(color: color.withValues(alpha: 0.3)),
                     ),
                   ),
                   child: Text(action.label, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -515,7 +577,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.1),
+              color: accent.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, size: 18, color: accent),
@@ -531,6 +593,78 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildQuickAddPreview(ThemeData theme, Color color) {
+    final payload = _response!.payload;
+    if (payload == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        children: [
+          _buildPreviewRow("Type", payload['type'] == 0 ? "Income" : "Expense", color),
+          const Divider(height: 24),
+          _buildPreviewRow("Category", payload['category'], color),
+          if (payload['description'] != null && (payload['description'] as String).isNotEmpty) ...[
+            const Divider(height: 24),
+            _buildPreviewRow("Note", payload['description'], color),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreviewRow(String label, String value, Color color) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold)),
+        Text(value, style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: color)),
+      ],
+    );
+  }
+}
+
+class _MiniSparkLine extends StatelessWidget {
+  final List<double> data;
+  final Color color;
+
+  const _MiniSparkLine({required this.data, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    if (data.isEmpty) return const SizedBox.shrink();
+    
+    // Find max for scaling
+    final max = data.reduce((a, b) => a > b ? a : b);
+    if (max == 0) return const SizedBox(height: 40, child: Center(child: Text('No spending activity', style: TextStyle(fontSize: 10, color: Colors.grey))));
+
+    return SizedBox(
+      height: 60,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: data.map((val) {
+          final heightFactor = val / max;
+          return Expanded(
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 2),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: heightFactor.clamp(0.1, 1.0)),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              height: (60 * heightFactor).clamp(4.0, 60.0),
+            ),
+          );
+        }).toList(),
       ),
     );
   }

@@ -3,10 +3,19 @@ import 'services/database_service.dart';
 import 'services/session_service.dart';
 import 'services/security_service.dart';
 import 'dashboard_screen.dart';
+import 'models/account.dart';
 
 class PinSetupScreen extends StatefulWidget {
   final bool isFromSettings;
-  const PinSetupScreen({super.key, this.isFromSettings = false});
+  final bool isResetting;
+  final Account? account;
+
+  const PinSetupScreen({
+    super.key, 
+    this.isFromSettings = false, 
+    this.isResetting = false,
+    this.account,
+  });
 
   @override
   State<PinSetupScreen> createState() => _PinSetupScreenState();
@@ -53,10 +62,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
       return;
     }
 
-    final account = SessionService.activeAccount;
+    final account = widget.account ?? SessionService.activeAccount;
     if (account != null) {
       account.pin = pin;
-      account.isBiometricEnabled = _useBiometrics;
+      if (!widget.isResetting) {
+        account.isBiometricEnabled = _useBiometrics;
+      }
       if (_fakePinController.text.isNotEmpty) {
         account.fakePin = _fakePinController.text;
       }
@@ -121,12 +132,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
             children: [
               const SizedBox(height: 20),
               Text(
-                'Secure your account',
+                widget.isResetting ? 'Reset your PIN' : 'Secure your account',
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter a 4-digit PIN for extra security.',
+                widget.isResetting 
+                  ? 'Enter a new 4-digit PIN for ${widget.account?.name ?? 'your account'}.'
+                  : 'Enter a 4-digit PIN for extra security.',
                 style: TextStyle(fontSize: 16, color: hintColor),
               ),
               const SizedBox(height: 40),
@@ -146,7 +159,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
               const SizedBox(height: 16),
               _buildPinField('Fake PIN', _fakePinController),
               const SizedBox(height: 32),
-              if (_canCheckBiometrics)
+              if (_canCheckBiometrics && !widget.isResetting)
                 Row(
                   children: [
                     Expanded(

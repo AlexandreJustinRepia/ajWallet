@@ -129,7 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: Text('Forgot PIN?', style: TextStyle(color: textColor, fontWeight: FontWeight.bold)),
         content: Column(
@@ -157,17 +157,32 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        Navigator.pop(context);
+                        Navigator.pop(dialogContext);
+                        
+                        // Small delay to allow dialog to close before system prompt
+                        await Future.delayed(const Duration(milliseconds: 300));
+                        
                         final success = await SecurityService.authenticateWithBiometrics(
                           reason: 'Verify your identity to reset your PIN.',
                         );
+                        
                         if (success) {
                           if (mounted) {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => const PinSetupScreen(isFromSettings: true),
+                                builder: (context) => PinSetupScreen(
+                                  isFromSettings: true,
+                                  isResetting: true,
+                                  account: widget.account,
+                                ),
                               ),
+                            );
+                          }
+                        } else {
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Biometric verification failed.')),
                             );
                           }
                         }
@@ -188,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      Navigator.pop(context);
+                      Navigator.pop(dialogContext);
                       _showDeleteAccountConfirmation();
                     },
                     icon: const Icon(Icons.delete_forever),
@@ -202,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
               ),
             ],
@@ -218,7 +233,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (confContext) => AlertDialog(
         title: Text('Wipe Account Data?', style: TextStyle(color: theme.colorScheme.error, fontWeight: FontWeight.bold)),
         content: Text(
           'This will permanently delete all transactions, wallets, and settings for "${widget.account.name}". This action cannot be undone.',
@@ -226,12 +241,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(confContext),
             child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              Navigator.pop(confContext);
               await DatabaseService.wipeAccountData(widget.account.key as int);
               await DatabaseService.deleteAccount(widget.account);
               if (mounted) {

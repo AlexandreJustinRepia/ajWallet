@@ -26,13 +26,14 @@ class AccountAdapter extends TypeAdapter<Account> {
       maxFailedAttempts: fields[6] as int,
       isWipeEnabled: fields[7] as bool,
       autoLockDurationSeconds: fields[8] as int,
+      hasSeenTutorial: fields[9] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(7)
       ..write(obj.isWipeEnabled)
       ..writeByte(8)
-      ..write(obj.autoLockDurationSeconds);
+      ..write(obj.autoLockDurationSeconds)
+      ..writeByte(9)
+      ..write(obj.hasSeenTutorial);
   }
 
   @override

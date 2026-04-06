@@ -14,7 +14,19 @@ import 'dashboard_helpers.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback onRefresh;
-  const HomeView({super.key, required this.onRefresh});
+  final GlobalKey? balanceKey;
+  final GlobalKey? quickAddKey;
+  final GlobalKey? activityHeaderKey;
+  final GlobalKey? sampleTransactionKey;
+
+  const HomeView({
+    super.key, 
+    required this.onRefresh,
+    this.balanceKey,
+    this.quickAddKey,
+    this.activityHeaderKey,
+    this.sampleTransactionKey,
+  });
 
   @override
   State<HomeView> createState() => _HomeViewState();
@@ -63,10 +75,11 @@ class _HomeViewState extends State<HomeView> {
           const SizedBox(height: 32),
           _buildBalanceCard(context, totalBalance, _isNetWorthMode, (val) {
             setState(() => _isNetWorthMode = val);
-          }),
+          }, key: widget.balanceKey),
           if (account != null) ...[
             const SizedBox(height: 16),
             QuickAddInput(
+              key: widget.quickAddKey,
               accountKey: account.key as int,
               onSaved: widget.onRefresh,
             ),
@@ -78,7 +91,7 @@ class _HomeViewState extends State<HomeView> {
             _buildInsightsList(context, insights),
             const SizedBox(height: 32),
           ],
-          _buildRecentActivityHeader(context),
+          _buildRecentActivityHeader(context, key: widget.activityHeaderKey),
           const SizedBox(height: 16),
           if (transactions.isEmpty)
             _buildEmptyState(context)
@@ -157,13 +170,15 @@ class _HomeViewState extends State<HomeView> {
     BuildContext context,
     double totalBalance,
     bool isNetWorth,
-    ValueChanged<bool> onToggle,
-  ) {
+    ValueChanged<bool> onToggle, {
+    Key? key,
+  }) {
     final theme = Theme.of(context);
     final cardColor = theme.primaryColor;
     final contentColor = theme.colorScheme.onPrimary;
 
     return AnimatedScale(
+      key: key,
       scale: _showGlow ? 1.02 : 1.0,
       duration: const Duration(milliseconds: 400),
       curve: Curves.easeOutBack,
@@ -271,9 +286,10 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildRecentActivityHeader(BuildContext context) {
+  Widget _buildRecentActivityHeader(BuildContext context, {Key? key}) {
     final theme = Theme.of(context);
     return Row(
+      key: key,
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
@@ -356,7 +372,11 @@ class _HomeViewState extends State<HomeView> {
           padding: const EdgeInsets.only(bottom: 12),
           child: SlideInListItem(
             index: index,
-            child: TransactionCard(tx: tx, onRefresh: widget.onRefresh),
+            child: TransactionCard(
+              key: index == 0 ? widget.sampleTransactionKey : null,
+              tx: tx, 
+              onRefresh: widget.onRefresh
+            ),
           ),
         );
       },

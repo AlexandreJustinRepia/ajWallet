@@ -14,10 +14,10 @@ class QuickAddInput extends StatefulWidget {
   });
 
   @override
-  State<QuickAddInput> createState() => _QuickAddInputState();
+  State<QuickAddInput> createState() => QuickAddInputState();
 }
 
-class _QuickAddInputState extends State<QuickAddInput> {
+class QuickAddInputState extends State<QuickAddInput> {
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   QuickAddResult? _preview;
@@ -38,6 +38,18 @@ class _QuickAddInputState extends State<QuickAddInput> {
       return;
     }
     setState(() => _preview = QuickAddService.parse(_controller.text));
+  }
+
+  Future<void> simulateTyping(String text) async {
+    _controller.clear();
+    for (int i = 0; i < text.length; i++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+      _controller.text = text.substring(0, i + 1);
+      _controller.selection = TextSelection.fromPosition(
+        TextPosition(offset: _controller.text.length),
+      );
+    }
   }
 
   Future<void> _submit() async {

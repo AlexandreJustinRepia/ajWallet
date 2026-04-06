@@ -14,6 +14,8 @@ import 'views/planning_view.dart';
 import 'widgets/ai_assistant_view.dart';
 import 'screens/about_screen.dart';
 import 'services/update_service.dart';
+import 'widgets/onboarding_overlay.dart';
+import 'widgets/quick_add_input.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +26,39 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
+  bool _showTutorial = false;
+
+  // Onboarding Keys
+  final GlobalKey _balanceKey = GlobalKey();
+  final GlobalKey<QuickAddInputState> _quickAddKey = GlobalKey<QuickAddInputState>();
+  final GlobalKey _activityHeaderKey = GlobalKey();
+  final GlobalKey _sampleTransactionKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstRun();
+  }
+
+  Future<void> _checkFirstRun() async {
+    final account = SessionService.activeAccount;
+    if (account != null && !account.hasSeenTutorial) {
+      // Small delay to ensure everything is rendered
+      await Future.delayed(const Duration(milliseconds: 1000));
+      if (mounted) {
+        setState(() => _showTutorial = true);
+      }
+    }
+  }
+
+  Future<void> _onTutorialFinish() async {
+    setState(() => _showTutorial = false);
+    final account = SessionService.activeAccount;
+    if (account != null) {
+      account.hasSeenTutorial = true;
+      await DatabaseService.updateAccount(account);
+    }
+  }
 
   void _refresh() => setState(() {});
 
@@ -45,11 +80,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final accountKey = SessionService.activeAccount?.key as int?;
 
     final pages = [
-      HomeView(onRefresh: _refresh),
+      HomeView(
+        onRefresh: _refresh,
+        balanceKey: _balanceKey,
+        quickAddKey: _quickAddKey,
+        activityHeaderKey: _activityHeaderKey,
+        sampleTransactionKey: _sampleTransactionKey,
+      ),
       ActivityView(onRefresh: _refresh),
       WalletsView(onRefresh: _refresh),
       PlanningView(onRefresh: _refresh),
       const AIAssistantView(),
+    ];
+
+    final tutorialSteps = [
+      OnboardingStep(
+        targetKey: _balanceKey,
+        title: 'Total Balance',
+        description: 'This is your Total Balance — it shows how much money you currently have across your wallets.',
+      ),
+      OnboardingStep(
+        targetKey: _quickAddKey,
+        title: 'Quick Add',
+        description: 'Use Quick Add to instantly record a transaction without leaving the home screen.',
+        onStepEnter: () {
+          final context = _quickAddKey.currentContext;
+          if (context != null) {
+            Scrollable.ensureVisible(
+              context,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              alignment: 0.3,
+            );
+          }
+        },
+      ),
+      OnboardingStep(
+        targetKey: _quickAddKey,
+        title: 'Smart Parsing',
+        description: 'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
+        onStepEnter: () {
+          _quickAddKey.currentState?.simulateTyping('250 Food');
+          final context = _quickAddKey.currentContext;
+          if (context != null) {
+            Scrollable.ensureVisible(
+              context,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeInOut,
+              alignment: 0.3,
+            );
+          }
+        },
+      ),
+      OnboardingStep(
+        targetKey: _balanceKey,
+        title: 'Automatic Updates',
+        description: 'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
+      ),
+      OnboardingStep(
+        targetKey: _activityHeaderKey,
+        title: 'Recent Activity',
+        description: 'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
+      ),
+      OnboardingStep(
+        targetKey: _sampleTransactionKey,
+        title: 'Transaction Details',
+        description: 'Each entry shows the amount, category, and type of transaction. Tap any item to see more details.',
+      ),
+      OnboardingStep(
+        title: 'All Set!',
+        description: "You're all set! Start managing your finances with AJ Wallet. Welcome aboard!",
+      ),
     ];
 
     return Scaffold(
@@ -59,19 +160,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
         automaticallyImplyLeading: false,
         actions: [_buildProfileMenu(context, theme)],
       ),
-      body: Column(
-        children: [
-          _buildUpdateBanner(theme),
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                _refresh();
-                await Future.delayed(const Duration(milliseconds: 500));
-              },
-              child: pages[_selectedIndex],
+      body: OnboardingOverlay(
+        visible: _showTutorial && _selectedIndex == 0,
+        steps: tutorialSteps,
+        onFinish: _onTutorialFinish,
+        child: Column(
+          children: [
+            _buildUpdateBanner(theme),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  _refresh();
+                  await Future.delayed(const Duration(milliseconds: 500));
+                },
+                child: pages[_selectedIndex],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => _onFabPressed(context, accountKey),

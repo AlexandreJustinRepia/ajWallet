@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:flutter/services.dart';
 import 'database_service.dart';
@@ -25,21 +26,36 @@ class SecurityService {
   }
 
   static Future<bool> canAuthenticateWithBiometrics() async {
-    final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
-    final bool canAuthenticate = canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
-    return canAuthenticate;
+    final bool canCheckBiometrics = await _auth.canCheckBiometrics;
+    final bool isDeviceSupported = await _auth.isDeviceSupported();
+    final List<BiometricType> availableBiometrics = await _auth.getAvailableBiometrics();
+    
+    debugPrint('Hardware support: $canCheckBiometrics');
+    debugPrint('Device supported: $isDeviceSupported');
+    debugPrint('Enrolled biometrics: $availableBiometrics');
+
+    return (canCheckBiometrics || isDeviceSupported) && availableBiometrics.isNotEmpty;
   }
 
-  static Future<bool> authenticateWithBiometrics() async {
+  static Future<bool> authenticateWithBiometrics({String reason = 'Authenticate to access your wallet'}) async {
     try {
+      final bool canCheck = await _auth.canCheckBiometrics;
+      final bool isSupported = await _auth.isDeviceSupported();
+      if (!canCheck || !isSupported) return false;
+
       return await _auth.authenticate(
-        localizedReason: 'Authenticate to access your wallet',
+        localizedReason: reason,
         options: const AuthenticationOptions(
           stickyAuth: true,
           biometricOnly: true,
+          useErrorDialogs: true,
         ),
       );
-    } on PlatformException {
+    } on PlatformException catch (e) {
+      debugPrint('Biometric auth error: ${e.code} - ${e.message}');
+      return false;
+    } catch (e) {
+      debugPrint('General auth error: $e');
       return false;
     }
   }

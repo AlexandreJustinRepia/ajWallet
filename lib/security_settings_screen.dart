@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/session_service.dart';
 import 'services/backup_service.dart';
+import 'services/security_service.dart';
 import 'models/account.dart';
 import 'pin_setup_screen.dart';
 
@@ -53,16 +54,55 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             'Biometric Login',
             'Use fingerprint or face ID to unlock.',
             _account.isBiometricEnabled,
-            (val) => setState(() => _account.isBiometricEnabled = val),
+            (val) async {
+              if (val) {
+                // If there's no PIN set, we shouldn't allow biometrics
+                if (_account.pin == null || _account.pin!.isEmpty) {
+                  _showPinRequiredDialog();
+                  return;
+                }
+
+                final canAuth = await SecurityService.canAuthenticateWithBiometrics();
+                if (!canAuth) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Biometrics not available or not set up.')),
+                    );
+                  }
+                  return;
+                }
+
+                final success = await SecurityService.authenticateWithBiometrics(
+                  reason: 'Verify your identity to enable biometric login.',
+                );
+
+                if (success) {
+                  setState(() => _account.isBiometricEnabled = true);
+                  await DatabaseService.updateAccount(_account);
+                } else {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Biometric verification failed.')),
+                    );
+                  }
+                }
+              } else {
+                setState(() => _account.isBiometricEnabled = false);
+                await DatabaseService.updateAccount(_account);
+              }
+            },
           ),
           const SizedBox(height: 16),
           _buildSectionTitle('Protection'),
-          _buildSwitchTile(
-            'Data Wipe',
-            'Wipe all data after ${_account.maxFailedAttempts} failed attempts.',
-            _account.isWipeEnabled,
-            (val) => setState(() => _account.isWipeEnabled = val),
-          ),
+            _buildSwitchTile(
+              'Data Wipe',
+              'Wipe all data after ${_account.maxFailedAttempts} failed attempts.',
+              _account.isWipeEnabled,
+              (val) async {
+                setState(() => _account.isWipeEnabled = val);
+                await DatabaseService.updateAccount(_account);
+              },
+            ),
           const SizedBox(height: 16),
           _buildSectionTitle('Auto-Lock'),
           ListTile(
@@ -77,9 +117,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   child: Text(value < 60 ? '$value sec' : '${value ~/ 60} min'),
                 );
               }).toList(),
-              onChanged: (val) {
+              onChanged: (val) async {
                 if (val != null) {
                   setState(() => _account.autoLockDurationSeconds = val);
+                  await DatabaseService.updateAccount(_account);
                 }
               },
             ),
@@ -208,6 +249,45 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         }
       }
     }
+  }
+
+  void _showPinRequiredDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('PIN Required'),
+        content: const Text(
+          'A backup PIN must be set before you can enable biometric login. This ensures you can always access your vault.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Not Now', style: TextStyle(color: Colors.grey[600])),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const PinSetupScreen(isFromSettings: true),
+                ),
+              );
+              // Refresh account status after returning from setup
+              setState(() {
+                _account = SessionService.activeAccount!;
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('Set PIN Now', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildSectionTitle(String title) {

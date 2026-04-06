@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
 import 'services/database_service.dart';
 import 'services/session_service.dart';
 import 'services/security_service.dart';
@@ -16,7 +15,6 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _pinController = TextEditingController();
-  final LocalAuthentication _auth = LocalAuthentication();
   bool _canCheckBiometrics = false;
   bool _isLocked = false;
 
@@ -27,39 +25,38 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _checkBiometrics() async {
+    debugPrint('Checking biometrics for account: ${widget.account.name}');
+    debugPrint('Is biometric enabled: ${widget.account.isBiometricEnabled}');
+    
     if (!widget.account.isBiometricEnabled) return;
 
-    bool canCheckBiometrics = false;
-    try {
-      canCheckBiometrics = await _auth.canCheckBiometrics;
-    } catch (e) {
-      debugPrint('Error checking biometrics: $e');
-    }
+    // Small delay to ensure the screen is settled and avoid race conditions with platform channels
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final canCheck = await SecurityService.canAuthenticateWithBiometrics();
+    debugPrint('Can authenticate with biometrics: $canCheck');
+    
     if (!mounted) return;
     setState(() {
-      _canCheckBiometrics = canCheckBiometrics;
+      _canCheckBiometrics = canCheck;
     });
 
     if (_canCheckBiometrics) {
+      debugPrint('Triggering automatic biometric authentication...');
       _authenticateWithBiometrics();
     }
   }
 
   Future<void> _authenticateWithBiometrics() async {
     if (_isLocked) return;
-    try {
-      bool authenticated = await _auth.authenticate(
-        localizedReason: 'Authenticate to access ${widget.account.name}',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-        ),
-      );
-      if (authenticated && mounted) {
-        _navigateToDashboard();
-      }
-    } catch (e) {
-      debugPrint('Biometric auth error: $e');
+    
+    final authenticated = await SecurityService.authenticateWithBiometrics(
+      reason: 'Authenticate to access ${widget.account.name}',
+    );
+
+    if (authenticated && mounted) {
+      SessionService.setActiveAccount(widget.account);
+      _navigateToDashboard();
     }
   }
 

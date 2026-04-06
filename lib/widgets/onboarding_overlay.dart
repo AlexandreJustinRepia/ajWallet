@@ -199,12 +199,24 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
     final double baseBottom = (screenHeight - (_targetRect?.top ?? 400)) + 20;
     
     // Provide safe margins
-    final top = isSpotlightTopHalf ? baseTop.clamp(24.0, screenHeight - 150) : null;
-    final bottom = !isSpotlightTopHalf ? baseBottom.clamp(24.0, screenHeight - 150) : null;
+    double? top = isSpotlightTopHalf ? baseTop.clamp(24.0, screenHeight - 150) : null;
+    double? bottom = !isSpotlightTopHalf ? baseBottom.clamp(24.0, screenHeight - 150) : null;
 
-    final maxHeight = isSpotlightTopHalf 
+    double maxHeight = isSpotlightTopHalf 
         ? screenHeight - top! - 24 
         : screenHeight - bottom! - 24;
+
+    // Fallback if target is too large to fit the text box below/above it.
+    if (maxHeight < 250) {
+      if (isSpotlightTopHalf) {
+         top = null;
+         bottom = 24.0;
+      } else {
+         bottom = null;
+         top = 24.0;
+      }
+      maxHeight = screenHeight / 2 - 24;
+    }
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 500),

@@ -12,7 +12,31 @@ import 'dashboard_helpers.dart';
 /// Merged Activity tab: toggles between a full transaction list and a calendar view.
 class ActivityView extends StatefulWidget {
   final VoidCallback onRefresh;
-  const ActivityView({super.key, required this.onRefresh});
+  final bool isTutorialActive;
+  final GlobalKey? listAreaKey;
+  final GlobalKey? singleItemKey;
+  final GlobalKey? dateHeaderKey;
+  final GlobalKey? colorIndicatorKey;
+  final GlobalKey? filterChipsKey;
+  final GlobalKey? searchBarKey;
+  final GlobalKey? calendarTabKey;
+  final GlobalKey? calendarAreaKey;
+  final int? overrideTabIndex;
+
+  const ActivityView({
+    super.key, 
+    required this.onRefresh,
+    this.isTutorialActive = false,
+    this.listAreaKey,
+    this.singleItemKey,
+    this.dateHeaderKey,
+    this.colorIndicatorKey,
+    this.filterChipsKey,
+    this.searchBarKey,
+    this.calendarTabKey,
+    this.calendarAreaKey,
+    this.overrideTabIndex,
+  });
 
   @override
   State<ActivityView> createState() => _ActivityViewState();
@@ -25,12 +49,25 @@ class _ActivityViewState extends State<ActivityView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
   }
+
+  @override
+  void didUpdateWidget(ActivityView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.overrideTabIndex != null && widget.overrideTabIndex != oldWidget.overrideTabIndex) {
+      _tabController.animateTo(widget.overrideTabIndex!);
+    }
+  }
+
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  TransactionType? _filter;
 
   @override
   void dispose() {
     _tabController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -65,9 +102,71 @@ class _ActivityViewState extends State<ActivityView>
                 fontSize: 13,
               ),
               dividerColor: Colors.transparent,
-              tabs: const [
-                Tab(text: 'List'),
-                Tab(text: 'Calendar'),
+              tabs: [
+                const Tab(text: 'List'),
+                Tab(key: widget.calendarTabKey, text: 'Calendar'),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Search Bar ─────────────────────────────────────────────────────
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+          child: Container(
+            key: widget.searchBarKey,
+            height: 44,
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: theme.dividerColor, width: 0.5),
+            ),
+            child: TextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search transactions...',
+                hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 13),
+                prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              style: const TextStyle(fontSize: 13),
+            ),
+          ),
+        ),
+
+        // ── Filter Chips (Shared) ──────────────────────────────────────────
+        Padding(
+          key: widget.filterChipsKey,
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                FilterTab(
+                  label: 'All',
+                  isSelected: _filter == null,
+                  onTap: () => setState(() => _filter = null),
+                ),
+                const SizedBox(width: 8),
+                FilterTab(
+                  label: 'Income',
+                  isSelected: _filter == TransactionType.income,
+                  onTap: () => setState(() => _filter = TransactionType.income),
+                ),
+                const SizedBox(width: 8),
+                FilterTab(
+                  label: 'Expense',
+                  isSelected: _filter == TransactionType.expense,
+                  onTap: () => setState(() => _filter = TransactionType.expense),
+                ),
+                const SizedBox(width: 8),
+                FilterTab(
+                  label: 'Transfer',
+                  isSelected: _filter == TransactionType.transfer,
+                  onTap: () => setState(() => _filter = TransactionType.transfer),
+                ),
               ],
             ),
           ),
@@ -78,8 +177,23 @@ class _ActivityViewState extends State<ActivityView>
           child: TabBarView(
             controller: _tabController,
             children: [
-              _ListViewTab(onRefresh: widget.onRefresh),
-              _CalendarViewTab(onRefresh: widget.onRefresh),
+              _ListViewTab(
+                onRefresh: widget.onRefresh,
+                isTutorialActive: widget.isTutorialActive,
+                searchQuery: _searchQuery,
+                filter: _filter,
+                listAreaKey: widget.listAreaKey,
+                singleItemKey: widget.singleItemKey,
+                dateHeaderKey: widget.dateHeaderKey,
+                colorIndicatorKey: widget.colorIndicatorKey,
+              ),
+              _CalendarViewTab(
+                onRefresh: widget.onRefresh,
+                isTutorialActive: widget.isTutorialActive,
+                searchQuery: _searchQuery,
+                filter: _filter,
+                calendarAreaKey: widget.calendarAreaKey,
+              ),
             ],
           ),
         ),
@@ -94,15 +208,51 @@ class _ActivityViewState extends State<ActivityView>
 
 class _ListViewTab extends StatelessWidget {
   final VoidCallback onRefresh;
-  const _ListViewTab({required this.onRefresh});
+  final bool isTutorialActive;
+  final String searchQuery;
+  final TransactionType? filter;
+  
+  final GlobalKey? listAreaKey;
+  final GlobalKey? singleItemKey;
+  final GlobalKey? dateHeaderKey;
+  final GlobalKey? colorIndicatorKey;
+
+  const _ListViewTab({
+    required this.onRefresh,
+    required this.isTutorialActive,
+    required this.searchQuery,
+    required this.filter,
+    this.listAreaKey,
+    this.singleItemKey,
+    this.dateHeaderKey,
+    this.colorIndicatorKey,
+  });
 
   @override
   Widget build(BuildContext context) {
     final account = SessionService.activeAccount;
     final theme = Theme.of(context);
-    final transactions = account != null
-        ? DatabaseService.getTransactions(account.key as int)
-        : <Transaction>[];
+    List<Transaction> baseTransactions = [];
+
+    if (isTutorialActive) {
+      final now = DateTime.now();
+      baseTransactions = [
+        Transaction(accountKey: 0, title: 'Grocery Run', amount: 250.00, type: TransactionType.expense, date: now, category: 'Food', description: 'Bought some food at the store'),
+        Transaction(accountKey: 0, title: 'Salary', amount: 5000.00, type: TransactionType.income, date: now.subtract(const Duration(days: 1)), category: 'Salary', description: 'Monthly salary from work'),
+        Transaction(accountKey: 0, title: 'Transfer to Savings', amount: 500.00, type: TransactionType.transfer, date: now.subtract(const Duration(days: 2)), category: 'Transfer', description: 'Moving cash to savings'),
+      ];
+    } else if (account != null) {
+      baseTransactions = DatabaseService.getTransactions(account.key as int);
+    }
+
+    final transactions = baseTransactions.where((tx) {
+      if (filter != null && tx.type != filter) return false;
+      if (searchQuery.isNotEmpty) {
+        final q = searchQuery;
+        if (!tx.title.toLowerCase().contains(q) && !tx.category.toLowerCase().contains(q)) return false;
+      }
+      return true;
+    }).toList();
 
     if (transactions.isEmpty) {
       return Center(
@@ -136,23 +286,52 @@ class _ListViewTab extends StatelessWidget {
       items.add(tx);
     }
 
-    return ListView.builder(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+    return Container(
+      key: listAreaKey,
+      child: ListView.builder(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       itemCount: items.length,
       itemBuilder: (context, index) {
         final item = items[index];
-        if (item is DateTime) return buildDateHeader(context, item);
+        if (item is DateTime) {
+          return SizedBox(
+            key: index == 0 ? dateHeaderKey : null,
+            child: buildDateHeader(context, item),
+          );
+        }
         final tx = item as Transaction;
+        
+        // Target the first transaction card for the tutorial
+        final isFirstTx = index == (items.first is DateTime ? 1 : 0);
+
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
           child: SlideInListItem(
             index: index,
-            child: TransactionCard(tx: tx, onRefresh: onRefresh),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  key: isFirstTx ? colorIndicatorKey : null,
+                  width: 14,
+                  height: 14,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : (tx.type == TransactionType.expense ? theme.colorScheme.error : Colors.blue),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  key: isFirstTx ? singleItemKey : null,
+                  child: TransactionCard(tx: tx, onRefresh: onRefresh),
+                ),
+              ],
+            ),
           ),
         );
       },
-    );
+    ));
   }
 }
 
@@ -162,7 +341,18 @@ class _ListViewTab extends StatelessWidget {
 
 class _CalendarViewTab extends StatefulWidget {
   final VoidCallback onRefresh;
-  const _CalendarViewTab({required this.onRefresh});
+  final bool isTutorialActive;
+  final String searchQuery;
+  final TransactionType? filter;
+  final GlobalKey? calendarAreaKey;
+
+  const _CalendarViewTab({
+    required this.onRefresh,
+    required this.isTutorialActive,
+    required this.searchQuery,
+    required this.filter,
+    this.calendarAreaKey,
+  });
 
   @override
   State<_CalendarViewTab> createState() => _CalendarViewTabState();
@@ -171,7 +361,6 @@ class _CalendarViewTab extends StatefulWidget {
 class _CalendarViewTabState extends State<_CalendarViewTab> {
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  TransactionType? _filter;
 
   @override
   void initState() {
@@ -183,14 +372,29 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
   Widget build(BuildContext context) {
     final account = SessionService.activeAccount;
     final theme = Theme.of(context);
-    final transactions = account != null
-        ? DatabaseService.getTransactions(account.key as int)
-        : <Transaction>[];
+    List<Transaction> transactions = [];
 
-    final filtered = transactions.where((tx) {
-      final dateMatch = isSameDay(tx.date, _selectedDay ?? _focusedDay);
-      final typeMatch = _filter == null || tx.type == _filter;
-      return dateMatch && typeMatch;
+    if (widget.isTutorialActive) {
+      final now = DateTime.now();
+      transactions = [
+        Transaction(accountKey: 0, title: 'Grocery Run', amount: 250.00, type: TransactionType.expense, date: now, category: 'Food', description: 'Bought some food at the store'),
+        Transaction(accountKey: 0, title: 'Salary', amount: 5000.00, type: TransactionType.income, date: now.subtract(const Duration(days: 1)), category: 'Salary', description: 'Monthly salary from work'),
+        Transaction(accountKey: 0, title: 'Transfer to Savings', amount: 500.00, type: TransactionType.transfer, date: now.subtract(const Duration(days: 2)), category: 'Transfer', description: 'Moving cash to savings'),
+      ];
+    } else if (account != null) {
+      transactions = DatabaseService.getTransactions(account.key as int);
+    }
+
+    final globalFiltered = transactions.where((tx) {
+      final typeMatch = widget.filter == null || tx.type == widget.filter;
+      final searchMatch = widget.searchQuery.isEmpty || 
+        tx.title.toLowerCase().contains(widget.searchQuery) || 
+        tx.category.toLowerCase().contains(widget.searchQuery);
+      return typeMatch && searchMatch;
+    }).toList();
+
+    final filtered = globalFiltered.where((tx) {
+      return isSameDay(tx.date, _selectedDay ?? _focusedDay);
     }).toList();
 
     final dayIncome = filtered
@@ -202,7 +406,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
 
     final categoryData = <String, double>{};
     for (final tx in filtered) {
-      if (_filter == null && tx.type != TransactionType.expense) continue;
+      if (widget.filter == null && tx.type != TransactionType.expense) continue;
       if (tx.type == TransactionType.transfer) continue;
       categoryData[tx.category] = (categoryData[tx.category] ?? 0) + tx.amount;
     }
@@ -230,7 +434,9 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: TableCalendar(
+            child: Container(
+              key: widget.calendarAreaKey,
+              child: TableCalendar(
               firstDay: DateTime.utc(2020, 1, 1),
               lastDay: DateTime.utc(2030, 12, 31),
               focusedDay: _focusedDay,
@@ -242,6 +448,9 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
               }),
               onPageChanged: (focusedDay) =>
                   setState(() => _focusedDay = focusedDay),
+              eventLoader: (day) {
+                return globalFiltered.where((tx) => isSameDay(tx.date, day)).toList();
+              },
               headerVisible: false,
               daysOfWeekStyle: DaysOfWeekStyle(
                 weekdayStyle: TextStyle(
@@ -282,39 +491,16 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                 defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
                 weekendTextStyle: const TextStyle(fontWeight: FontWeight.w500),
                 outsideDaysVisible: false,
+                markerDecoration: BoxDecoration(
+                  color: theme.primaryColor,
+                  shape: BoxShape.circle,
+                ),
+                markersMaxCount: 1,
+                markerMargin: const EdgeInsets.only(top: 6),
               ),
             ),
           ),
         ),
-
-        // Filter chips
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-            child: Row(
-              children: [
-                FilterTab(
-                  label: 'All',
-                  isSelected: _filter == null,
-                  onTap: () => setState(() => _filter = null),
-                ),
-                const SizedBox(width: 8),
-                FilterTab(
-                  label: 'Income',
-                  isSelected: _filter == TransactionType.income,
-                  onTap: () =>
-                      setState(() => _filter = TransactionType.income),
-                ),
-                const SizedBox(width: 8),
-                FilterTab(
-                  label: 'Expense',
-                  isSelected: _filter == TransactionType.expense,
-                  onTap: () =>
-                      setState(() => _filter = TransactionType.expense),
-                ),
-              ],
-            ),
-          ),
         ),
 
         // Day summary
@@ -453,7 +639,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _filter == TransactionType.income ? 'INCOME BREAKDOWN' : 'SPENDING BREAKDOWN',
+                widget.filter == TransactionType.income ? 'INCOME BREAKDOWN' : 'SPENDING BREAKDOWN',
                 style: theme.textTheme.labelLarge?.copyWith(
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,

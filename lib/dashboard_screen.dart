@@ -34,6 +34,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _activityHeaderKey = GlobalKey();
   final GlobalKey _sampleTransactionKey = GlobalKey();
 
+  // Activity Onboarding Keys
+  final GlobalKey _activityTabKey = GlobalKey();
+  final GlobalKey _activityListAreaKey = GlobalKey();
+  final GlobalKey _activitySingleItemKey = GlobalKey();
+  final GlobalKey _activityDateHeaderKey = GlobalKey();
+  final GlobalKey _activityColorIndicatorKey = GlobalKey();
+  final GlobalKey _activityFilterChipsKey = GlobalKey();
+  final GlobalKey _activitySearchBarKey = GlobalKey();
+  final GlobalKey _fakeDetailsEditAreaKey = GlobalKey();
+  final GlobalKey _fakeDetailsDeleteKey = GlobalKey();
+  final GlobalKey _activityCalendarTabKey = GlobalKey();
+  final GlobalKey _activityCalendarAreaKey = GlobalKey();
+
+  bool _showFakeDetailsModal = false;
+  int _activityTutorialTabIndex = 0;
+
   @override
   void initState() {
     super.initState();
@@ -100,7 +116,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         sampleTransactionKey: _sampleTransactionKey,
         isTutorialActive: _showTutorial && _selectedIndex == 0,
       ),
-      ActivityView(onRefresh: _refresh),
+      ActivityView(
+        onRefresh: _refresh,
+        isTutorialActive: _showTutorial && _selectedIndex == 1,
+        listAreaKey: _activityListAreaKey,
+        singleItemKey: _activitySingleItemKey,
+        dateHeaderKey: _activityDateHeaderKey,
+        colorIndicatorKey: _activityColorIndicatorKey,
+        filterChipsKey: _activityFilterChipsKey,
+        searchBarKey: _activitySearchBarKey,
+        calendarTabKey: _activityCalendarTabKey,
+        calendarAreaKey: _activityCalendarAreaKey,
+        overrideTabIndex: _activityTutorialTabIndex,
+      ),
       WalletsView(onRefresh: _refresh),
       PlanningView(onRefresh: _refresh),
       const AIAssistantView(),
@@ -151,8 +179,118 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onStepEnter: () => _scrollTo(_sampleTransactionKey, 0.6),
       ),
       OnboardingStep(
+        targetKey: _activityTabKey,
+        title: 'Transactions Tab',
+        description: 'Tap here to view all your transactions in detail.',
+        onStepEnter: () async {
+          setState(() {
+             _showFakeDetailsModal = false;
+          });
+        },
+      ),
+      OnboardingStep(
+        targetKey: _activityListAreaKey,
+        title: 'Transaction List',
+        description: 'This is where all your transactions are displayed.',
+        onStepEnter: () async {
+          setState(() {
+            _selectedIndex = 1;
+            _showFakeDetailsModal = false;
+          });
+        },
+      ),
+      OnboardingStep(
+        targetKey: _activitySingleItemKey,
+        title: 'Transaction Details',
+        description: 'Each transaction shows the amount, category, and type (income, expense, or transfer).',
+      ),
+      OnboardingStep(
+        targetKey: _activityColorIndicatorKey,
+        title: 'Color Indicators',
+        description: 'Quickly identify transactions — income, expenses, and transfers have different colors!',
+      ),
+      OnboardingStep(
+        targetKey: _activityDateHeaderKey,
+        title: 'Timeline',
+        description: 'Transactions are organized by date so you can easily track your activity.',
+      ),
+      OnboardingStep(
+        targetKey: _activityFilterChipsKey,
+        title: 'Filters',
+        description: 'Use filters to quickly find specific transactions.',
+        onStepEnter: () {
+            _scrollTo(_activityFilterChipsKey, 0.1);
+        }
+      ),
+      OnboardingStep(
+        targetKey: _activitySearchBarKey,
+        title: 'Search Bar',
+        description: 'Search for transactions by keyword, category, or amount.',
+        onStepEnter: () {
+            _scrollTo(_activitySearchBarKey, 0.1);
+        }
+      ),
+      OnboardingStep(
+        targetKey: _activitySingleItemKey,
+        title: 'View Details',
+        description: 'Tap a transaction to view more details.',
+        onStepEnter: () {
+           _scrollTo(_activitySingleItemKey, 0.5);
+           setState(() {
+             _showFakeDetailsModal = false;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _fakeDetailsEditAreaKey,
+        title: 'Edit Transaction',
+        description: 'You can edit or update transaction details anytime.',
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = true;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _fakeDetailsDeleteKey,
+        title: 'Delete Transaction',
+        description: 'You can also delete a transaction if needed.',
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = true;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _activityCalendarTabKey,
+        title: 'Calendar View',
+        description: 'Switch to the Calendar View to see your activity across the month.',
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = false;
+             _activityTutorialTabIndex = 0;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _activityCalendarAreaKey,
+        title: 'Monthly Calendar',
+        description: 'Days with transactions will have a bright marker dot. Tap on any day to see its summary!',
+        onStepEnter: () {
+           setState(() {
+             _activityTutorialTabIndex = 1;
+           });
+        }
+      ),
+      OnboardingStep(
         title: 'All Set!',
         description: "You're all set! Start managing your finances with AJ Wallet. Welcome aboard!",
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = false;
+             _activityTutorialTabIndex = 0;
+           });
+        }
       ),
     ];
 
@@ -164,21 +302,123 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [_buildProfileMenu(context, theme)],
       ),
       body: OnboardingOverlay(
-        visible: _showTutorial && _selectedIndex == 0,
+        visible: _showTutorial,
         steps: tutorialSteps,
         onFinish: _onTutorialFinish,
-        child: Column(
+        child: Stack(
           children: [
-            _buildUpdateBanner(theme),
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  _refresh();
-                  await Future.delayed(const Duration(milliseconds: 500));
-                },
-                child: pages[_selectedIndex],
-              ),
+            Column(
+              children: [
+                _buildUpdateBanner(theme),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      _refresh();
+                      await Future.delayed(const Duration(milliseconds: 500));
+                    },
+                    child: pages[_selectedIndex],
+                  ),
+                ),
+              ],
             ),
+            
+            if (_showFakeDetailsModal)
+              Positioned(
+                bottom: 0, left: 0, right: 0,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    height: 520,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, -5)),
+                      ]
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text('Transaction Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            Row(
+                              children: [
+                                IconButton(
+                                  key: _fakeDetailsEditAreaKey,
+                                  icon: const Icon(Icons.edit_rounded),
+                                  onPressed: () {},
+                                ),
+                                IconButton(
+                                  key: _fakeDetailsDeleteKey,
+                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                                  onPressed: () {},
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        Container(
+                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(color: theme.dividerColor, width: 0.5),
+                          ),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.south_west_rounded, color: theme.colorScheme.error, size: 32),
+                              ),
+                              const SizedBox(height: 16),
+                              Text('- ₱250.00', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: -1)),
+                              const SizedBox(height: 8),
+                              Text('EXPENSE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4))),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: theme.dividerColor.withOpacity(0.05), borderRadius: BorderRadius.circular(10)),
+                              child: Icon(Icons.category_rounded, size: 20, color: theme.primaryColor),
+                            ),
+                            const SizedBox(width: 16),
+                            Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            const Spacer(),
+                            const Text('Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ],
+                        ),
+                        const Divider(height: 24),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(color: theme.dividerColor.withOpacity(0.05), borderRadius: BorderRadius.circular(10)),
+                              child: Icon(Icons.calendar_today_rounded, size: 20, color: theme.primaryColor),
+                            ),
+                            const SizedBox(width: 16),
+                            Text('Note', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            const Spacer(),
+                            const Text('Grocery Run', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  )
+                )
+              ),
           ],
         ),
       ),
@@ -227,24 +467,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) =>
             setState(() => _selectedIndex = index),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.grid_view_rounded),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_rounded),
+            key: _activityTabKey,
+            icon: const Icon(Icons.receipt_long_rounded),
             label: 'Activity',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_rounded),
             label: 'Wallets',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.track_changes_rounded),
             label: 'Plan',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.auto_awesome_rounded),
             label: 'Assistant',
           ),

@@ -11,7 +11,31 @@ import '../screens/fund_goal_screen.dart';
 
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
-  const PlanningView({super.key, required this.onRefresh});
+  final bool isTutorialActive;
+  final GlobalKey? budgetSectionKey;
+  final GlobalKey? budgetAddKey;
+  final GlobalKey? budgetIndicatorKey;
+  final GlobalKey? goalSectionKey;
+  final GlobalKey? goalAddKey;
+  final GlobalKey? goalFundKey;
+  final GlobalKey? goalWithdrawKey;
+  final GlobalKey? debtSectionKey;
+  final GlobalKey? debtAddKey;
+
+  const PlanningView({
+    super.key, 
+    required this.onRefresh,
+    this.isTutorialActive = false,
+    this.budgetSectionKey,
+    this.budgetAddKey,
+    this.budgetIndicatorKey,
+    this.goalSectionKey,
+    this.goalAddKey,
+    this.goalFundKey,
+    this.goalWithdrawKey,
+    this.debtSectionKey,
+    this.debtAddKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -49,6 +73,8 @@ class PlanningView extends StatelessWidget {
         // Budgets Section
         SliverToBoxAdapter(
           child: _SectionCard(
+            sectionKey: budgetSectionKey,
+            addKey: budgetAddKey,
             title: 'Monthly Budgets',
             icon: Icons.pie_chart_outline_rounded,
             color: Colors.blue,
@@ -57,10 +83,25 @@ class PlanningView extends StatelessWidget {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBudgetScreen(accountKey: accountKey)));
               if (result == true) onRefresh();
             },
-            child: budgets.isEmpty 
+            child: (budgets.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
               : Column(
-                  children: budgets.map((b) {
+                  children: [
+                    if (isTutorialActive && budgets.isEmpty)
+                      Container(
+                        key: budgetIndicatorKey,
+                        child: _PlanningItem(
+                          title: 'Food & Drinks',
+                          subtitle: DateFormat('MMM yyyy').format(DateTime.now()),
+                          trailingText: '₱0 / ₱2000',
+                          progress: 0.0,
+                          progressColor: Colors.blue,
+                          onDelete: () {},
+                        ),
+                      ),
+                    ...budgets.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final b = entry.value;
                     final currentSpending = DatabaseService.getTransactions(accountKey)
                         .where((t) => (t.budgetKey == b.key) || 
                                      (t.category == b.category && t.date.month == b.month && t.date.year == b.year))
@@ -69,18 +110,22 @@ class PlanningView extends StatelessWidget {
                     final progress = b.amountLimit > 0 ? (currentSpending / b.amountLimit).clamp(0.0, 1.0) : 0.0;
                     final isOver = currentSpending > b.amountLimit;
 
-                    return _PlanningItem(
-                      title: b.category,
-                      subtitle: '${DateFormat('MMM yyyy').format(DateTime(b.year, b.month))}',
-                      trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
-                      progress: progress,
-                      progressColor: isOver ? Colors.red : Colors.blue,
-                      onDelete: () async {
-                        await DatabaseService.deleteBudget(b);
-                        onRefresh();
-                      },
+                    return Container(
+                      key: index == 0 ? budgetIndicatorKey : null,
+                      child: _PlanningItem(
+                        title: b.category,
+                        subtitle: '${DateFormat('MMM yyyy').format(DateTime(b.year, b.month))}',
+                        trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
+                        progress: progress,
+                        progressColor: isOver ? Colors.red : Colors.blue,
+                        onDelete: () async {
+                          await DatabaseService.deleteBudget(b);
+                          onRefresh();
+                        },
+                      ),
                     );
                   }).toList(),
+                  ],
                 ),
           ),
         ),
@@ -88,6 +133,8 @@ class PlanningView extends StatelessWidget {
         // Goals Section
         SliverToBoxAdapter(
           child: _SectionCard(
+            sectionKey: goalSectionKey,
+            addKey: goalAddKey,
             title: 'Savings Goals',
             icon: Icons.flag_outlined,
             color: Colors.green,
@@ -96,10 +143,28 @@ class PlanningView extends StatelessWidget {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddGoalScreen(accountKey: accountKey)));
               if (result == true) onRefresh();
             },
-            child: goals.isEmpty 
+            child: (goals.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.flag_outlined, message: 'No savings goals')
               : Column(
-                  children: goals.map((g) {
+                  children: [
+                    if (isTutorialActive && goals.isEmpty)
+                      _PlanningItem(
+                        title: 'Vacation',
+                        subtitle: 'Target: ₱10000',
+                        trailingText: '₱0 saved',
+                        progress: 0.0,
+                        progressColor: Colors.green,
+                        primaryActionLabel: 'Save',
+                        primaryActionKey: goalFundKey,
+                        onPrimaryAction: () {},
+                        secondaryActionLabel: 'Withdraw',
+                        secondaryActionKey: goalWithdrawKey,
+                        onSecondaryAction: () {},
+                        onDelete: () {},
+                      ),
+                    ...goals.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final g = entry.value;
                     final progress = g.targetAmount > 0 ? (g.savedAmount / g.targetAmount).clamp(0.0, 1.0) : 0.0;
                     return _PlanningItem(
                       title: g.name,
@@ -108,6 +173,7 @@ class PlanningView extends StatelessWidget {
                       progress: progress,
                       progressColor: Colors.green,
                       primaryActionLabel: 'Save',
+                      primaryActionKey: index == 0 ? goalFundKey : null,
                       onPrimaryAction: () async {
                         final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
                           accountKey: accountKey,
@@ -117,6 +183,7 @@ class PlanningView extends StatelessWidget {
                         if (res == true) onRefresh();
                       },
                       secondaryActionLabel: 'Withdraw',
+                      secondaryActionKey: index == 0 ? goalWithdrawKey : null,
                       onSecondaryAction: () async {
                         final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
                           accountKey: accountKey,
@@ -131,6 +198,7 @@ class PlanningView extends StatelessWidget {
                       },
                     );
                   }).toList(),
+                  ],
                 ),
           ),
         ),
@@ -138,6 +206,8 @@ class PlanningView extends StatelessWidget {
         // Debts Section
         SliverToBoxAdapter(
           child: _SectionCard(
+            sectionKey: debtSectionKey,
+            addKey: debtAddKey,
             title: 'Debts & Loans',
             icon: Icons.handshake_outlined,
             color: Colors.orange,
@@ -146,7 +216,7 @@ class PlanningView extends StatelessWidget {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDebtScreen(accountKey: accountKey)));
               if (result == true) onRefresh();
             },
-            child: debts.isEmpty 
+            child: (debts.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
               : Column(
                   children: debts.map((d) {
@@ -193,8 +263,10 @@ class _PlanningItem extends StatelessWidget {
   final double progress;
   final Color progressColor;
   final String? primaryActionLabel;
+  final GlobalKey? primaryActionKey;
   final VoidCallback? onPrimaryAction;
   final String? secondaryActionLabel;
+  final GlobalKey? secondaryActionKey;
   final VoidCallback? onSecondaryAction;
   final VoidCallback onDelete;
 
@@ -205,8 +277,10 @@ class _PlanningItem extends StatelessWidget {
     required this.progress,
     required this.progressColor,
     this.primaryActionLabel,
+    this.primaryActionKey,
     this.onPrimaryAction,
     this.secondaryActionLabel,
+    this.secondaryActionKey,
     this.onSecondaryAction,
     required this.onDelete,
   });
@@ -261,6 +335,7 @@ class _PlanningItem extends StatelessWidget {
                 children: [
                   if (onSecondaryAction != null) ...[
                     TextButton.icon(
+                      key: secondaryActionKey,
                       onPressed: onSecondaryAction,
                       icon: Icon(Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
                       label: Text(
@@ -277,6 +352,7 @@ class _PlanningItem extends StatelessWidget {
                   ],
                   if (onPrimaryAction != null)
                     TextButton.icon(
+                      key: primaryActionKey,
                       onPressed: onPrimaryAction,
                       icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: progressColor),
                       label: Text(
@@ -300,6 +376,8 @@ class _PlanningItem extends StatelessWidget {
 }
 
 class _SectionCard extends StatelessWidget {
+  final GlobalKey? sectionKey;
+  final GlobalKey? addKey;
   final String title;
   final IconData icon;
   final Color color;
@@ -308,6 +386,8 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
 
   const _SectionCard({
+    this.sectionKey,
+    this.addKey,
     required this.title,
     required this.icon,
     required this.color,
@@ -320,6 +400,7 @@ class _SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
+      key: sectionKey,
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -359,6 +440,7 @@ class _SectionCard extends StatelessWidget {
                 ),
               ),
               IconButton(
+                key: addKey,
                 icon: const Icon(Icons.add_circle_outline_rounded),
                 color: theme.primaryColor,
                 onPressed: onAdd,

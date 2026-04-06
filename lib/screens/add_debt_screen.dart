@@ -5,10 +5,12 @@ import '../models/debt.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
 import '../widgets/calculator_input.dart';
+import '../widgets/onboarding_overlay.dart';
 
 class AddDebtScreen extends StatefulWidget {
   final int accountKey;
-  const AddDebtScreen({super.key, required this.accountKey});
+  final bool isTutorialMode;
+  const AddDebtScreen({super.key, required this.accountKey, this.isTutorialMode = false});
 
   @override
   State<AddDebtScreen> createState() => _AddDebtScreenState();
@@ -23,13 +25,32 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   int? _selectedWalletKey;
   List<Wallet> _wallets = [];
 
+  final GlobalKey _typeKey = GlobalKey();
+  final GlobalKey _nameKey = GlobalKey();
+  final GlobalKey _amountKey = GlobalKey();
+  final GlobalKey _walletKey = GlobalKey();
+  final GlobalKey _saveKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     _loadWallets();
+    if (widget.isTutorialMode) {
+      _personController.text = 'John Doe';
+      _amountController.text = '500';
+    }
   }
 
   void _loadWallets() {
+    if (widget.isTutorialMode) {
+      final fakeOptions = [Wallet(name: 'Cash', balance: 5000, type: 'Cash', accountKey: widget.accountKey)];
+      setState(() {
+        _wallets = fakeOptions;
+        _selectedWalletKey = null; // Fake wallets don't have hive keys.
+      });
+      return;
+    }
+
     final wallets = DatabaseService.getWallets(widget.accountKey);
     setState(() {
       _wallets = wallets.where((w) => !w.isExcluded).toList();
@@ -45,7 +66,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
 
   void _saveDebt() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedWalletKey == null) {
+      if (_selectedWalletKey == null && !widget.isTutorialMode) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a wallet')),
         );
@@ -101,9 +122,39 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Add Debt/Loan'), elevation: 0),
+    return OnboardingOverlay(
+      visible: widget.isTutorialMode,
+      steps: [
+        OnboardingStep(
+          targetKey: _typeKey,
+          title: 'Transaction Type',
+          description: 'Choose the type of transaction.',
+        ),
+        OnboardingStep(
+          targetKey: _nameKey,
+          title: 'Person Name',
+          description: 'Enter who the transaction is with.',
+        ),
+        OnboardingStep(
+          targetKey: _amountKey,
+          title: 'Amount',
+          description: 'Enter the amount.',
+        ),
+        OnboardingStep(
+          targetKey: _walletKey,
+          title: 'Wallet Selection',
+          description: 'Select the wallet involved.',
+        ),
+        OnboardingStep(
+          targetKey: _saveKey,
+          title: 'Save Record',
+          description: 'Save to record it.',
+        ),
+      ],
+      onFinish: () => Navigator.pop(context),
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('Add Debt/Loan'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -111,9 +162,11 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
+              Container(
+                key: _typeKey,
+                child: Row(
+                  children: [
+                    Expanded(
                     child: InkWell(
                       onTap: () => setState(() => _isOwedToMe = true),
                       child: Container(
@@ -160,10 +213,12 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                   ),
                 ],
               ),
+              ),
               const SizedBox(height: 32),
               Text(_isOwedToMe ? 'Who owes you?' : 'Who do you owe?', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               TextFormField(
+                key: _nameKey,
                 controller: _personController,
                 decoration: InputDecoration(
                   hintText: 'Person or Bank Name',
@@ -173,6 +228,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
               ),
               const SizedBox(height: 24),
               CalculatorInputField(
+                key: _amountKey,
                 label: 'Total Amount',
                 initialValue: double.tryParse(_amountController.text),
                 onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
@@ -185,6 +241,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
               Text('Select Wallet', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Container(
+                key: _walletKey,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
@@ -199,7 +256,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                     dropdownColor: theme.cardColor,
                     items: _wallets.map((wallet) {
                       return DropdownMenuItem<int>(
-                        value: wallet.key as int,
+                        value: widget.isTutorialMode ? null : wallet.key as int,
                         child: Text(
                           '${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})',
                         ),
@@ -234,6 +291,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
+                  key: _saveKey,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _isOwedToMe ? theme.primaryColor : theme.colorScheme.error,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -246,6 +304,6 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

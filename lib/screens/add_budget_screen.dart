@@ -3,9 +3,12 @@ import '../services/database_service.dart';
 import '../models/budget.dart';
 import '../widgets/calculator_input.dart';
 
+import '../widgets/onboarding_overlay.dart';
+
 class AddBudgetScreen extends StatefulWidget {
   final int accountKey;
-  const AddBudgetScreen({super.key, required this.accountKey});
+  final bool isTutorialMode;
+  const AddBudgetScreen({super.key, required this.accountKey, this.isTutorialMode = false});
 
   @override
   State<AddBudgetScreen> createState() => _AddBudgetScreenState();
@@ -15,6 +18,19 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   String _selectedCategory = 'Food & Drinks';
+
+  final GlobalKey _categoryKey = GlobalKey();
+  final GlobalKey _amountKey = GlobalKey();
+  final GlobalKey _saveKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isTutorialMode) {
+      _selectedCategory = 'Food & Drinks';
+      _amountController.text = '2000';
+    }
+  }
 
   final List<String> _categories = [
     'Food & Drinks',
@@ -46,8 +62,28 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+    return OnboardingOverlay(
+      visible: widget.isTutorialMode,
+      steps: [
+        OnboardingStep(
+          targetKey: _categoryKey,
+          title: 'Select Category',
+          description: 'Choose a category to set a budget for.',
+        ),
+        OnboardingStep(
+          targetKey: _amountKey,
+          title: 'Budget Amount',
+          description: 'Enter how much you want to spend for this category.',
+        ),
+        OnboardingStep(
+          targetKey: _saveKey,
+          title: 'Save Budget',
+          description: 'Save your budget.',
+        ),
+      ],
+      onFinish: () => Navigator.pop(context),
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Add Monthly Budget'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -59,6 +95,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
               Text('Category', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Container(
+                key: _categoryKey,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
@@ -76,6 +113,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
               ),
               const SizedBox(height: 24),
               CalculatorInputField(
+                key: _amountKey,
                 label: 'Monthly Limit',
                 initialValue: double.tryParse(_amountController.text),
                 onChanged: (val) => setState(() => _amountController.text = val.toStringAsFixed(2)),
@@ -89,6 +127,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
+                  key: _saveKey,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -101,6 +140,6 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

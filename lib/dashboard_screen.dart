@@ -11,6 +11,9 @@ import 'views/home_view.dart';
 import 'views/activity_view.dart';
 import 'views/wallets_view.dart';
 import 'views/planning_view.dart';
+import 'screens/add_budget_screen.dart';
+import 'screens/add_goal_screen.dart';
+import 'screens/add_debt_screen.dart';
 import 'widgets/ai_assistant_view.dart';
 import 'screens/about_screen.dart';
 import 'services/update_service.dart';
@@ -51,6 +54,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _walletListKey = GlobalKey();
   final GlobalKey _singleWalletKey = GlobalKey();
   final GlobalKey _lifeOfMoneyKey = GlobalKey();
+
+  // Plan Onboarding Keys
+  final GlobalKey _planTabKey = GlobalKey();
+  final GlobalKey _planBudgetSectionKey = GlobalKey();
+  final GlobalKey _planBudgetAddKey = GlobalKey();
+  final GlobalKey _planBudgetIndicatorKey = GlobalKey();
+  final GlobalKey _planGoalSectionKey = GlobalKey();
+  final GlobalKey _planGoalAddKey = GlobalKey();
+  final GlobalKey _planGoalFundKey = GlobalKey();
+  final GlobalKey _planGoalWithdrawKey = GlobalKey();
+  final GlobalKey _planDebtSectionKey = GlobalKey();
+  final GlobalKey _planDebtAddKey = GlobalKey();
 
   // New Edit/Delete Mock Keys
   final GlobalKey _fakeDetailsModalKey = GlobalKey();
@@ -149,7 +164,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
         singleWalletKey: _singleWalletKey,
         lifeOfMoneyKey: _lifeOfMoneyKey,
       ),
-      PlanningView(onRefresh: _refresh),
+      PlanningView(
+        onRefresh: _refresh,
+        isTutorialActive: _showTutorial && _selectedIndex == 3,
+        budgetSectionKey: _planBudgetSectionKey,
+        budgetAddKey: _planBudgetAddKey,
+        budgetIndicatorKey: _planBudgetIndicatorKey,
+        goalSectionKey: _planGoalSectionKey,
+        goalAddKey: _planGoalAddKey,
+        goalFundKey: _planGoalFundKey,
+        goalWithdrawKey: _planGoalWithdrawKey,
+        debtSectionKey: _planDebtSectionKey,
+        debtAddKey: _planDebtAddKey,
+      ),
       const AIAssistantView(),
     ];
 
@@ -392,8 +419,100 @@ class _DashboardScreenState extends State<DashboardScreen> {
         description: 'As your spending changes, this adjusts automatically.',
       ),
       OnboardingStep(
+        targetKey: _planTabKey,
+        title: 'Plan Tab',
+        description: 'Tap here to manage your financial plans.',
+        onStepEnter: () {
+           setState(() {
+             _selectedIndex = 3; // Plan Tab
+           });
+        }
+      ),
+      OnboardingStep(
+        title: 'Financial Planning',
+        description: 'Plan your money with budgets, savings, and debt tracking.',
+      ),
+      OnboardingStep(
+        targetKey: _planBudgetSectionKey,
+        title: 'Monthly Budget',
+        description: 'Set limits for your spending categories.',
+        onStepEnter: () => _scrollTo(_planBudgetSectionKey, 0.1),
+      ),
+      OnboardingStep(
+        targetKey: _planBudgetAddKey,
+        title: 'Add Budget',
+        description: 'Tap here to create a new budget.',
+        onStepEnter: () async {
+           await Navigator.push(context, MaterialPageRoute(
+              builder: (_) => AddBudgetScreen(
+                 accountKey: accountKey ?? 0, 
+                 isTutorialMode: true
+              )
+           ));
+        }
+      ),
+      OnboardingStep(
+        targetKey: _planBudgetIndicatorKey,
+        title: 'Track Your Limits',
+        description: 'When you add transactions, you\'ll see how much budget is left.',
+        onStepEnter: () => _scrollTo(_planBudgetSectionKey, 0.2),
+      ),
+      OnboardingStep(
+        targetKey: _planGoalSectionKey,
+        title: 'Savings Goals',
+        description: 'Save money for your future plans.',
+        onStepEnter: () => _scrollTo(_planGoalSectionKey, 0.2),
+      ),
+      OnboardingStep(
+        targetKey: _planGoalAddKey,
+        title: 'Add Goal',
+        description: 'Tap here to create a savings goal.',
+        onStepEnter: () async {
+           await Navigator.push(context, MaterialPageRoute(
+              builder: (_) => AddGoalScreen(
+                 accountKey: accountKey ?? 0, 
+                 isTutorialMode: true
+              )
+           ));
+        }
+      ),
+      OnboardingStep(
+        targetKey: _planGoalFundKey,
+        title: 'Add to Savings',
+        description: 'Add money to your goal — it will be deducted from your balance.',
+        onStepEnter: () => _scrollTo(_planGoalFundKey, 0.4),
+      ),
+      OnboardingStep(
+        targetKey: _planGoalWithdrawKey,
+        title: 'Withdraw Target',
+        description: 'Withdraw anytime — it will return to your balance.',
+      ),
+      OnboardingStep(
+        targetKey: _planDebtSectionKey,
+        title: 'Debts & Loans',
+        description: 'Track money you gave or borrowed.',
+        onStepEnter: () => _scrollTo(_planDebtSectionKey, 0.4),
+      ),
+      OnboardingStep(
+        targetKey: _planDebtAddKey,
+        title: 'Record Debt',
+        description: 'Tap here to record a debt or loan.',
+        onStepEnter: () async {
+           await Navigator.push(context, MaterialPageRoute(
+              builder: (_) => AddDebtScreen(
+                 accountKey: accountKey ?? 0, 
+                 isTutorialMode: true
+              )
+           ));
+        }
+      ),
+      OnboardingStep(
+        title: 'Balance Reflections',
+        description: 'Giving money deducts from your wallet. Borrowing adds to your wallet.',
+      ),
+      OnboardingStep(
         title: 'Manage Your Finances',
-        description: "Manage your wallets and stay in control of your finances!",
+        description: 'Now you can budget, save, and track debts بسهولة!',
         onStepEnter: () {
            setState(() {
              _showFakeDetailsModal = false;
@@ -623,12 +742,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.receipt_long_rounded),
             label: 'Activity',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_rounded),
+          NavigationDestination(
+            key: _walletsTabKey,
+            icon: const Icon(Icons.account_balance_wallet_rounded),
             label: 'Wallets',
           ),
-          const NavigationDestination(
-            icon: Icon(Icons.track_changes_rounded),
+          NavigationDestination(
+            key: _planTabKey,
+            icon: const Icon(Icons.track_changes_rounded),
             label: 'Plan',
           ),
           const NavigationDestination(

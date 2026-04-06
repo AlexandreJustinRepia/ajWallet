@@ -4,10 +4,12 @@ import '../services/database_service.dart';
 import '../models/goal.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../widgets/calculator_input.dart';
+import '../widgets/onboarding_overlay.dart';
 
 class AddGoalScreen extends StatefulWidget {
   final int accountKey;
-  const AddGoalScreen({super.key, required this.accountKey});
+  final bool isTutorialMode;
+  const AddGoalScreen({super.key, required this.accountKey, this.isTutorialMode = false});
 
   @override
   State<AddGoalScreen> createState() => _AddGoalScreenState();
@@ -19,6 +21,19 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   final _targetController = TextEditingController();
   DateTime? _targetDate;
   Color _selectedColor = Colors.green;
+
+  final GlobalKey _nameKey = GlobalKey();
+  final GlobalKey _targetKey = GlobalKey();
+  final GlobalKey _saveKey = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isTutorialMode) {
+      _nameController.text = 'Vacation';
+      _targetController.text = '10000';
+    }
+  }
 
   void _saveGoal() async {
     if (_formKey.currentState!.validate()) {
@@ -67,9 +82,29 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('New Savings Goal'), elevation: 0),
+    return OnboardingOverlay(
+      visible: widget.isTutorialMode,
+      steps: [
+        OnboardingStep(
+          targetKey: _nameKey,
+          title: 'Goal Name',
+          description: 'Name your goal.',
+        ),
+        OnboardingStep(
+          targetKey: _targetKey,
+          title: 'Target Amount',
+          description: 'Set how much you want to save.',
+        ),
+        OnboardingStep(
+          targetKey: _saveKey,
+          title: 'Save Goal',
+          description: 'Create your savings goal.',
+        ),
+      ],
+      onFinish: () => Navigator.pop(context),
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('New Savings Goal'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(
@@ -80,6 +115,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
               Text('Goal Name', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               TextFormField(
+                key: _nameKey,
                 controller: _nameController,
                 decoration: InputDecoration(
                   hintText: 'e.g. New Car, Vacation',
@@ -89,6 +125,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
               ),
               const SizedBox(height: 24),
               CalculatorInputField(
+                key: _targetKey,
                 label: 'Target Amount',
                 initialValue: double.tryParse(_targetController.text),
                 onChanged: (val) => setState(() => _targetController.text = val.toStringAsFixed(2)),
@@ -153,6 +190,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
+                  key: _saveKey,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.primaryColor,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -165,6 +203,6 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
           ),
         ),
       ),
-    );
+    ));
   }
 }

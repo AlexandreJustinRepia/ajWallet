@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:local_auth/local_auth.dart';
 import 'services/database_service.dart';
 import 'services/session_service.dart';
+import 'services/security_service.dart';
 import 'dashboard_screen.dart';
 
 class PinSetupScreen extends StatefulWidget {
@@ -16,7 +16,6 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   final TextEditingController _pinController = TextEditingController();
   final TextEditingController _confirmPinController = TextEditingController();
   final TextEditingController _fakePinController = TextEditingController();
-  final LocalAuthentication _auth = LocalAuthentication();
   bool _isButtonPressed = false;
   bool _canCheckBiometrics = false;
   bool _useBiometrics = false;
@@ -28,15 +27,10 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   }
 
   Future<void> _checkBiometrics() async {
-    bool canCheckBiometrics = false;
-    try {
-      canCheckBiometrics = await _auth.canCheckBiometrics;
-    } catch (e) {
-      debugPrint('Error checking biometrics: $e');
-    }
+    final canCheck = await SecurityService.canAuthenticateWithBiometrics();
     if (!mounted) return;
     setState(() {
-      _canCheckBiometrics = canCheckBiometrics;
+      _canCheckBiometrics = canCheck;
     });
   }
 
@@ -165,7 +159,41 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                     const SizedBox(width: 8),
                     Switch(
                       value: _useBiometrics,
-                      onChanged: (val) => setState(() => _useBiometrics = val),
+                      onChanged: (val) async {
+                        if (val) {
+                          // 1. Validate PIN
+                          final pin = _pinController.text;
+                          final confirmPin = _confirmPinController.text;
+
+                          if (pin.length != 4 || confirmPin.length != 4) {
+                            _showError('Set your 4-digit PIN first.');
+                            return;
+                          }
+                          if (pin != confirmPin) {
+                            _showError('PINs do not match.');
+                            return;
+                          }
+
+                          // 2. Perform verification scan
+                          final canAuth = await SecurityService.canAuthenticateWithBiometrics();
+                          if (!canAuth) {
+                            _showError('Biometrics not available or not set up.');
+                            return;
+                          }
+
+                          final success = await SecurityService.authenticateWithBiometrics(
+                            reason: 'Verify your identity to enable biometric login.',
+                          );
+
+                          if (success) {
+                            setState(() => _useBiometrics = true);
+                          } else {
+                            _showError('Biometric verification failed.');
+                          }
+                        } else {
+                          setState(() => _useBiometrics = false);
+                        }
+                      },
                       activeColor: theme.primaryColor,
                     ),
                   ],

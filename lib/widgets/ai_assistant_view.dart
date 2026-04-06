@@ -5,6 +5,7 @@ import '../services/ai_assistant_service.dart';
 import '../services/achievement_service.dart';
 import '../models/transaction_model.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'onboarding_overlay.dart';
 
 class AIAssistantView extends StatefulWidget {
   const AIAssistantView({super.key});
@@ -21,6 +22,12 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   late Animation<double> _fadeAnimation;
   bool _showTutorial = false;
 
+  // Tutorial GlobalKeys
+  final _headerKey = GlobalKey();
+  final _inputKey = GlobalKey();
+  final _suggestionsKey = GlobalKey();
+  final _analyticsKey = GlobalKey();
+
   final List<String> _suggestions = [
     "Check my runway",
     "What if I save ₱100 more per day?",
@@ -30,6 +37,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     "Suggest a food budget",
     "Should I pay my loan today?",
     "Find my biggest expense",
+    "500 food and drinks mcdo",
   ];
 
   @override
@@ -44,14 +52,14 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     final box = Hive.box('achievements');
     if (mounted) {
       setState(() {
-        _showTutorial = !box.containsKey('tutorial_seen');
+        _showTutorial = !box.containsKey('ai_tutorial_seen');
       });
     }
   }
 
   void _dismissTutorial() {
     final box = Hive.box('achievements');
-    box.put('tutorial_seen', true);
+    box.put('ai_tutorial_seen', true);
     setState(() => _showTutorial = false);
     AchievementService.unlock('explorer');
   }
@@ -71,8 +79,10 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       _response = null;
     });
 
+    FocusScope.of(context).unfocus();
+
     // Subtle delay for "processing" feel
-    await Future.delayed(const Duration(milliseconds: 600));
+    await Future.delayed(const Duration(milliseconds: 800));
 
     final account = SessionService.activeAccount;
     if (account == null) return;
@@ -96,7 +106,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       setState(() {
         _response = response;
         _isProcessing = false;
-        if (_showTutorial) _dismissTutorial(); // Dismiss tutorial on first query
+        if (_showTutorial) _dismissTutorial();
       });
       _animationController.forward(from: 0);
 
@@ -134,6 +144,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
 
   void _handleAction(AIAction action) async {
     if (action.type == AIActionType.confirmQuickAdd) {
+      if (_showTutorial) _dismissTutorial();
       final payload = action.payload as Map<String, dynamic>;
       final account = SessionService.activeAccount;
       if (account == null) return;
@@ -170,13 +181,11 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       }
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Action: ${action.label}')));
   }
 
   int? _findDefaultWallet(int accountKey) {
     final wallets = DatabaseService.getWallets(accountKey);
     try {
-      // Prefer "Cash"
       return wallets.firstWhere((w) => w.name.toLowerCase() == 'cash').key as int;
     } catch (_) {
       if (wallets.isNotEmpty) return wallets.first.key as int;
@@ -187,28 +196,25 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      body: Column(
-        children: [
-          _buildHeader(theme),
-          Expanded(
-            child: ListView(
-              reverse: true, // Results appear on top of input
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              children: [
-                // Input section and suggestions logically at the bottom of the scroll
-                const SizedBox(height: 24),
-                _buildSuggestions(),
+    return OnboardingOverlay(
+      steps: _getTutorialSteps(),
+      visible: _showTutorial,
+      onFinish: _dismissTutorial,
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: Column(
+          children: [
+            _buildHeader(theme),
+            Expanded(
+              child: ListView(
+                reverse: true, 
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                children: [
+                  const SizedBox(height: 24),
+                  Container(key: _suggestionsKey, child: _buildSuggestions()),
+                  
+                  const SizedBox(height: 40),
                 
-                if (_showTutorial) ...[
-                  const SizedBox(height: 32),
-                  _buildTutorialCard(theme),
-                ],
-
-                const SizedBox(height: 40),
-                
-                // Results and insights
                 if (_response != null)
                   FadeTransition(
                     opacity: _fadeAnimation,
@@ -220,18 +226,20 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                     child: Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.grey)),
                   )
                 else
-                  _buildQuickInsights(theme),
+                  Container(key: _analyticsKey, child: _buildQuickInsights(theme)),
               ],
             ),
           ),
-          _buildInputSection(theme),
+          Container(key: _inputKey, child: _buildInputSection(theme)),
         ],
       ),
+    ),
     );
   }
 
   Widget _buildHeader(ThemeData theme) {
     return Container(
+      key: _headerKey,
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
@@ -252,33 +260,30 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                       style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(width: 8),
-                        InkWell(
-                          onTap: () => setState(() => _showTutorial = true),
+                    InkWell(
+                      onTap: () => setState(() => _showTutorial = true),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: theme.primaryColor.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(Icons.help_outline, size: 14, color: theme.primaryColor),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Help',
-                                  style: TextStyle(fontSize: 10, color: theme.primaryColor, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
                         ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.help_outline, size: 14, color: theme.primaryColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Help',
+                              style: TextStyle(fontSize: 10, color: theme.primaryColor, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const Text(
-                  'Financial Intelligence Engine',
-                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                ),
+                const Text('Offline • Secure Intelligence', style: TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
             _buildStatusBadge(),
@@ -300,10 +305,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         children: [
           Icon(Icons.lock_outline, size: 12, color: Colors.grey),
           SizedBox(width: 4),
-          Text(
-            'Offline • Secure',
-            style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold),
-          ),
+          Text('Active', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -321,7 +323,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         decoration: BoxDecoration(
           color: theme.cardColor,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: theme.dividerColor, width: 1),
+          border: Border.all(color: theme.dividerColor),
         ),
         child: Row(
           children: [
@@ -332,7 +334,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                 decoration: const InputDecoration(
                   hintText: 'Ask about your finances...',
                   border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
                 ),
               ),
             ),
@@ -368,88 +369,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           border: Border.all(color: theme.dividerColor),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTutorialCard(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [theme.primaryColor.withValues(alpha: 0.1), theme.primaryColor.withValues(alpha: 0.05)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.primaryColor.withValues(alpha: 0.3), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: theme.primaryColor.withValues(alpha: 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb_outline, color: theme.primaryColor),
-              const SizedBox(width: 12),
-              const Text('How to use AI', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close, size: 20),
-                onPressed: _dismissTutorial,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildTutorialStep(Icons.auto_graph, "Simulation", "Ask 'What if I save more?' to see future impacts."),
-          _buildTutorialStep(Icons.account_balance_wallet, "Budgets", "Ask 'Suggest a budget' for personalized limits."),
-          _buildTutorialStep(Icons.warning_amber_rounded, "Risk", "The AI warns you if debt payments threaten your cashflow."),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _dismissTutorial,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: theme.colorScheme.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Get Started'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTutorialStep(IconData icon, String title, String desc) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.grey),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                Text(desc, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
-        ],
+        child: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ),
     );
   }
@@ -469,7 +389,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,19 +466,9 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.5),
         ),
         const SizedBox(height: 16),
-        _buildInsightMiniCard(
-          'Cashflow Forecast',
-          'AI is projecting your runway.',
-          Icons.trending_up_rounded,
-          const Color(0xFF2E7D32),
-        ),
+        _buildInsightMiniCard('Cashflow Forecast', 'AI is projecting your runway.', Icons.trending_up, const Color(0xFF2E7D32)),
         const SizedBox(height: 12),
-        _buildInsightMiniCard(
-          'Strategic Optimization',
-          '2 new strategies detected.',
-          Icons.auto_fix_high,
-          const Color(0xFF1976D2),
-        ),
+        _buildInsightMiniCard('Strategic Optimization', '2 new strategies detected.', Icons.auto_fix_high, const Color(0xFF1976D2)),
       ],
     );
   }
@@ -632,6 +542,31 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       ],
     );
   }
+
+  List<OnboardingStep> _getTutorialSteps() {
+    return [
+      OnboardingStep(
+        targetKey: _headerKey,
+        title: 'Intelligence Engine',
+        description: 'Your financial AI is 100% offline and secure. We analyze your local data to provide private, high-fidelity projections.',
+      ),
+      OnboardingStep(
+        targetKey: _suggestionsKey,
+        title: 'Contextual Shortcuts',
+        description: 'Access frequently used financial queries with one tap. These scale and change based on your spending habits.',
+      ),
+      OnboardingStep(
+        targetKey: _inputKey,
+        title: 'Quick Add & Query',
+        description: 'Ask questions like "How was my spending this week?" or use Quick Add like "500 food and drinks mcdo" to record expenses instantly.',
+      ),
+      OnboardingStep(
+        targetKey: _analyticsKey,
+        title: 'Proactive Forecasting',
+        description: 'The AI constantly checks for cashflow risks and detects saving strategies across all your wallets.',
+      ),
+    ];
+  }
 }
 
 class _MiniSparkLine extends StatelessWidget {
@@ -643,10 +578,8 @@ class _MiniSparkLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (data.isEmpty) return const SizedBox.shrink();
-    
-    // Find max for scaling
     final max = data.reduce((a, b) => a > b ? a : b);
-    if (max == 0) return const SizedBox(height: 40, child: Center(child: Text('No spending activity', style: TextStyle(fontSize: 10, color: Colors.grey))));
+    if (max == 0) return const SizedBox(height: 40);
 
     return SizedBox(
       height: 60,

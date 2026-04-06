@@ -415,4 +415,212 @@ class FinancialInsightsService {
       'monthsSaved': (remaining / spare).toStringAsFixed(1), // Simplified
     };
   }
+
+  static int? getDaysToNextPayday(List<Transaction> income) {
+    // Only analyze substantial income to filter out casual peer transfers
+    final majorIncomes = income.where((i) => i.amount >= 5000).toList();
+    if (majorIncomes.length < 2) return null;
+
+    final today = DateTime.now();
+    final dayCounts = <int, int>{};
+    for (var tx in majorIncomes) {
+      // Allow a small +- 1 day buffer for weekends if mapped strictly, but exact day is a good start.
+      dayCounts[tx.date.day] = (dayCounts[tx.date.day] ?? 0) + 1;
+    }
+
+    // Find frequent income deposit days (recurring at least twice)
+    final payDays = dayCounts.entries.where((e) => e.value >= 2).map((e) => e.key).toList();
+    if (payDays.isEmpty) return null;
+
+    payDays.sort();
+    
+    for (var pd in payDays) {
+      if (pd > today.day) {
+        return pd - today.day;
+      }
+    }
+    
+    // Cycle wraps to the first payday of the next month
+    var nextMonth = today.month + 1;
+    var nextYear = today.year;
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear++;
+    }
+    final nextMonthDate = DateTime(nextYear, nextMonth, payDays.first);
+    return nextMonthDate.difference(DateTime(today.year, today.month, _validateDay(nextYear, nextMonth, today.day))).inDays;
+  }
+
+  static int _validateDay(int year, int month, int day) {
+    final daysInMonth = DateTime(year, month + 1, 0).day;
+    return day > daysInMonth ? daysInMonth : day;
+  }
+
+  static List<Map<String, dynamic>> getUpcomingBills(List<Transaction> expenses) {
+    final subs = detectSubscriptions(expenses);
+    if (subs.isEmpty) return [];
+
+    final upcoming = <Map<String, dynamic>>[];
+    final today = DateTime.now();
+    final pureToday = DateTime(today.year, today.month, today.day);
+
+    for (var sub in subs) {
+      final relevantTxs = expenses.where((e) => e.title == sub['name'] && e.category == sub['category']).toList();
+      relevantTxs.sort((a, b) => b.date.compareTo(a.date));
+      
+      if (relevantTxs.isNotEmpty) {
+        final lastDate = relevantTxs.first.date;
+        var nextMonth = lastDate.month + 1;
+        var nextYear = lastDate.year;
+        if (nextMonth > 12) {
+          nextMonth = 1;
+          nextYear++;
+        }
+        
+        final safeDay = _validateDay(nextYear, nextMonth, lastDate.day);
+        final nextDueDate = DateTime(nextYear, nextMonth, safeDay);
+        
+        final daysUntilDue = nextDueDate.difference(pureToday).inDays;
+        
+        if (daysUntilDue >= 0 && daysUntilDue <= 7) {
+          upcoming.add({
+            'name': sub['name'],
+            'amount': sub['amount'],
+            'daysUntilDue': daysUntilDue,
+          });
+        }
+      }
+    }
+    return upcoming;
+  }
+
+  static Map<String, String> getTimeLayeredInsights(
+    List<Transaction> expenses, 
+    List<Transaction> income, 
+    List<Budget> budgets, 
+    List<Goal> goals
+  ) {
+    final now = DateTime.now();
+    
+    // 1. Today
+    var todayInsight = "You haven't spent anything today.";
+    if (expenses.isNotEmpty) {
+      final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+      final historyDays = now.difference(firstDate).inDays + 1;
+      final totalHistorical = expenses.fold(0.0, (s, e) => s + e.amount);
+      final dailyAvg = historyDays > 0 ? (totalHistorical / historyDays) : 0.0;
+      
+      final todayExpenses = expenses.where((e) => e.date.year == now.year && e.date.month == now.month && e.date.day == now.day).toList();
+      final todayTotal = todayExpenses.fold(0.0, (s, e) => s + e.amount);
+      
+      if (todayTotal > 0 && dailyAvg > 0) {
+        final percent = ((todayTotal / dailyAvg) * 100).toStringAsFixed(0);
+        if (todayTotal > dailyAvg) {
+          todayInsight = "You've already spent $percent% of your historical daily average.";
+        } else {
+          todayInsight = "You're pacing well: you've spent $percent% of your daily average.";
+        }
+      }
+    }
+
+    // 2. This Month
+    var monthInsight = "No budgets set. Create budgets to unlock month-end tracking.";
+    if (budgets.isNotEmpty) {
+      final totalBudgetLimit = budgets.fold(0.0, (s, b) => s + b.amountLimit);
+      final thisMonthExpenses = expenses.where((e) => e.date.year == now.year && e.date.month == now.month).toList();
+      final monthSpent = thisMonthExpenses.fold(0.0, (s, e) => s + e.amount);
+      
+      final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+      final currentRunRate = now.day > 0 ? (monthSpent / now.day) : 0.0;
+      final projectedEnd = currentRunRate * daysInMonth;
+      
+      if (currentRunRate == 0) {
+         monthInsight = "You're perfectly on track with ₱0 spent this month.";
+      } else if (projectedEnd > totalBudgetLimit) {
+         monthInsight = "You're on track to mathematically exceed your cumulative budget limits.";
+      } else {
+         monthInsight = "Your current spending habits will comfortably fit within your active budgets.";
+      }
+    }
+
+    // 3. Long-term
+    var longInsight = "No goals set. Create a goal to unlock long-term trajectory projections.";
+    if (goals.isNotEmpty) {
+      final onTrack = goals.firstWhere((g) => g.savedAmount < g.targetAmount, orElse: () => goals.first);
+      if (onTrack.savedAmount >= onTrack.targetAmount) {
+        longInsight = "Incredible! You've successfully completed your active savings goals.";
+      } else {
+        final lastMonthStart = now.subtract(const Duration(days: 30));
+        final recentIncome = income.where((e) => e.date.isAfter(lastMonthStart)).fold(0.0, (s, e) => s + e.amount);
+        final recentExps = expenses.where((e) => e.date.isAfter(lastMonthStart)).fold(0.0, (s, e) => s + e.amount);
+        final netMonthly = recentIncome - recentExps;
+        
+        final remaining = onTrack.targetAmount - onTrack.savedAmount;
+        if (netMonthly <= 0) {
+          longInsight = "At your current negative run-rate, your savings goal '${onTrack.name}' is heavily delayed.";
+        } else {
+          final monthsToTarget = (remaining / netMonthly).ceil();
+          longInsight = "At this rate, you'll reach your '${onTrack.name}' goal in approximately $monthsToTarget months.";
+        }
+      }
+    }
+
+    return {
+      'Today': todayInsight,
+      'Month': monthInsight,
+      'Long-Term': longInsight,
+    };
+  }
+
+  static List<String> getEarlyWarnings(List<Transaction> expenses, double balance, List<Budget> budgets) {
+    if (expenses.isEmpty) return [];
+    final warnings = <String>[];
+    final now = DateTime.now();
+
+    // 1. Runway Drop Interceptor
+    final firstDate = expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+    final historyDays = now.difference(firstDate).inDays + 1;
+    final totalHistorical = expenses.fold(0.0, (s, e) => s + e.amount);
+    final dailyAvg = historyDays >= 3 ? (totalHistorical / historyDays) : 0.0;
+
+    if (dailyAvg > 0) {
+      final safeBaselineDays = 10;
+      final currentRunway = (balance / dailyAvg).floor();
+
+      if (currentRunway > safeBaselineDays) {
+        final daysUntilDrop = currentRunway - safeBaselineDays;
+        if (daysUntilDrop > 0 && daysUntilDrop <= 4) {
+          warnings.add("⚠️ Predictor: At your current burn rate, your runway will drop below the safe $safeBaselineDays-day baseline in approximately $daysUntilDrop days.");
+        }
+      } else if (currentRunway <= 4 && currentRunway > 0) {
+        warnings.add("🧨 Danger: You only have $currentRunway days of runway left at your current pace.");
+      }
+    }
+
+    // 2. Weekend Extrapolator
+    if (now.weekday == DateTime.thursday || now.weekday == DateTime.friday) {
+      final dailyAvgs = getDailyAveragesByDayOfWeek(expenses);
+      final combinedWeekdays = ((dailyAvgs[1] ?? 0.0) + (dailyAvgs[2] ?? 0.0) + (dailyAvgs[3] ?? 0.0) + (dailyAvgs[4] ?? 0.0)) / 4;
+      final saturdayAvg = dailyAvgs[6] ?? 0.0;
+      final sundayAvg = dailyAvgs[7] ?? 0.0;
+      final weekendAvgSpike = (saturdayAvg + sundayAvg) / 2;
+
+      // Ensure there is actually a distinct weekend spike pattern mapped
+      if (weekendAvgSpike > (combinedWeekdays * 1.5) && budgets.isNotEmpty) {
+        // Evaluate active budgets based on the expected looming weekend burst
+        for (var budget in budgets.where((b) => b.month == now.month && b.year == now.year)) {
+          final spent = expenses.where((e) => e.category == budget.category && e.date.month == now.month).fold(0.0, (s, e) => s + e.amount);
+          final remaining = budget.amountLimit - spent;
+
+          // If the budget is not already blown, but the combined weekend historicals mathematically exceed remaining
+          if (remaining > 0 && remaining < (saturdayAvg + sundayAvg)) {
+            warnings.add("⚠️ Weekend Alert: Your historical weekend spending bursts will likely overshoot your '${budget.category}' budget if unmonitored.");
+          }
+        }
+      }
+    }
+
+    return warnings;
+  }
 }
+

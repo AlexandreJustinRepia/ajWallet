@@ -81,7 +81,7 @@ class AIAssistantService {
     final range = _getRangeForTimeframe(timeframe);
 
     final response = _process(intent, lowerQuery, expenses, income, range, timeframe, balance, goals, debts, allBudgets);
-    return _applyAdaptiveTone(response, balance, expenses, allBudgets);
+    return _applyAdaptiveTone(response, balance, expenses, income, allBudgets);
   }
 
   static AIResponse _process(AIIntent intent, String lowerQuery, List<Transaction> expenses, List<Transaction> income, DateTimeRange range, String timeframe, double balance, List<Goal>? goals, List<Debt>? debts, List<Budget> budgets) {
@@ -113,7 +113,7 @@ class AIAssistantService {
       case AIIntent.debtStatus:
         return _processDebts(debts ?? [], expenses + income, balance, budgets);
       case AIIntent.financialAdvice:
-        return _processAdvice(expenses, income, balance, budgets);
+        return _processAdvice(lowerQuery, expenses, income, balance, budgets, goals ?? []);
       case AIIntent.unknown:
         return AIResponse(
           result: "I'm not quite sure how to analyze that yet.",
@@ -137,6 +137,7 @@ class AIAssistantService {
     if (query.contains('budget for') || query.contains('suggest budget')) return AIIntent.spendingCategory;
     if (query.contains('advice') || query.contains('tip') || query.contains('help') || query.contains('improve')) return AIIntent.financialAdvice;
     if (query.contains('spent') || query.contains('spending') || query.contains('total') || query.contains('cost')) return AIIntent.spendingTotal;
+    if (query.contains('status') || query.contains('report') || query.contains('how am i doing') || query.contains('how is my')) return AIIntent.financialAdvice;
     return AIIntent.unknown;
   }
 
@@ -550,15 +551,32 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _processAdvice(List<Transaction> expenses, List<Transaction> income, double balance, List<Budget> budgets) {
+  static AIResponse _processAdvice(String query, List<Transaction> expenses, List<Transaction> income, double balance, List<Budget> budgets, List<Goal> goals) {
     if (expenses.isEmpty) {
       return AIResponse(
         result: "Keep going!",
-        insight: "Start tracking your expenses to get personalized financial advice.",
+        insight: "Start tracking your expenses to unlock layered financial diagnostics.",
         intent: AIIntent.financialAdvice,
       );
     }
 
+    // Check if the user is asking for a comprehensive status
+    if (query.contains('status') || query.contains('report') || query.contains('how am i doing') || query.contains('how is my')) {
+      final timeInsights = FinancialInsightsService.getTimeLayeredInsights(expenses, income, budgets, goals);
+      
+      String layeredMessage = "Here is your multi-level diagnostic status:\n\n"
+          "• **Today**: ${timeInsights['Today']}\n\n"
+          "• **This Month**: ${timeInsights['Month']}\n\n"
+          "• **Long-Term**: ${timeInsights['Long-Term']}";
+          
+      return AIResponse(
+        result: "Diagnostic Report",
+        insight: layeredMessage,
+        intent: AIIntent.financialAdvice,
+      );
+    }
+
+    // Otherwise, return standard contextual advice (e.g. Friday Spikes)
     final dailyAvgs = FinancialInsightsService.getDailyAveragesByDayOfWeek(expenses);
     final combinedWeekdays = (dailyAvgs[1] ?? 0 + (dailyAvgs[2] ?? 0) + (dailyAvgs[3] ?? 0) + (dailyAvgs[4] ?? 0)) / 4;
     final fridaySpend = dailyAvgs[5] ?? 0;
@@ -576,7 +594,7 @@ class AIAssistantService {
     final topCat = FinancialInsightsService.getCategoryData(expenses).entries.toList();
     topCat.sort((a, b) => b.value.compareTo(a.value));
 
-    String tip = "Your biggest expense category is ${topCat.first.key}. Try to see if you can find alternatives there.";
+    String tip = "Your biggest expense category is ${topCat.isNotEmpty ? topCat.first.key : 'none'}. Try to see if you can find alternatives there.";
     if (balance < 1000) {
       tip = "Your balance is getting low. It might be a good time to review non-essential expenses.";
     }
@@ -588,10 +606,11 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _applyAdaptiveTone(AIResponse response, double balance, List<Transaction> expenses, List<Budget> budgets) {
+  static AIResponse _applyAdaptiveTone(AIResponse response, double balance, List<Transaction> expenses, List<Transaction> income, List<Budget> budgets) {
     AITone tone = AITone.calm;
+    String extra = "";
     
-    // Determine Tone
+    // Core Tone check
     final runway = FinancialInsightsService.projectCashflow(expenses, balance, budgets);
     int days = runway['days'] as int;
 
@@ -601,17 +620,39 @@ class AIAssistantService {
       tone = AITone.encouraging;
     }
 
-    // Add Payday Context if applicable
-    String extra = "";
-    if (tone == AITone.strict) {
+    // Context Awareness: Next Payday
+    final daysToPayday = FinancialInsightsService.getDaysToNextPayday(income);
+    if (daysToPayday != null && daysToPayday <= 5) {
+      if (response.intent == AIIntent.spendingTotal || response.intent == AIIntent.spendingCategory || response.intent == AIIntent.simulation) {
+        extra += "\n\n💡 Context: You're $daysToPayday days before your usual salary. Reduce non-essential spending temporarily to bridge the gap.";
+      }
+    }
+
+    // Context Awareness: Upcoming Bills
+    final upcomingBills = FinancialInsightsService.getUpcomingBills(expenses);
+    if (upcomingBills.isNotEmpty && daysToPayday != null && daysToPayday > 5) {
+      final firstBill = upcomingBills.first;
+      extra += "\n\n⚠️ Heads up: Your '${firstBill['name']}' bill (₱${firstBill['amount']}) is due in ${firstBill['daysUntilDue']} days. Ensure you have liquidity mapped out.";
+      tone = AITone.strict;
+    }
+
+    if (tone == AITone.strict && extra.isEmpty) {
       extra = "\n\nStay alert—funds are tight until your usual income patterns reappear.";
+    }
+
+    // --- PROACTIVE EARLY WARNING INJECTION ---
+    final warnings = FinancialInsightsService.getEarlyWarnings(expenses, balance, budgets);
+    String warningPrefix = "";
+    if (warnings.isNotEmpty) {
+      warningPrefix = warnings.join("\n\n") + "\n\n---\n\n";
+      tone = AITone.strict; // Force strict tone due to early warnings
     }
 
     return AIResponse(
       result: response.result,
-      insight: response.insight + extra,
+      insight: warningPrefix + response.insight + extra,
       intent: response.intent,
-      isPositive: response.isPositive,
+      isPositive: warningPrefix.isEmpty ? response.isPositive : false,
       actions: response.actions,
       tone: tone,
     );

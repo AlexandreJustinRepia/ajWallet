@@ -6,11 +6,13 @@ import '../services/database_service.dart';
 class QuickAddInput extends StatefulWidget {
   final int accountKey;
   final VoidCallback onSaved;
+  final Future<void> Function(Transaction)? onTutorialSubmit;
 
   const QuickAddInput({
     super.key,
     required this.accountKey,
     required this.onSaved,
+    this.onTutorialSubmit,
   });
 
   @override
@@ -52,9 +54,40 @@ class QuickAddInputState extends State<QuickAddInput> {
     }
   }
 
+  Future<void> simulateSubmit() async {
+    await _submit();
+  }
+
   Future<void> _submit() async {
     final result = _preview;
     if (result == null || result.amount <= 0) return;
+
+    if (widget.onTutorialSubmit != null) {
+      final transaction = Transaction(
+        title: result.title,
+        amount: result.amount,
+        date: DateTime.now(),
+        category: result.category,
+        description: 'Demo transaction',
+        type: result.type,
+        accountKey: widget.accountKey,
+        walletKey: 999, // Fake wallet key
+      );
+      await widget.onTutorialSubmit!(transaction);
+      _controller.clear();
+      _focusNode.unfocus();
+      setState(() => _preview = null);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Added ₱${result.amount.toStringAsFixed(2)} to ${result.category}'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
 
     final wallets = DatabaseService.getWallets(widget.accountKey)
         .where((w) => !w.isExcluded)

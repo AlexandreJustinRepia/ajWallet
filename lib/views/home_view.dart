@@ -18,6 +18,7 @@ class HomeView extends StatefulWidget {
   final GlobalKey? quickAddKey;
   final GlobalKey? activityHeaderKey;
   final GlobalKey? sampleTransactionKey;
+  final bool isTutorialActive;
 
   const HomeView({
     super.key, 
@@ -26,6 +27,7 @@ class HomeView extends StatefulWidget {
     this.quickAddKey,
     this.activityHeaderKey,
     this.sampleTransactionKey,
+    this.isTutorialActive = false,
   });
 
   @override
@@ -37,15 +39,34 @@ class _HomeViewState extends State<HomeView> {
   bool _showGlow = false;
   bool _isNetWorthMode = false;
 
+  final List<Transaction> _tutorialTransactions = [];
+  late final List<Wallet> _tutorialWallets = [
+    Wallet(
+      name: 'Demo Wallet', 
+      balance: 10000.0, 
+      type: 'E-Wallet',
+      accountKey: 999,
+    )
+  ];
+
   @override
   Widget build(BuildContext context) {
     final account = SessionService.activeAccount;
-    final transactions = account != null
-        ? DatabaseService.getTransactions(account.key as int)
-        : <Transaction>[];
-    final wallets = account != null
-        ? DatabaseService.getWallets(account.key as int)
-        : <Wallet>[];
+    
+    List<Transaction> transactions;
+    List<Wallet> wallets;
+
+    if (widget.isTutorialActive) {
+      transactions = _tutorialTransactions;
+      wallets = _tutorialWallets;
+    } else {
+      transactions = account != null
+          ? DatabaseService.getTransactions(account.key as int)
+          : <Transaction>[];
+      wallets = account != null
+          ? DatabaseService.getWallets(account.key as int)
+          : <Wallet>[];
+    }
 
     final double totalBalance = wallets
         .where((w) => _isNetWorthMode || !w.isExcluded)
@@ -82,6 +103,14 @@ class _HomeViewState extends State<HomeView> {
               key: widget.quickAddKey,
               accountKey: account.key as int,
               onSaved: widget.onRefresh,
+              onTutorialSubmit: widget.isTutorialActive ? (t) async {
+                setState(() {
+                  _tutorialTransactions.insert(0, t);
+                  if (_tutorialWallets.isNotEmpty) {
+                    _tutorialWallets[0].balance -= t.amount;
+                  }
+                });
+              } : null,
             ),
           ],
           const SizedBox(height: 32),

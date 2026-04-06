@@ -98,6 +98,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         quickAddKey: _quickAddKey,
         activityHeaderKey: _activityHeaderKey,
         sampleTransactionKey: _sampleTransactionKey,
+        isTutorialActive: _showTutorial && _selectedIndex == 0,
       ),
       ActivityView(onRefresh: _refresh),
       WalletsView(onRefresh: _refresh),
@@ -131,7 +132,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         targetKey: _balanceKey,
         title: 'Automatic Updates',
         description: 'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
-        onStepEnter: () => _scrollTo(_balanceKey, 0.1),
+        onStepEnter: () async {
+          _scrollTo(_balanceKey, 0.1);
+          await Future.delayed(const Duration(milliseconds: 300));
+          await _quickAddKey.currentState?.simulateSubmit();
+        },
       ),
       OnboardingStep(
         targetKey: _activityHeaderKey,

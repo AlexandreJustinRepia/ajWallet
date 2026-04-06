@@ -87,9 +87,17 @@ class _BurnRateCard extends StatelessWidget {
     }
 
     final daysRemaining = dailyAvg > 0 ? (balance / dailyAvg).floor() : -1;
-    final status = (dailyAvg == 0 || daysRemaining > 30)
-        ? 'SURPLUS'
-        : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL');
+    
+    String status;
+    if (balance <= 0) {
+      status = 'EMPTY';
+    } else if (dailyAvg == 0 || daysRemaining > 30) {
+      status = 'SURPLUS';
+    } else if (daysRemaining > 7) {
+      status = 'NOMINAL';
+    } else {
+      status = 'CRITICAL';
+    }
 
     return Container(
       width: double.infinity,

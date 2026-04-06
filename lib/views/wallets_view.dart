@@ -116,12 +116,22 @@ class _GlobalStatsBanner extends StatelessWidget {
       dailyAvg = expenses.fold(0.0, (s, e) => s + e.amount) / days;
     }
     final daysRemaining = dailyAvg > 0 ? (totalBalance / dailyAvg).floor() : -1;
-    final status = (dailyAvg == 0 || daysRemaining > 30)
-        ? 'SURPLUS'
-        : (daysRemaining > 7 ? 'NOMINAL' : 'CRITICAL');
-    final statusColor = (dailyAvg == 0 || daysRemaining > 30)
-        ? theme.colorScheme.tertiary
-        : (daysRemaining > 7 ? theme.primaryColor : theme.colorScheme.error);
+    String status;
+    Color statusColor;
+
+    if (totalBalance <= 0) {
+      status = 'EMPTY';
+      statusColor = theme.colorScheme.error;
+    } else if (dailyAvg == 0 || daysRemaining > 30) {
+      status = 'SURPLUS';
+      statusColor = theme.colorScheme.tertiary;
+    } else if (daysRemaining > 7) {
+      status = 'NOMINAL';
+      statusColor = theme.primaryColor;
+    } else {
+      status = 'CRITICAL';
+      statusColor = theme.colorScheme.error;
+    }
 
     final trendData = FinancialInsightsService.getWeeklyTrendLineData(expenses);
 

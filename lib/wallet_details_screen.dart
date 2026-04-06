@@ -70,8 +70,10 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                 Navigator.pop(context, true); // Go back to wallets list
               }
             },
-            child: const Text('Delete', 
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -83,29 +85,35 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final transactions =
-        DatabaseService.getWalletTransactions(widget.wallet.key as int);
+    final transactions = DatabaseService.getWalletTransactions(
+      widget.wallet.key as int,
+    );
 
     // Wallet Analytics
     final income = transactions
-        .where((tx) =>
-            tx.type == TransactionType.income ||
-            (tx.type == TransactionType.transfer &&
-                tx.toWalletKey == widget.wallet.key))
+        .where(
+          (tx) =>
+              tx.type == TransactionType.income ||
+              (tx.type == TransactionType.transfer &&
+                  tx.toWalletKey == widget.wallet.key),
+        )
         .fold(0.0, (s, tx) => s + tx.amount);
     final expense = transactions
-        .where((tx) =>
-            tx.type == TransactionType.expense ||
-            (tx.type == TransactionType.transfer &&
-                tx.walletKey == widget.wallet.key)) // A transfer "from" this wallet has the main walletKey as this wallet
+        .where(
+          (tx) =>
+              tx.type == TransactionType.expense ||
+              (tx.type == TransactionType.transfer &&
+                  tx.walletKey == widget.wallet.key),
+        ) // A transfer "from" this wallet has the main walletKey as this wallet
         .fold(0.0, (s, tx) => s + tx.amount);
 
-    final expensesOnly =
-        transactions.where((tx) => tx.type == TransactionType.expense).toList();
-    final trendData =
-        FinancialInsightsService.getWeeklyTrendLineData(expensesOnly);
-    final categoryData =
-        FinancialInsightsService.getCategoryData(expensesOnly);
+    final expensesOnly = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
+    final trendData = FinancialInsightsService.getWeeklyTrendLineData(
+      expensesOnly,
+    );
+    final categoryData = FinancialInsightsService.getCategoryData(expensesOnly);
 
     double dailyAvg = 0;
     if (expensesOnly.isNotEmpty) {
@@ -115,8 +123,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
       final days = DateTime.now().difference(firstDate).inDays + 1;
       dailyAvg = expensesOnly.fold(0.0, (s, e) => s + e.amount) / days;
     }
-    final daysRemaining =
-        dailyAvg > 0 ? (widget.wallet.balance / dailyAvg).floor() : 0;
+    final daysRemaining = dailyAvg > 0
+        ? (widget.wallet.balance / dailyAvg).floor()
+        : 0;
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -148,8 +157,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           ),
           IconButton(
             icon: Icon(
-                _isExcluded ? Icons.visibility_off : Icons.visibility,
-                color: _isExcluded ? Colors.red : theme.primaryColor),
+              _isExcluded ? Icons.visibility_off : Icons.visibility,
+              color: _isExcluded ? Colors.red : theme.primaryColor,
+            ),
             onPressed: _toggleExclusion,
             tooltip: _isExcluded ? 'Excluded from total' : 'Included in total',
           ),
@@ -166,16 +176,19 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
                 border: Border(
-                    bottom: BorderSide(
-                        color: theme.dividerColor.withOpacity(0.1))),
+                  bottom: BorderSide(
+                    color: theme.dividerColor.withOpacity(0.1),
+                  ),
+                ),
               ),
               child: Column(
                 children: [
                   Text(
                     'CURRENT BALANCE',
                     style: TextStyle(
-                      color:
-                          theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                      color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                        0.5,
+                      ),
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2.0,
@@ -185,16 +198,19 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                   Text(
                     '₱${widget.wallet.balance.toStringAsFixed(2)}',
                     style: const TextStyle(
-                        fontSize: 42,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1),
+                      fontSize: 42,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -1,
+                    ),
                   ),
                   if (_isExcluded)
                     Padding(
                       padding: const EdgeInsets.only(top: 8.0),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(20),
@@ -226,19 +242,19 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                   Row(
                     children: [
                       _StatBox(
-                        label: 'INFLOW',
+                        label: 'Income',
                         value: '₱${income.toStringAsFixed(0)}',
                         color: theme.colorScheme.tertiary,
                       ),
                       const SizedBox(width: 12),
                       _StatBox(
-                        label: 'OUTFLOW',
+                        label: 'Expenses',
                         value: '₱${expense.toStringAsFixed(0)}',
                         color: theme.colorScheme.error,
                       ),
                       const SizedBox(width: 12),
                       _StatBox(
-                        label: 'RUNWAY',
+                        label: 'Days Remaining',
                         value: '$daysRemaining days',
                         color: theme.primaryColor,
                       ),
@@ -254,8 +270,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
-                        color: theme.textTheme.bodyMedium?.color
-                            ?.withOpacity(0.5),
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.5,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -265,8 +282,10 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                       decoration: BoxDecoration(
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: theme.dividerColor, width: 0.5),
+                        border: Border.all(
+                          color: theme.dividerColor,
+                          width: 0.5,
+                        ),
                       ),
                       child: LineChart(
                         LineChartData(
@@ -285,8 +304,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color:
-                                    theme.primaryColor.withOpacity(0.06),
+                                color: theme.primaryColor.withOpacity(0.06),
                               ),
                             ),
                           ],
@@ -304,8 +322,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
-                        color: theme.textTheme.bodyMedium?.color
-                            ?.withOpacity(0.5),
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                          0.5,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -314,8 +333,10 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                       decoration: BoxDecoration(
                         color: theme.cardColor,
                         borderRadius: BorderRadius.circular(20),
-                        border:
-                            Border.all(color: theme.dividerColor, width: 0.5),
+                        border: Border.all(
+                          color: theme.dividerColor,
+                          width: 0.5,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -331,20 +352,21 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                                     .asMap()
                                     .entries
                                     .map((e) {
-                                  final colors = [
-                                    theme.primaryColor,
-                                    theme.colorScheme.tertiary,
-                                    theme.colorScheme.error,
-                                    theme.colorScheme.secondary,
-                                    theme.primaryColor.withOpacity(0.5),
-                                  ];
-                                  return PieChartSectionData(
-                                    value: e.value.value,
-                                    color: colors[e.key % colors.length],
-                                    radius: 6,
-                                    title: '',
-                                  );
-                                }).toList(),
+                                      final colors = [
+                                        theme.primaryColor,
+                                        theme.colorScheme.tertiary,
+                                        theme.colorScheme.error,
+                                        theme.colorScheme.secondary,
+                                        theme.primaryColor.withOpacity(0.5),
+                                      ];
+                                      return PieChartSectionData(
+                                        value: e.value.value,
+                                        color: colors[e.key % colors.length],
+                                        radius: 6,
+                                        title: '',
+                                      );
+                                    })
+                                    .toList(),
                               ),
                             ),
                           ),
@@ -355,34 +377,37 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                               children: categoryData.entries
                                   .toList()
                                   .take(4) // Show top 4
-                                  .map((e) => Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 2),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              e.key,
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
+                                  .map(
+                                    (e) => Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 2,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            e.key,
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
                                             ),
-                                            Text(
-                                              '₱${e.value.toStringAsFixed(0)}',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                              ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            '₱${e.value.toStringAsFixed(0)}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                          ],
-                                        ),
-                                      ))
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  )
                                   .toList(),
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -425,18 +450,13 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
               : SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final tx =
-                            transactions[transactions.length - 1 - index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child:
-                              TransactionCard(tx: tx, onRefresh: _refresh),
-                        );
-                      },
-                      childCount: transactions.length,
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, index) {
+                      final tx = transactions[transactions.length - 1 - index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TransactionCard(tx: tx, onRefresh: _refresh),
+                      );
+                    }, childCount: transactions.length),
                   ),
                 ),
           const SliverToBoxAdapter(child: SizedBox(height: 40)),

@@ -9,7 +9,17 @@ import '../wallet_details_screen.dart';
 
 class WalletsView extends StatelessWidget {
   final VoidCallback onRefresh;
-  const WalletsView({super.key, required this.onRefresh});
+  final GlobalKey? walletListKey;
+  final GlobalKey? singleWalletKey;
+  final GlobalKey? lifeOfMoneyKey;
+
+  const WalletsView({
+    super.key, 
+    required this.onRefresh,
+    this.walletListKey,
+    this.singleWalletKey,
+    this.lifeOfMoneyKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -36,13 +46,15 @@ class WalletsView extends StatelessWidget {
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
       children: [
-        // ── Global Stats Banner ─────────────────────────────────────────
-        _GlobalStatsBanner(
-          wallets: wallets,
-          transactions: transactions,
-          totalBalance: totalBalance,
-          totalIncome: totalIncome,
-          totalExpense: totalExpense,
+        Container(
+          key: lifeOfMoneyKey,
+          child: _GlobalStatsBanner(
+            wallets: wallets,
+            transactions: transactions,
+            totalBalance: totalBalance,
+            totalIncome: totalIncome,
+            totalExpense: totalExpense,
+          ),
         ),
         const SizedBox(height: 28),
 
@@ -59,25 +71,34 @@ class WalletsView extends StatelessWidget {
         const SizedBox(height: 12),
 
         // ── Wallet Cards ────────────────────────────────────────────────
-        if (wallets.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 40),
-            child: Center(
-              child: Text(
-                'No wallets yet',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+        Container(
+          key: walletListKey,
+          child: wallets.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Text(
+                      'No wallets yet',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                      ),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: wallets.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final wallet = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 14),
+                      child: Container(
+                        key: index == 0 ? singleWalletKey : null,
+                        child: _WalletCard(wallet: wallet, onRefresh: onRefresh),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              ),
-            ),
-          )
-        else
-          ...wallets.map(
-            (wallet) => Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: _WalletCard(wallet: wallet, onRefresh: onRefresh),
-            ),
-          ),
+        ),
       ],
     );
   }

@@ -45,6 +45,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _activityCalendarTabKey = GlobalKey();
   final GlobalKey _activityCalendarAreaKey = GlobalKey();
 
+  // Wallets Onboarding Keys
+  final GlobalKey _walletsTabKey = GlobalKey();
+  final GlobalKey _walletsFabKey = GlobalKey();
+  final GlobalKey _walletListKey = GlobalKey();
+  final GlobalKey _singleWalletKey = GlobalKey();
+  final GlobalKey _lifeOfMoneyKey = GlobalKey();
+
   // New Edit/Delete Mock Keys
   final GlobalKey _fakeDetailsModalKey = GlobalKey();
   final GlobalKey _fakeDetailsEditIconKey = GlobalKey();
@@ -136,7 +143,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         calendarAreaKey: _activityCalendarAreaKey,
         overrideTabIndex: _activityTutorialTabIndex,
       ),
-      WalletsView(onRefresh: _refresh),
+      WalletsView(
+        onRefresh: _refresh,
+        walletListKey: _walletListKey,
+        singleWalletKey: _singleWalletKey,
+        lifeOfMoneyKey: _lifeOfMoneyKey,
+      ),
       PlanningView(onRefresh: _refresh),
       const AIAssistantView(),
     ];
@@ -325,8 +337,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       ),
       OnboardingStep(
-        title: 'All Set!',
-        description: "You're all set! Start managing your finances with AJ Wallet. Welcome aboard!",
+        targetKey: _walletsTabKey,
+        title: 'Wallets Tab',
+        description: 'Tap here to manage your wallets.',
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = false;
+             _activityTutorialTabIndex = 0;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _walletListKey,
+        title: 'Your Wallets',
+        description: 'Here you can see all your wallets in one place.',
+        onStepEnter: () {
+           setState(() {
+             _selectedIndex = 2; // Wallets Tab
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _singleWalletKey,
+        title: 'Wallet Balances',
+        description: 'Each wallet shows your current balance.',
+      ),
+      OnboardingStep(
+        targetKey: _walletsFabKey,
+        title: 'Add Wallet',
+        description: 'Tap here to add a new wallet.',
+        onStepEnter: () async {
+           await Navigator.push(context, MaterialPageRoute(
+              builder: (_) => WalletFormScreen(
+                 accountKey: accountKey ?? 0, 
+                 isTutorialMode: true
+              )
+           ));
+        }
+      ),
+      OnboardingStep(
+        targetKey: _lifeOfMoneyKey,
+        title: 'Life of Your Money',
+        description: 'This shows how long your money will last.',
+        onStepEnter: () => _scrollTo(_lifeOfMoneyKey, 0.1),
+      ),
+      OnboardingStep(
+        targetKey: _lifeOfMoneyKey,
+        title: 'Dynamic Calculation',
+        description: 'It’s based on your daily spending habits.',
+      ),
+      OnboardingStep(
+        targetKey: _lifeOfMoneyKey,
+        title: 'Real-time Updates',
+        description: 'As your spending changes, this adjusts automatically.',
+      ),
+      OnboardingStep(
+        title: 'Manage Your Finances',
+        description: "Manage your wallets and stay in control of your finances!",
         onStepEnter: () {
            setState(() {
              _showFakeDetailsModal = false;
@@ -501,6 +568,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       ),
       floatingActionButton: FloatingActionButton(
+        key: _walletsFabKey,
         onPressed: () => _onFabPressed(context, accountKey),
         child: const Icon(Icons.add_rounded, size: 28),
       ),

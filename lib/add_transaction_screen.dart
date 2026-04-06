@@ -6,6 +6,7 @@ import '../models/wallet.dart';
 import '../models/budget.dart';
 import 'package:hive/hive.dart';
 import 'widgets/calculator_input.dart';
+import 'widgets/onboarding_overlay.dart';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -16,6 +17,8 @@ class AddTransactionScreen extends StatefulWidget {
   final int? initialBudgetKey;
   final int? initialDebtKey;
   final TransactionType? initialType;
+  
+  final bool isTutorialMode;
 
   const AddTransactionScreen({
     super.key, 
@@ -25,6 +28,7 @@ class AddTransactionScreen extends StatefulWidget {
     this.initialBudgetKey,
     this.initialDebtKey,
     this.initialType,
+    this.isTutorialMode = false,
   });
 
   @override
@@ -42,6 +46,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _walletKey = GlobalKey();
   final _amountKey = GlobalKey();
   final _categoryKey = GlobalKey();
+  final _noteKey = GlobalKey();
+  final _dateKey = GlobalKey();
   final _saveKey = GlobalKey();
 
   TransactionType _selectedType = TransactionType.expense;
@@ -60,14 +66,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   // Tutorial State
   bool _showTutorial = false;
-  int _tutorialStep = 0;
 
   @override
   void initState() {
     super.initState();
     _budgets = DatabaseService.getBudgets(widget.accountKey);
     _transactions = DatabaseService.getTransactions(widget.accountKey);
-    _checkTutorial();
+    
+    if (widget.isTutorialMode) {
+      _showTutorial = true;
+      _selectedType = TransactionType.expense;
+      _amountController.text = '250.00';
+      _selectedCategory = 'Food & Drinks';
+      _descriptionController.text = 'Grocery Run';
+      _selectedDate = DateTime.now();
+      _isManualDate = true;
+      _checkTutorial(); // still call this just in case, but rely on isTutorialMode mostly.
+    } else {
+      _checkTutorial();
+    }
     
     if (widget.existingTransaction != null) {
       final tx = widget.existingTransaction!;
@@ -287,31 +304,75 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-          title: Text(widget.existingTransaction == null
-              ? 'Add Transaction'
-              : 'Edit Transaction'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.help_outline),
-              onPressed: () => setState(() {
-                _showTutorial = true;
-                _tutorialStep = 0;
-              }),
-            ),
-          ],
-          elevation: 0),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+    final tutorialSteps = [
+      OnboardingStep(
+        targetKey: _typeKey,
+        title: 'Transaction Type',
+        description: 'You can change the type of transaction anytime.',
+      ),
+      OnboardingStep(
+        targetKey: _amountKey,
+        title: 'Amount',
+        description: 'Update the amount if needed.',
+      ),
+      OnboardingStep(
+        targetKey: _walletKey,
+        title: 'Wallet',
+        description: 'Choose the correct wallet for this transaction.',
+      ),
+      OnboardingStep(
+        targetKey: _categoryKey,
+        title: 'Category',
+        description: 'Update the category to better organize your records.',
+      ),
+      OnboardingStep(
+        targetKey: _noteKey,
+        title: 'Description',
+        description: 'Edit or add notes for more details (optional).',
+      ),
+      OnboardingStep(
+        targetKey: _dateKey,
+        title: 'Date & Time',
+        description: 'You can manually change the date of this transaction.',
+      ),
+      OnboardingStep(
+        targetKey: _saveKey,
+        title: 'Update Transaction',
+        description: 'Save your changes to update the transaction.',
+      ),
+    ];
+
+    return OnboardingOverlay(
+      steps: tutorialSteps,
+      visible: _showTutorial,
+      onFinish: () {
+        _dismissTutorial();
+        if (widget.isTutorialMode && mounted) {
+           Navigator.pop(context); // Automatically pop for the bridged workflow!
+        }
+      },
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+            title: Text(widget.existingTransaction == null
+                ? 'Add Transaction'
+                : 'Edit Transaction'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.help_outline),
+                onPressed: () => setState(() {
+                  _showTutorial = true;
+                }),
+              ),
+            ],
+            elevation: 0),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                   // Transaction Type Selector
                   Row(
                     key: _typeKey,
@@ -474,46 +535,53 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     style: theme.textTheme.titleMedium,
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _descriptionController,
-                    maxLines: 2,
-                    decoration: InputDecoration(
-                      hintText: 'Add a note...',
-                      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.4)),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Container(
+                    key: _noteKey,
+                    child: TextFormField(
+                      controller: _descriptionController,
+                      maxLines: 2,
+                      decoration: InputDecoration(
+                        hintText: 'Add a note...',
+                        hintStyle: TextStyle(color: theme.colorScheme.onSurface.withValues(alpha: 0.4)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 32),
 
-
-
                   // Manual Date Toggle
-                  Row(
-                    children: [
-                      const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
-                      const SizedBox(width: 12),
-                      Text('Manual Date Entry', 
-                        style: TextStyle(
-                          color: theme.colorScheme.onSurface,
-                          fontWeight: FontWeight.w500
-                        )
-                      ),
-                      const Spacer(),
-                      Switch(
-                        value: _isManualDate,
-                        onChanged: (val) {
-                          setState(() {
-                            _isManualDate = val;
-                            if (!val) _selectedDate = DateTime.now();
-                          });
-                        },
-                        activeColor: theme.primaryColor,
-                      ),
-                    ],
+                  Container(
+                    key: _dateKey,
+                    child: Row(
+                      children: [
+                        const Icon(Icons.history_toggle_off_rounded, size: 20, color: Colors.grey),
+                        const SizedBox(width: 12),
+                        Text('Manual Date Entry', 
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w500
+                          )
+                        ),
+                        const Spacer(),
+                        Switch(
+                          value: _isManualDate,
+                          onChanged: (val) {
+                            setState(() {
+                              _isManualDate = val;
+                              if (!val) _selectedDate = DateTime.now();
+                            });
+                          },
+                          activeThumbImage: null, // to specify thumb if needed or just use activeColor alternative
+                          activeColor: theme.primaryColor, 
+                          // Flutter 3.31 deprecates activeColor in favor of thumbIcon/trackColor 
+                          // we'll just use activeColor as standard if it's simpler
+                          activeTrackColor: theme.primaryColor.withValues(alpha: 0.5),
+                        ),
+                      ],
+                    ),
                   ),
-                  
                   if (_isManualDate) ...[
                     const SizedBox(height: 12),
                     InkWell(
@@ -525,6 +593,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           lastDate: DateTime.now(),
                         );
                         if (pickedDate != null) {
+                          if (!mounted) return;
                           final pickedTime = await showTimePicker(
                             context: context,
                             initialTime: TimeOfDay.fromDateTime(_selectedDate),
@@ -570,7 +639,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       padding: const EdgeInsets.only(left: 4),
                       child: Text(
                         'Recorded as Today, ${DateFormat('hh:mm a').format(_selectedDate)}',
-                        style: TextStyle(color: Colors.grey.withOpacity(0.6), fontSize: 12),
+                        style: TextStyle(color: Colors.grey.withValues(alpha: 0.6), fontSize: 12),
                       ),
                     ),
                   ],
@@ -603,113 +672,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
             ),
           ),
-          if (_showTutorial) _buildTutorialOverlay(theme),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTutorialOverlay(ThemeData theme) {
-    String message = '';
-    GlobalKey? targetKey;
-
-    switch (_tutorialStep) {
-      case 0:
-        message = "Income, Expense, or Transfer? Pick how your money is moving.";
-        targetKey = _typeKey;
-        break;
-      case 1:
-        message = "Choose the wallet you're using for this transaction.";
-        targetKey = _walletKey;
-        break;
-      case 2:
-        message = "Tap to enter the amount. Use the built-in calculator for math!";
-        targetKey = _amountKey;
-        break;
-      case 3:
-        if (_selectedType == TransactionType.transfer) {
-          _tutorialStep++; // Skip category for transfers
-          return _buildTutorialOverlay(theme);
-        }
-        message = "Tag it with a category to track where your money goes.";
-        targetKey = _categoryKey;
-        break;
-      case 4:
-        message = "All set? Hit save to update your balances instantly!";
-        targetKey = _saveKey;
-        break;
-    }
-
-    return Container(
-      color: Colors.black.withOpacity(0.7),
-      width: double.infinity,
-      height: double.infinity,
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: theme.primaryColor.withOpacity(0.5), width: 2),
-                  boxShadow: [
-                    BoxShadow(color: theme.primaryColor.withOpacity(0.2), blurRadius: 40),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.auto_awesome_rounded, color: theme.primaryColor, size: 40),
-                    const SizedBox(height: 16),
-                    Text(
-                      message,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        TextButton(
-                          onPressed: _dismissTutorial,
-                          child: const Text('Skip'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            setState(() {
-                              if (_tutorialStep < 4) {
-                                _tutorialStep++;
-                                // Scroll to target if needed (simplified here)
-                              } else {
-                                _dismissTutorial();
-                              }
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: theme.primaryColor,
-                            foregroundColor: theme.colorScheme.onPrimary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: Text(_tutorialStep < 4 ? 'Next' : 'Got it!'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                  "Step ${_tutorialStep + 1} of 5",
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ],
-          ),
         ),
-      ),
     );
   }
 

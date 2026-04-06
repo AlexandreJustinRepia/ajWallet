@@ -42,12 +42,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _activityColorIndicatorKey = GlobalKey();
   final GlobalKey _activityFilterChipsKey = GlobalKey();
   final GlobalKey _activitySearchBarKey = GlobalKey();
-  final GlobalKey _fakeDetailsEditAreaKey = GlobalKey();
-  final GlobalKey _fakeDetailsDeleteKey = GlobalKey();
   final GlobalKey _activityCalendarTabKey = GlobalKey();
   final GlobalKey _activityCalendarAreaKey = GlobalKey();
 
+  // New Edit/Delete Mock Keys
+  final GlobalKey _fakeDetailsModalKey = GlobalKey();
+  final GlobalKey _fakeDetailsEditIconKey = GlobalKey();
+  final GlobalKey _fakeDetailsDeleteIconKey = GlobalKey();
+  final GlobalKey _fakeDeleteConfirmKey = GlobalKey();
+
+  // Fake Details Modal State
   bool _showFakeDetailsModal = false;
+  bool _showFakeDeleteConfirm = false;
+  bool _hasShownEditTutorial = false;
   int _activityTutorialTabIndex = 0;
 
   @override
@@ -95,7 +102,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // ---------------------------------------------------------------------------
 
   String get _appBarTitle => switch (_selectedIndex) {
-    1 => 'Activity',
+    1 => 'Transactions',
     2 => 'Wallets',
     3 => 'Planning',
     4 => 'Assistant',
@@ -242,22 +249,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       ),
       OnboardingStep(
-        targetKey: _fakeDetailsEditAreaKey,
-        title: 'Edit Transaction',
-        description: 'You can edit or update transaction details anytime.',
+        targetKey: _fakeDetailsModalKey,
+        title: 'Transaction Details',
+        description: 'Here you can see complete information about the transaction.',
         onStepEnter: () {
            setState(() {
              _showFakeDetailsModal = true;
+             _showFakeDeleteConfirm = false;
            });
         }
       ),
       OnboardingStep(
-        targetKey: _fakeDetailsDeleteKey,
+        targetKey: _fakeDetailsEditIconKey,
+        title: 'Edit Transaction',
+        description: 'Tap here to edit this transaction.',
+      ),
+      OnboardingStep(
+        targetKey: _fakeDetailsDeleteIconKey,
         title: 'Delete Transaction',
-        description: 'You can also delete a transaction if needed.',
+        description: 'Tap here to delete this transaction if needed.',
+        onStepEnter: () async {
+           if (!_hasShownEditTutorial) {
+             _hasShownEditTutorial = true;
+             // Push to the AddTransactionScreen in tutorial mode!
+             await Navigator.push(context, MaterialPageRoute(
+                builder: (_) => AddTransactionScreen(accountKey: accountKey ?? 0, isTutorialMode: true)
+             ));
+           }
+        }
+      ),
+      OnboardingStep(
+        targetKey: _fakeDetailsDeleteIconKey,
+        title: 'Permanent Deletion',
+        description: 'Deleting will permanently remove this transaction from your records.',
         onStepEnter: () {
            setState(() {
-             _showFakeDetailsModal = true;
+             _showFakeDeleteConfirm = true;
+           });
+        }
+      ),
+      OnboardingStep(
+        targetKey: _fakeDeleteConfirmKey,
+        title: 'Confirm Delete',
+        description: 'Confirm to delete the transaction.',
+      ),
+      OnboardingStep(
+        title: 'Easily Manageable',
+        description: 'Your transactions are always editable and easy to manage!',
+        onStepEnter: () {
+           setState(() {
+             _showFakeDetailsModal = false;
+             _showFakeDeleteConfirm = false;
            });
         }
       ),
@@ -347,12 +389,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Row(
                               children: [
                                 IconButton(
-                                  key: _fakeDetailsEditAreaKey,
+                                  key: _fakeDetailsEditIconKey,
                                   icon: const Icon(Icons.edit_rounded),
                                   onPressed: () {},
                                 ),
                                 IconButton(
-                                  key: _fakeDetailsDeleteKey,
+                                  key: _fakeDetailsDeleteIconKey,
                                   icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
                                   onPressed: () {},
                                 ),
@@ -418,6 +460,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   )
                 )
+              ),
+            
+            if (_showFakeDeleteConfirm)
+              Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 40),
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor,
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Delete Transaction?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 16),
+                        const Text('This action cannot be undone. Are you sure you want to remove this record?', textAlign: TextAlign.center),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            TextButton(onPressed: () {}, child: const Text('Cancel')),
+                            const SizedBox(width: 8),
+                            TextButton(
+                              key: _fakeDeleteConfirmKey,
+                              onPressed: () {}, 
+                              child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                            ),
+                          ],
+                        )
+                      ],
+                    ),
+                  ),
+                ),
               ),
           ],
         ),

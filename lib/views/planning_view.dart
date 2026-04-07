@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/session_service.dart';
 import '../services/database_service.dart';
+import '../services/planning_intelligence_service.dart';
 import '../screens/add_budget_screen.dart';
 import '../screens/add_goal_screen.dart';
 import '../screens/add_debt_screen.dart';
@@ -52,6 +53,21 @@ class PlanningView extends StatelessWidget {
 
     final theme = Theme.of(context);
 
+    final transactions = DatabaseService.getTransactions(accountKey);
+    final wallets = DatabaseService.getWallets(accountKey);
+    final totalBalance = wallets
+        .where((w) => !w.isExcluded)
+        .fold(0.0, (sum, w) => sum + w.balance);
+
+    final insights = PlanningIntelligenceService.generate(
+      transactions: transactions,
+      budgets: budgets,
+      goals: goals,
+      debts: debts,
+      totalBalance: totalBalance,
+      wallets: wallets,
+    );
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -69,6 +85,12 @@ class PlanningView extends StatelessWidget {
             ),
           ),
         ),
+
+        // ── Financial Intelligence Panel ─────────────────────────────
+        if (insights.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _IntelligencePanel(insights: insights),
+          ),
 
         // Budgets Section
         SliverToBoxAdapter(
@@ -474,6 +496,177 @@ class _EmptyState extends StatelessWidget {
             Text(message, style: TextStyle(color: theme.dividerColor)),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// Financial Intelligence Panel
+// ============================================================================
+
+class _IntelligencePanel extends StatelessWidget {
+  final List<PlanningInsight> insights;
+
+  const _IntelligencePanel({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: theme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'FINANCIAL INTELLIGENCE',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  color: theme.primaryColor.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            itemCount: insights.length,
+            itemBuilder: (context, index) {
+              return _InsightCard(insight: insights[index]);
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final PlanningInsight insight;
+
+  const _InsightCard({required this.insight});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = insight.color;
+
+    return Container(
+      width: 220,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.25),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(insight.icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  insight.badgeLabel,
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Text(
+              insight.message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Urgency dot indicator
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(
+                    insight.urgency == InsightUrgency.high
+                        ? 1.0
+                        : insight.urgency == InsightUrgency.medium
+                            ? 0.6
+                            : 0.3,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                insight.urgency == InsightUrgency.high
+                    ? 'High priority'
+                    : insight.urgency == InsightUrgency.medium
+                        ? 'Worth acting on'
+                        : 'Good to know',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

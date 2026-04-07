@@ -421,7 +421,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                     ),
                     child: IconButton(
                       onPressed: () => _handleQuery(_queryController.text),
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      icon: Icon(Icons.send_rounded, color: theme.colorScheme.onPrimary, size: 20),
                     ),
                   ),
                 ],

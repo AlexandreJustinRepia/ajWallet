@@ -686,7 +686,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _selectedIndex == 4 ? null : FloatingActionButton(
         key: _walletsFabKey,
         onPressed: () => _onFabPressed(context, accountKey),
         child: const Icon(Icons.add_rounded, size: 28),

@@ -28,10 +28,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Security Settings'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Security Settings'), elevation: 0),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [
@@ -39,12 +36,23 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: Icon(Icons.password_rounded, color: theme.primaryColor),
-            title: Text(_account.pin == null || _account.pin!.isEmpty ? 'Set PIN' : 'Change PIN'),
-            subtitle: Text(_account.pin == null || _account.pin!.isEmpty 
-                ? 'Create a 4-digit PIN for offline security.' 
-                : 'Update your current vault sequence.'),
+            title: Text(
+              _account.pin == null || _account.pin!.isEmpty
+                  ? 'Set PIN'
+                  : 'Change PIN',
+            ),
+            subtitle: Text(
+              _account.pin == null || _account.pin!.isEmpty
+                  ? 'Create a 4-digit PIN for offline security.'
+                  : 'Update your current vault sequence.',
+            ),
             onTap: () async {
-              await Navigator.push(context, MaterialPageRoute(builder: (c) => const PinSetupScreen(isFromSettings: true)));
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (c) => const PinSetupScreen(isFromSettings: true),
+                ),
+              );
               setState(() {
                 _account = SessionService.activeAccount!;
               });
@@ -62,19 +70,25 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   return;
                 }
 
-                final canAuth = await SecurityService.canAuthenticateWithBiometrics();
+                final canAuth =
+                    await SecurityService.canAuthenticateWithBiometrics();
                 if (!canAuth) {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Biometrics not available or not set up.')),
+                      const SnackBar(
+                        content: Text(
+                          'Biometrics not available or not set up.',
+                        ),
+                      ),
                     );
                   }
                   return;
                 }
 
-                final success = await SecurityService.authenticateWithBiometrics(
-                  reason: 'Verify your identity to enable biometric login.',
-                );
+                final success =
+                    await SecurityService.authenticateWithBiometrics(
+                      reason: 'Verify your identity to enable biometric login.',
+                    );
 
                 if (success) {
                   setState(() => _account.isBiometricEnabled = true);
@@ -82,7 +96,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 } else {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Biometric verification failed.')),
+                      const SnackBar(
+                        content: Text('Biometric verification failed.'),
+                      ),
                     );
                   }
                 }
@@ -94,15 +110,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           ),
           const SizedBox(height: 16),
           _buildSectionTitle('Protection'),
-            _buildSwitchTile(
-              'Data Wipe',
-              'Wipe all data after ${_account.maxFailedAttempts} failed attempts.',
-              _account.isWipeEnabled,
-              (val) async {
-                setState(() => _account.isWipeEnabled = val);
-                await DatabaseService.updateAccount(_account);
-              },
-            ),
+          _buildSwitchTile(
+            'Data Wipe',
+            'Wipe all data after ${_account.maxFailedAttempts} failed attempts.',
+            _account.isWipeEnabled,
+            (val) async {
+              setState(() => _account.isWipeEnabled = val);
+              await DatabaseService.updateAccount(_account);
+            },
+          ),
           const SizedBox(height: 16),
           _buildSectionTitle('Auto-Lock'),
           ListTile(
@@ -124,19 +140,25 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 }
               },
             ),
-      ),
+          ),
           const SizedBox(height: 16),
           _buildSectionTitle('Data Management'),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.cloud_upload_outlined, color: theme.primaryColor),
+            leading: Icon(
+              Icons.cloud_upload_outlined,
+              color: theme.primaryColor,
+            ),
             title: const Text('Export Backup'),
             subtitle: const Text('Encrypt and save your data offline.'),
             onTap: () => _handleBackup(context, isExport: true),
           ),
           ListTile(
             contentPadding: EdgeInsets.zero,
-            leading: Icon(Icons.cloud_download_outlined, color: theme.primaryColor),
+            leading: Icon(
+              Icons.cloud_download_outlined,
+              color: theme.primaryColor,
+            ),
             title: const Text('Import Backup'),
             subtitle: const Text('Restore data from an encrypted file.'),
             onTap: () => _handleBackup(context, isExport: false),
@@ -154,12 +176,17 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: Text(
               'Save Changes',
-              style: TextStyle(color: theme.scaffoldBackgroundColor, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: theme.scaffoldBackgroundColor,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],
@@ -167,7 +194,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     );
   }
 
-  Future<void> _handleBackup(BuildContext context, {required bool isExport}) async {
+  Future<void> _handleBackup(
+    BuildContext context, {
+    required bool isExport,
+  }) async {
     final theme = Theme.of(context);
     final pinController = TextEditingController();
 
@@ -179,9 +209,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              isExport 
-                ? 'Enter your PIN to encrypt the backup file.' 
-                : 'Enter the PIN used to encrypt this backup.',
+              isExport
+                  ? 'Enter your PIN to encrypt the backup file.'
+                  : 'Enter the PIN used to encrypt this backup.',
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 16),
@@ -198,7 +228,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: Text(isExport ? 'Export' : 'Import'),
@@ -215,25 +248,39 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         if (_account.pin != null && _account.pin != enteredPin) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Incorrect account PIN. Export aborted.')),
+              const SnackBar(
+                content: Text('Incorrect account PIN. Export aborted.'),
+              ),
             );
           }
           return;
         }
 
-        final success = await BackupService.exportBackup(enteredPin, _account.key as int);
+        final success = await BackupService.exportBackup(
+          enteredPin,
+          _account.key as int,
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(success ? 'Backup exported successfully' : 'Export failed')),
+            SnackBar(
+              content: Text(
+                success ? 'Backup exported successfully' : 'Export failed',
+              ),
+            ),
           );
         }
       } else {
         // Import into current account
-        final success = await BackupService.importBackup(enteredPin, _account.key as int);
+        final success = await BackupService.importBackup(
+          enteredPin,
+          _account.key as int,
+        );
         if (mounted) {
           if (success) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Data restored successfully into this account.')),
+              const SnackBar(
+                content: Text('Data restored successfully into this account.'),
+              ),
             );
             // Refresh to show updated data
             setState(() {
@@ -243,7 +290,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             if (mounted) Navigator.pop(context, true);
           } else {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Import failed. Check your PIN or file integrity.')),
+              const SnackBar(
+                content: Text(
+                  'Import failed. Check your PIN or file integrity.',
+                ),
+              ),
             );
           }
         }
@@ -256,10 +307,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text('PIN Required', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(
+          'PIN Required',
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+        ),
         content: Text(
           'A backup PIN must be set before you can enable biometric login. This ensures you can always access your vault.',
-          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8)),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+          ),
         ),
         actions: [
           TextButton(
@@ -272,7 +328,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const PinSetupScreen(isFromSettings: true),
+                  builder: (context) =>
+                      const PinSetupScreen(isFromSettings: true),
                 ),
               );
               // Refresh account status after returning from setup
@@ -282,9 +339,14 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).primaryColor,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Set PIN Now', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Set PIN Now',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -296,16 +358,29 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         title.toUpperCase(),
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.2),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          color: Colors.grey,
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
 
-  Widget _buildSwitchTile(String title, String subtitle, bool value, ValueChanged<bool> onChanged) {
+  Widget _buildSwitchTile(
+    String title,
+    String subtitle,
+    bool value,
+    ValueChanged<bool> onChanged,
+  ) {
     return SwitchListTile(
       contentPadding: EdgeInsets.zero,
       title: Text(title),
-      subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+      subtitle: Text(
+        subtitle,
+        style: const TextStyle(fontSize: 12, color: Colors.grey),
+      ),
       value: value,
       onChanged: onChanged,
       activeColor: Theme.of(context).primaryColor,

@@ -17,17 +17,19 @@ class DatabaseService {
 
   static Future<void> init() async {
     await Hive.initFlutter();
-    
+
     // Register Adapters
     if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(AccountAdapter());
     if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(AppThemeAdapter());
-    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(TransactionTypeAdapter());
-    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(TransactionAdapter());
+    if (!Hive.isAdapterRegistered(2))
+      Hive.registerAdapter(TransactionTypeAdapter());
+    if (!Hive.isAdapterRegistered(3))
+      Hive.registerAdapter(TransactionAdapter());
     if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(WalletAdapter());
     if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(GoalAdapter());
     if (!Hive.isAdapterRegistered(6)) Hive.registerAdapter(BudgetAdapter());
     if (!Hive.isAdapterRegistered(7)) Hive.registerAdapter(DebtAdapter());
-    
+
     try {
       await Hive.openBox<Account>(_boxName);
     } catch (_) {
@@ -72,7 +74,8 @@ class DatabaseService {
   }
 
   static Box<Account> get _box => Hive.box<Account>(_boxName);
-  static Box<Transaction> get _transactionBox => Hive.box<Transaction>(_transactionBoxName);
+  static Box<Transaction> get _transactionBox =>
+      Hive.box<Transaction>(_transactionBoxName);
   static Box<Wallet> get _walletBox => Hive.box<Wallet>(_walletBoxName);
   static Box<Goal> get _goalBox => Hive.box<Goal>(_goalBoxName);
   static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
@@ -97,12 +100,17 @@ class DatabaseService {
   static Account? getLatestAccount() {
     if (_box.isEmpty) return null;
     // Return the first non-fake account as the primary one for initial loading
-    return _box.values.firstWhere((a) => !a.isFake, orElse: () => _box.values.last);
+    return _box.values.firstWhere(
+      (a) => !a.isFake,
+      orElse: () => _box.values.last,
+    );
   }
 
   static Account? getFakeAccount(String primaryName) {
     try {
-      return _box.values.firstWhere((a) => a.isFake && a.name.contains(primaryName));
+      return _box.values.firstWhere(
+        (a) => a.isFake && a.name.contains(primaryName),
+      );
     } catch (_) {
       return null;
     }
@@ -123,7 +131,7 @@ class DatabaseService {
     final transactionsToDelete = _transactionBox.values
         .where((t) => t.walletKey == walletKey || t.toWalletKey == walletKey)
         .toList();
-    
+
     for (var tx in transactionsToDelete) {
       await tx.delete();
     }
@@ -145,7 +153,10 @@ class DatabaseService {
   }
 
   // Transaction Operations
-  static Future<int> saveTransaction(Transaction transaction, {bool silent = false}) async {
+  static Future<int> saveTransaction(
+    Transaction transaction, {
+    bool silent = false,
+  }) async {
     final key = await _transactionBox.add(transaction);
     if (!silent) {
       await _applyTransactionEffect(transaction, isReversing: false);
@@ -158,7 +169,10 @@ class DatabaseService {
     await transaction.delete();
   }
 
-  static Future<void> updateTransaction(Transaction oldTx, Transaction newTx) async {
+  static Future<void> updateTransaction(
+    Transaction oldTx,
+    Transaction newTx,
+  ) async {
     // 1. Reverse old transaction's effect
     await _applyTransactionEffect(oldTx, isReversing: true);
     // 2. Apply new transaction's effect
@@ -167,7 +181,10 @@ class DatabaseService {
     await newTx.save();
   }
 
-  static Future<void> _applyTransactionEffect(Transaction tx, {required bool isReversing}) async {
+  static Future<void> _applyTransactionEffect(
+    Transaction tx, {
+    required bool isReversing,
+  }) async {
     double amount = isReversing ? -tx.amount : tx.amount;
     double charge = isReversing ? -(tx.charge ?? 0) : (tx.charge ?? 0);
 
@@ -184,18 +201,20 @@ class DatabaseService {
         wallet.balance -= amount;
         await wallet.save();
       }
-    } 
+    }
     // Handle Transfers between wallets
-    else if (tx.type == TransactionType.transfer && tx.walletKey != null && tx.toWalletKey != null) {
+    else if (tx.type == TransactionType.transfer &&
+        tx.walletKey != null &&
+        tx.toWalletKey != null) {
       final fromWallet = _walletBox.get(tx.walletKey);
       final toWallet = _walletBox.get(tx.toWalletKey);
       if (fromWallet != null && toWallet != null) {
         double fromDeduction = tx.amount + (tx.charge ?? 0);
         if (isReversing) fromDeduction = -fromDeduction;
-        
+
         fromWallet.balance -= fromDeduction;
         toWallet.balance += amount;
-        
+
         await fromWallet.save();
         await toWallet.save();
       }
@@ -253,7 +272,9 @@ class DatabaseService {
   }
 
   static List<Transaction> getTransactions(int accountKey) {
-    return _transactionBox.values.where((t) => t.accountKey == accountKey).toList();
+    return _transactionBox.values
+        .where((t) => t.accountKey == accountKey)
+        .toList();
   }
 
   static List<Transaction> getAllTransactions() {
@@ -308,9 +329,20 @@ class DatabaseService {
     return _budgetBox.values.toList();
   }
 
-  static Budget? getBudgetForCategory(int accountKey, String category, int month, int year) {
+  static Budget? getBudgetForCategory(
+    int accountKey,
+    String category,
+    int month,
+    int year,
+  ) {
     try {
-      return _budgetBox.values.firstWhere((b) => b.accountKey == accountKey && b.category == category && b.month == month && b.year == year);
+      return _budgetBox.values.firstWhere(
+        (b) =>
+            b.accountKey == accountKey &&
+            b.category == category &&
+            b.month == month &&
+            b.year == year,
+      );
     } catch (_) {
       return null;
     }

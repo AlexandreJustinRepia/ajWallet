@@ -33,7 +33,7 @@ class AccountAdapter extends TypeAdapter<Account> {
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -53,7 +53,8 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(8)
       ..write(obj.autoLockDurationSeconds)
       ..writeByte(9)
-      ..write(obj.hasSeenTutorial);
+      ..write(obj.hasSeenTutorial)
+      ..writeByte(10);
   }
 
   @override

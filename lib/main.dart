@@ -10,10 +10,10 @@ import 'widgets/security_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Database Service
   await DatabaseService.init();
-  
+
   // Initialize Theme Service
   await ThemeService.init();
 

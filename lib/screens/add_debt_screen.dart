@@ -21,6 +21,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   final _personController = TextEditingController();
   final _amountController = TextEditingController();
   bool _isOwedToMe = true;
+  bool _affectWallet = true;
   DateTime? _dueDate;
   int? _selectedWalletKey;
   List<Wallet> _wallets = [];
@@ -66,7 +67,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
 
   void _saveDebt() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedWalletKey == null && !widget.isTutorialMode) {
+      if (_affectWallet && _selectedWalletKey == null && !widget.isTutorialMode) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Please select a wallet')),
         );
@@ -75,11 +76,12 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
 
       final amount = double.parse(_amountController.text);
 
-      // 1. Create the Debt object with 0.0 total amount.
-      // The transaction effect will increment it to the correct total.
+      // 1. Create the Debt object.
+      // If _affectWallet is true, totalAmount starts at 0 and the Transaction increments it.
+      // If false, we set totalAmount directly to amount and skip the Transaction.
       final debt = Debt(
         personName: _personController.text.trim(),
-        totalAmount: 0.0, 
+        totalAmount: _affectWallet ? 0.0 : amount, 
         paidAmount: 0.0,
         accountKey: widget.accountKey,
         isOwedToMe: _isOwedToMe,
@@ -88,20 +90,22 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
 
       final debtKey = await DatabaseService.saveDebt(debt);
 
-      // 2. Create the initial Transaction
-      final transaction = Transaction(
-        title: _isOwedToMe ? 'Lent to ${debt.personName}' : 'Borrowed from ${debt.personName}',
-        amount: amount,
-        date: DateTime.now(),
-        category: _isOwedToMe ? 'Lent Money' : 'Borrowed Money',
-        description: 'Initial transaction for debt record',
-        type: _isOwedToMe ? TransactionType.expense : TransactionType.income,
-        accountKey: widget.accountKey,
-        walletKey: _selectedWalletKey,
-        debtKey: debtKey,
-      );
+      if (_affectWallet) {
+        // 2. Create the initial Transaction
+        final transaction = Transaction(
+          title: _isOwedToMe ? 'Lent to ${debt.personName}' : 'Borrowed from ${debt.personName}',
+          amount: amount,
+          date: DateTime.now(),
+          category: _isOwedToMe ? 'Lent Money' : 'Borrowed Money',
+          description: 'Initial transaction for debt record',
+          type: _isOwedToMe ? TransactionType.expense : TransactionType.income,
+          accountKey: widget.accountKey,
+          walletKey: _selectedWalletKey,
+          debtKey: debtKey,
+        );
 
-      await DatabaseService.saveTransaction(transaction);
+        await DatabaseService.saveTransaction(transaction);
+      }
 
       if (mounted) Navigator.pop(context, true);
     }
@@ -238,34 +242,45 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                 },
               ),
               const SizedBox(height: 24),
-              Text('Select Wallet', style: theme.textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Container(
-                key: _walletKey,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  border: Border.all(color: theme.dividerColor),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: _selectedWalletKey,
-                    isExpanded: true,
-                    hint: const Text('Select Wallet'),
-                    dropdownColor: theme.cardColor,
-                    items: _wallets.map((wallet) {
-                      return DropdownMenuItem<int>(
-                        value: widget.isTutorialMode ? null : wallet.key as int,
-                        child: Text(
-                          '${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})',
-                        ),
-                      );
-                    }).toList(),
-                    onChanged: (val) => setState(() => _selectedWalletKey = val),
+              SwitchListTile(
+                title: const Text('Include in Wallet Balance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                subtitle: Text('Turn off if you already included this amount in a wallet.', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                value: _affectWallet,
+                activeColor: theme.primaryColor,
+                contentPadding: EdgeInsets.zero,
+                onChanged: (val) => setState(() => _affectWallet = val),
+              ),
+              if (_affectWallet) ...[
+                const SizedBox(height: 16),
+                Text('Select Wallet', style: theme.textTheme.titleMedium),
+                const SizedBox(height: 8),
+                Container(
+                  key: _walletKey,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    border: Border.all(color: theme.dividerColor),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: _selectedWalletKey,
+                      isExpanded: true,
+                      hint: const Text('Select Wallet'),
+                      dropdownColor: theme.cardColor,
+                      items: _wallets.map((wallet) {
+                        return DropdownMenuItem<int>(
+                          value: widget.isTutorialMode ? null : wallet.key as int,
+                          child: Text(
+                            '${wallet.name} (₱${wallet.balance.toStringAsFixed(2)})',
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedWalletKey = val),
+                    ),
                   ),
                 ),
-              ),
+              ],
               const SizedBox(height: 24),
               Text('Due Date (Optional)', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
 import '../services/database_service.dart';
 import '../models/goal.dart';
 import '../models/transaction_model.dart';
@@ -25,14 +26,23 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
   final _amountController = TextEditingController();
   int? _selectedWalletKey;
   List<Wallet> _wallets = [];
+  late ConfettiController _confettiController;
+  bool _isPlayingConfetti = false;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
     _wallets = DatabaseService.getWallets(widget.accountKey).where((w) => !w.isExcluded).toList();
     if (_wallets.isNotEmpty) {
       _selectedWalletKey = _wallets.first.key as int;
     }
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
   }
 
   void _save() async {
@@ -77,7 +87,19 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
     await DatabaseService.saveTransaction(tx);
 
     if (mounted) {
-      Navigator.pop(context, true);
+      // Check if goal reached
+      if (!widget.isWithdrawing && widget.goal.targetAmount > 0 && 
+          (widget.goal.savedAmount + amount) >= widget.goal.targetAmount) {
+        setState(() => _isPlayingConfetti = true);
+        _confettiController.play();
+        
+        // Wait for confetti to finish before popping
+        await Future.delayed(const Duration(seconds: 2));
+      }
+      
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
     }
   }
 
@@ -86,7 +108,7 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
     final theme = Theme.of(context);
     final actionText = widget.isWithdrawing ? 'Withdraw' : 'Save';
 
-    return Scaffold(
+    final scaffold = Scaffold(
       appBar: AppBar(
         title: Text('$actionText: ${widget.goal.name}'),
         elevation: 0,
@@ -150,20 +172,41 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _save,
+                onPressed: _isPlayingConfetti ? null : _save,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: widget.isWithdrawing ? Colors.orange : Colors.green,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
-                child: Text(
-                  'Confirm $actionText',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                ),
+                child: _isPlayingConfetti
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : Text(
+                        'Confirm $actionText',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
               ),
             ),
           ],
         ),
       ),
+    );
+
+    return Stack(
+      children: [
+        scaffold,
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: false,
+            colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
+          ),
+        ),
+      ],
     );
   }
 }

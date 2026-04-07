@@ -178,6 +178,7 @@ class PlanningView extends StatelessWidget {
                         trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
                         progress: progress,
                         progressColor: isOver ? Colors.red : Colors.blue,
+                        isOverspent: isOver,
                         onDelete: () async {
                           await DatabaseService.deleteBudget(b);
                           onRefresh();
@@ -329,6 +330,7 @@ class _PlanningItem extends StatelessWidget {
   final GlobalKey? secondaryActionKey;
   final VoidCallback? onSecondaryAction;
   final VoidCallback onDelete;
+  final bool isOverspent;
 
   const _PlanningItem({
     required this.title,
@@ -343,12 +345,13 @@ class _PlanningItem extends StatelessWidget {
     this.secondaryActionKey,
     this.onSecondaryAction,
     required this.onDelete,
+    this.isOverspent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
+    final itemWidget = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -360,7 +363,15 @@ class _PlanningItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (isOverspent) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                        ]
+                      ],
+                    ),
                     Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
                   ],
                 ),
@@ -375,11 +386,18 @@ class _PlanningItem extends StatelessWidget {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: progressColor.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 8,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, _) {
+                return LinearProgressIndicator(
+                  value: val,
+                  backgroundColor: progressColor.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  minHeight: 8,
+                );
+              },
             ),
           ),
           const SizedBox(height: 8),
@@ -431,6 +449,62 @@ class _PlanningItem extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    return isOverspent ? _ShakeWidget(animate: true, child: itemWidget) : itemWidget;
+  }
+}
+
+class _ShakeWidget extends StatefulWidget {
+  final Widget child;
+  final bool animate;
+
+  const _ShakeWidget({required this.child, required this.animate});
+
+  @override
+  State<_ShakeWidget> createState() => _ShakeWidgetState();
+}
+
+class _ShakeWidgetState extends State<_ShakeWidget> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _animation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 10.0).chain(CurveTween(curve: Curves.easeOut)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 1),
+    ]).animate(_controller);
+
+    if (widget.animate) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_animation.value, 0),
+          child: child,
+        );
+      },
+      child: widget.child,
     );
   }
 }

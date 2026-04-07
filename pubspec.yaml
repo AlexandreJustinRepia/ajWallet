@@ -28,6 +28,7 @@ dependencies:
   url_launcher: ^6.3.2
   crypto: ^3.0.7
   pinput: ^6.0.2
+  confetti: ^0.8.0
 
 dev_dependencies:
   flutter_test:

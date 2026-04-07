@@ -59,7 +59,7 @@ class UpdateService {
         final currentVersion = packageInfo.version;
         final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-        bool hasUpdate = _isVersionNewer(updateInfo.latestVersion, currentVersion) || 
+        bool hasUpdate = isVersionNewer(updateInfo.latestVersion, currentVersion) || 
                          (updateInfo.latestVersion == currentVersion && updateInfo.buildNumber > currentBuild);
 
         if (hasUpdate) {
@@ -71,7 +71,7 @@ class UpdateService {
     }
   }
 
-  static bool _isVersionNewer(String latest, String current) {
+  static bool isVersionNewer(String latest, String current) {
     List<int> latestParts = latest.split('.').map(int.parse).toList();
     List<int> currentParts = current.split('.').map(int.parse).toList();
 

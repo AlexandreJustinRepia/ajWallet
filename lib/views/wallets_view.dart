@@ -373,15 +373,26 @@ class _WalletCard extends StatelessWidget {
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(11),
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
                   color: accentColor.withOpacity(0.07),
                   shape: BoxShape.circle,
                 ),
+                clipBehavior: Clip.antiAlias,
+                alignment: Alignment.center,
                 child: wallet.iconPath != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(wallet.iconPath!, fit: BoxFit.contain),
+                    ? Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.asset(
+                            wallet.iconPath!, 
+                            fit: BoxFit.contain,
+                            width: 20,
+                            height: 20,
+                          ),
+                        ),
                       )
                     : Icon(
                         _walletIcon(wallet.type),

@@ -189,16 +189,21 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
                   child: Row(
                     children: [
                       Container(
-                        width: 40,
-                        height: 40,
+                        width: 44,
+                        height: 44,
                         decoration: BoxDecoration(
                           color: theme.dividerColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        clipBehavior: Clip.antiAlias,
+                        alignment: Alignment.center,
                         child: _selectedIconPath != null
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.asset(_selectedIconPath!, fit: BoxFit.contain),
+                            ? Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.asset(_selectedIconPath!, fit: BoxFit.contain),
+                                ),
                               )
                             : Icon(Icons.account_balance_rounded, color: theme.primaryColor),
                       ),

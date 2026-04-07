@@ -111,12 +111,12 @@ class InstitutionSelector extends StatelessWidget {
           child: Column(
             children: [
               Container(
-                width: 70,
-                height: 70,
-                padding: const EdgeInsets.all(12),
+                width: 64,
+                height: 64,
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: theme.dividerColor, width: 0.5),
                   boxShadow: [
                     BoxShadow(

@@ -9,7 +9,7 @@ import '../screens/add_debt_screen.dart';
 import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
-
+import '../models/debt.dart';
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
   final bool isTutorialActive;
@@ -280,39 +280,159 @@ class PlanningView extends StatelessWidget {
             child: (debts.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
               : Column(
-                  children: debts.map((d) {
-                    final total = d.totalAmount;
-                    final paid = d.paidAmount;
-                    final remaining = total - paid;
-                    final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
-                    
-                    return _PlanningItem(
-                      title: d.personName,
-                      subtitle: d.isOwedToMe ? 'Lent (Remaining)' : 'Borrowed (Remaining)',
-                      trailingText: '₱${remaining.toStringAsFixed(0)}',
-                      progress: progress,
-                      progressColor: Colors.orange,
-                      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
-                      onPrimaryAction: () async {
-                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
-                          accountKey: accountKey,
-                          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
-                          initialDebtKey: d.key as int,
-                        )));
-                        if (res == true) onRefresh();
-                      },
-                      onDelete: () async {
-                        await DatabaseService.deleteDebt(d);
-                        onRefresh();
-                      },
-                    );
-                  }).toList(),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (debts.any((d) => !d.isOwedToMe)) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_drop_down, color: Colors.red, size: 20),
+                            Text('YOU OWE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          ],
+                        ),
+                      ),
+                      ...debts.where((d) => !d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
+                      const SizedBox(height: 16),
+                    ],
+                    if (debts.any((d) => d.isOwedToMe)) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_drop_up, color: Colors.green, size: 20),
+                            Text('OWED TO YOU', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          ],
+                        ),
+                      ),
+                      ...debts.where((d) => d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
+                    ],
+                  ],
                 ),
           ),
         ),
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
+    );
+  }
+
+  Widget _buildDebtItem(BuildContext context, Debt d, int accountKey) {
+    final total = d.totalAmount;
+    final paid = d.paidAmount;
+    final remaining = total - paid;
+    final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
+    
+    return _PlanningItem(
+      title: d.personName,
+      subtitle: d.dueDate != null ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}' : 'No due date',
+      trailingText: '₱${remaining.toStringAsFixed(0)}',
+      progress: progress,
+      progressColor: Colors.orange,
+      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
+      onPrimaryAction: () async {
+        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
+          accountKey: accountKey,
+          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
+          initialDebtKey: d.key as int,
+        )));
+        if (res == true) onRefresh();
+      },
+      onSecondaryAction: () => _showDebtHistory(context, d, accountKey),
+      secondaryActionLabel: 'History',
+      secondaryActionIcon: Icons.history_rounded,
+      onDelete: () async {
+        await DatabaseService.deleteDebt(d);
+        onRefresh();
+      },
+    );
+  }
+
+  void _showDebtHistory(BuildContext context, Debt debt, int accountKey) {
+    final transactions = DatabaseService.getTransactions(accountKey)
+        .where((t) => t.debtKey == debt.key)
+        .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24).copyWith(top: 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: (debt.isOwedToMe ? Colors.green : Colors.red).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.history_rounded, color: debt.isOwedToMe ? Colors.green : Colors.red),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${debt.personName}\'s History', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: transactions.isEmpty 
+                    ? const Center(child: Text('No transaction history yet'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(24),
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final tx = transactions[index];
+                          // Payment happens when I receive money for a loan (income) or I pay money for a debt (expense)
+                          final isPayment = tx.type == (debt.isOwedToMe ? TransactionType.income : TransactionType.expense);
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: isPayment ? Colors.blue.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                              child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? Colors.blue : Colors.orange, size: 20),
+                            ),
+                            title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.date), style: const TextStyle(fontSize: 12)),
+                            trailing: Text(
+                              '${isPayment ? '+' : ''}₱${tx.amount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900, 
+                                color: isPayment ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -329,6 +449,7 @@ class _PlanningItem extends StatelessWidget {
   final String? secondaryActionLabel;
   final GlobalKey? secondaryActionKey;
   final VoidCallback? onSecondaryAction;
+  final IconData? secondaryActionIcon;
   final VoidCallback onDelete;
   final bool isOverspent;
 
@@ -344,6 +465,7 @@ class _PlanningItem extends StatelessWidget {
     this.secondaryActionLabel,
     this.secondaryActionKey,
     this.onSecondaryAction,
+    this.secondaryActionIcon,
     required this.onDelete,
     this.isOverspent = false,
   });
@@ -415,7 +537,7 @@ class _PlanningItem extends StatelessWidget {
                     TextButton.icon(
                       key: secondaryActionKey,
                       onPressed: onSecondaryAction,
-                      icon: Icon(Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
+                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
                       label: Text(
                         secondaryActionLabel ?? 'Remove',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withOpacity(0.7)),

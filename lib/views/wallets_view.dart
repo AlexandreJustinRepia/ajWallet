@@ -378,11 +378,16 @@ class _WalletCard extends StatelessWidget {
                   color: accentColor.withOpacity(0.07),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  _walletIcon(wallet.type),
-                  color: accentColor,
-                  size: 20,
-                ),
+                child: wallet.iconPath != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(wallet.iconPath!, fit: BoxFit.contain),
+                      )
+                    : Icon(
+                        _walletIcon(wallet.type),
+                        color: accentColor,
+                        size: 20,
+                      ),
               ),
               const SizedBox(width: 16),
               Expanded(

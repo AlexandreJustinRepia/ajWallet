@@ -55,6 +55,8 @@ class AchievementService {
   }
 
   static List<Achievement> checkStreaks(List<Transaction> transactions, List<Budget> budgets) {
+    if (transactions.isEmpty) return [];
+
     final unlocked = <Achievement>[];
     final box = Hive.box(_boxName);
 

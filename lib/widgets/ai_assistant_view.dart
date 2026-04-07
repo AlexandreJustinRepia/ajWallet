@@ -421,7 +421,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                     ),
                     child: IconButton(
                       onPressed: () => _handleQuery(_queryController.text),
-                      icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                      icon: Icon(Icons.send_rounded, color: theme.colorScheme.onPrimary, size: 20),
                     ),
                   ),
                 ],
@@ -639,50 +639,70 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.5),
         ),
         const SizedBox(height: 16),
-        _buildInsightMiniCard('Cashflow Forecast', 'AI is projecting your runway.', Icons.trending_up, const Color(0xFF2E7D32)),
+        _buildInsightMiniCard(
+          'Cashflow Forecast', 
+          'AI is projecting your runway.', 
+          Icons.trending_up, 
+          const Color(0xFF2E7D32),
+          onTap: () => _handleQuery("Check my runway"),
+        ),
         const SizedBox(height: 12),
-        _buildInsightMiniCard('Strategic Optimization', '2 new strategies detected.', Icons.auto_fix_high, const Color(0xFF1976D2)),
+        _buildInsightMiniCard(
+          'Strategic Optimization', 
+          '2 new strategies detected.', 
+          Icons.auto_fix_high, 
+          const Color(0xFF1976D2),
+          onTap: () => _handleQuery("Show my financial status"),
+        ),
       ],
     );
   }
 
-  Widget _buildInsightMiniCard(String title, String subtitle, IconData icon, Color accent) {
+  Widget _buildInsightMiniCard(String title, String subtitle, IconData icon, Color accent, {VoidCallback? onTap}) {
     final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor, width: 0.5),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 18, color: accent),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: theme.textTheme.bodyLarge?.color,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: accent.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
                 ),
-                Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
+                child: Icon(icon, size: 18, color: accent),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: theme.textTheme.bodyLarge?.color,
+                      ),
+                    ),
+                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, size: 16, color: theme.dividerColor),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

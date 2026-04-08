@@ -388,21 +388,96 @@ class _HomeViewState extends State<HomeView> {
                      )
                   ),
                   const SizedBox(height: 32),
-                  const Text('Badges', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const Text('Today\'s Quests', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                   const SizedBox(height: 12),
-                  ...profile.badges.map((badge) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: CircleAvatar(
-                         backgroundColor: badge.isUnlocked ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
-                         child: Text(badge.icon, style: const TextStyle(fontSize: 20)),
+                  ...profile.dailyQuests.map((quest) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: quest.isCompleted ? Colors.green.withOpacity(0.5) : theme.dividerColor, width: 1),
                       ),
-                      title: Text(badge.title, style: TextStyle(fontWeight: FontWeight.bold, color: badge.isUnlocked ? theme.textTheme.bodyMedium?.color : Colors.grey)),
-                      subtitle: Text(badge.description, style: TextStyle(fontSize: 12, color: badge.isUnlocked ? theme.textTheme.bodyMedium?.color?.withOpacity(0.6) : Colors.grey.withOpacity(0.6))),
-                      trailing: badge.isUnlocked ? const Icon(Icons.check_circle_rounded, color: Colors.green) : const Icon(Icons.lock_rounded, color: Colors.grey),
-                    ),
-                  )),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        leading: CircleAvatar(
+                          backgroundColor: quest.isCompleted ? Colors.green.withOpacity(0.2) : theme.primaryColor.withOpacity(0.1),
+                          child: Icon(quest.isCompleted ? Icons.check_circle_rounded : Icons.star_rounded, color: quest.isCompleted ? Colors.green : theme.primaryColor),
+                        ),
+                        title: Row(
+                           children: [
+                              Expanded(child: Text(quest.title, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color))),
+                              Container(
+                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                 decoration: BoxDecoration(
+                                    color: Colors.amber.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                 ),
+                                 child: Text('+${quest.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12))
+                              )
+                           ],
+                        ),
+                        subtitle: Text(quest.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 32),
+                  const Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  ...profile.achievements.map((achievement) {
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 16),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: achievement.isUnlocked ? Colors.amber.withOpacity(0.5) : theme.dividerColor, width: 0.5),
+                        boxShadow: [
+                           if (achievement.isUnlocked)
+                              BoxShadow(color: Colors.amber.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                           CircleAvatar(
+                              backgroundColor: achievement.isUnlocked ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                              radius: 24,
+                              child: Text(achievement.icon, style: const TextStyle(fontSize: 24)),
+                           ),
+                           const SizedBox(width: 16),
+                           Expanded(
+                              child: Column(
+                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                 children: [
+                                    Row(
+                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                       children: [
+                                          Text(achievement.title, style: TextStyle(fontWeight: FontWeight.bold, color: achievement.isUnlocked ? theme.textTheme.bodyMedium?.color : Colors.grey)),
+                                          if (achievement.isUnlocked)
+                                            const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 16)
+                                          else
+                                            Text('${achievement.currentProgress.toStringAsFixed(0)} / ${achievement.targetProgress.toStringAsFixed(0)} ${achievement.unit}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.primaryColor)),
+                                       ],
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(achievement.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                                    const SizedBox(height: 8),
+                                    ClipRRect(
+                                       borderRadius: BorderRadius.circular(4),
+                                       child: LinearProgressIndicator(
+                                          value: achievement.progressPercentage,
+                                          minHeight: 6,
+                                          backgroundColor: theme.dividerColor.withOpacity(0.1),
+                                          valueColor: AlwaysStoppedAnimation<Color>(achievement.isUnlocked ? Colors.amber : theme.primaryColor),
+                                       ),
+                                    )
+                                 ],
+                              )
+                           )
+                        ]
+                      )
+                    );
+                  }),
                 ],
               )
             )

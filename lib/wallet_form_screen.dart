@@ -37,7 +37,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   late bool _isExcluded;
   String? _selectedIconPath;
 
-  final List<String> _walletTypes = ['Wallet', 'Cash', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
+  final List<String> _walletTypes = ['Wallet', 'Cash', 'Credit Card', 'Debit Card', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
 
   @override
   void initState() {

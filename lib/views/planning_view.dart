@@ -10,6 +10,7 @@ import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
 import '../models/debt.dart';
+import '../widgets/financial_health_strip.dart';
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
   final bool isTutorialActive;
@@ -83,7 +84,7 @@ class PlanningView extends StatelessWidget {
     final savingsPct = totalGoalTarget > 0 ? (totalGoalSaved / totalGoalTarget * 100).clamp(0.0, 100.0) : 0.0;
 
     // 3. Active Debts
-    final activeDebtAmount = debts.where((d) => !d.isOwedToMe).fold(0.0, (s, d) => s + (d.totalAmount - d.paidAmount));
+    final activeDebtAmount = debts.where((d) => !d.isOwedToMe).fold(0.0, (s, d) => s + (d.totalAmount - d.paidAmount).clamp(0.0, double.infinity));
 
     final insights = PlanningIntelligenceService.generate(
       transactions: transactions,
@@ -115,8 +116,8 @@ class PlanningView extends StatelessWidget {
         // ── Health Snapshot Strip ────────────────────────────────────
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: _HealthSnapshotStrip(
+            padding: const EdgeInsets.only(bottom: 24, top: 8),
+            child: FinancialHealthStrip(
               budgetUsedPct: budgetUsedPct,
               savingsPct: savingsPct,
               activeDebtAmount: activeDebtAmount,
@@ -907,127 +908,5 @@ class _InsightCard extends StatelessWidget {
 }
 
 // ============================================================================
-// Health Snapshot Strip
+// End of Planning View
 // ============================================================================
-
-class _HealthSnapshotStrip extends StatelessWidget {
-  final double budgetUsedPct;
-  final double savingsPct;
-  final double activeDebtAmount;
-
-  const _HealthSnapshotStrip({
-    required this.budgetUsedPct,
-    required this.savingsPct,
-    required this.activeDebtAmount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 60,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        children: [
-          _MiniHealthCard(
-            label: 'BUDGET USED',
-            value: '${budgetUsedPct.toStringAsFixed(0)}%',
-            icon: Icons.pie_chart_rounded,
-            color: Colors.blue,
-          ),
-          const SizedBox(width: 12),
-          _MiniHealthCard(
-            label: 'SAVINGS PROGRESS',
-            value: '${savingsPct.toStringAsFixed(0)}%',
-            icon: Icons.savings_rounded,
-            color: Colors.green,
-          ),
-          const SizedBox(width: 12),
-          _MiniHealthCard(
-            label: 'ACTIVE DEBTS',
-            value: '₱${activeDebtAmount.toStringAsFixed(0)}',
-            icon: Icons.warning_rounded,
-            color: Colors.orange,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniHealthCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _MiniHealthCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      width: 140,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 16, color: color),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-                    letterSpacing: 0.5,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w900,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

@@ -9,8 +9,13 @@ import '../widgets/slide_in_list_item.dart';
 import '../widgets/quick_add_input.dart';
 import '../widgets/transaction_card.dart';
 import '../services/financial_insights_service.dart';
+import '../services/gamification_service.dart';
+import '../models/goal.dart';
+import '../models/budget.dart';
+import '../models/debt.dart';
 import 'insight_card.dart';
 import 'dashboard_helpers.dart';
+import '../widgets/financial_health_strip.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback onRefresh;
@@ -82,6 +87,9 @@ class _HomeViewState extends State<HomeView> {
     
     List<Transaction> transactions;
     List<Wallet> wallets;
+    List<Budget> budgets = [];
+    List<Goal> goals = [];
+    List<Debt> debts = [];
 
     if (widget.isTutorialActive) {
       transactions = _tutorialTransactions;
@@ -93,6 +101,11 @@ class _HomeViewState extends State<HomeView> {
       wallets = account != null
           ? DatabaseService.getWallets(account.key as int)
           : <Wallet>[];
+      if (account != null) {
+        budgets = DatabaseService.getBudgets(account.key as int);
+        goals = DatabaseService.getGoals(account.key as int);
+        debts = DatabaseService.getDebts(account.key as int);
+      }
     }
 
     final double totalBalance = wallets
@@ -100,6 +113,29 @@ class _HomeViewState extends State<HomeView> {
         .fold(0, (sum, wallet) => sum + wallet.balance);
 
     final insights = FinancialInsightsService.generateInsights(transactions, totalBalance);
+
+    final now = DateTime.now();
+    // 1. Budget Used %
+    final thisMonthBudgets = budgets.where((b) => b.month == now.month && b.year == now.year).toList();
+    double totalBudgetLimit = 0;
+    double totalBudgetSpent = 0;
+    for (var b in thisMonthBudgets) {
+      totalBudgetLimit += b.amountLimit;
+      final spent = transactions
+          .where((e) =>
+              (e.budgetKey == b.key ||
+               (e.category == b.category && e.date.month == now.month && e.date.year == now.year)) &&
+              e.type == TransactionType.expense)
+          .fold(0.0, (s, e) => s + e.amount);
+      totalBudgetSpent += spent;
+    }
+    final budgetUsedPct = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit * 100).clamp(0.0, 100.0) : 0.0;
+    // 2. Savings Progress %
+    final totalGoalTarget = goals.fold(0.0, (s, g) => s + g.targetAmount);
+    final totalGoalSaved = goals.fold(0.0, (s, g) => s + g.savedAmount);
+    final savingsPct = totalGoalTarget > 0 ? (totalGoalSaved / totalGoalTarget * 100).clamp(0.0, 100.0) : 0.0;
+    // 3. Active Debts
+    final activeDebtAmount = debts.where((d) => !d.isOwedToMe).fold(0.0, (s, d) => s + (d.totalAmount - d.paidAmount).clamp(0.0, double.infinity));
 
     if (totalBalance != _prevBalance) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -113,14 +149,27 @@ class _HomeViewState extends State<HomeView> {
       });
     }
 
+    final gamification = GamificationService.generateProfile(
+      transactions: transactions, 
+      budgets: budgets, 
+      goals: goals, 
+      debts: debts
+    );
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(context, account?.name ?? 'User'),
-          const SizedBox(height: 32),
+          _buildHeader(context, account?.name ?? 'User', gamification),
+          const SizedBox(height: 16),
+          FinancialHealthStrip(
+            budgetUsedPct: budgetUsedPct,
+            savingsPct: savingsPct,
+            activeDebtAmount: activeDebtAmount,
+          ),
+          const SizedBox(height: 24),
           _buildBalanceCard(context, totalBalance, _isNetWorthMode, (val) {
             setState(() => _isNetWorthMode = val);
           }, key: widget.balanceKey),
@@ -199,26 +248,167 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String name) {
+  Widget _buildHeader(BuildContext context, String name, GamificationProfile profile) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          'Good Day,',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-            letterSpacing: 0.5,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Good Day,',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              name,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+              ),
+            ),
+          ],
         ),
-        Text(
-          name,
-          style: theme.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
+        InkWell(
+          onTap: () => _showGamificationSheet(context, profile, theme),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${profile.streakDays} Days', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text('Lvl ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 16)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  void _showGamificationSheet(BuildContext context, GamificationProfile profile, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            Container(margin: const EdgeInsets.symmetric(vertical: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(2))),
+            Padding(
+              padding: const EdgeInsets.all(24).copyWith(top: 0),
+              child: Column(
+                children: [
+                  CircleAvatar(
+                     radius: 40,
+                     backgroundColor: Colors.amber.withOpacity(0.2),
+                     child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
+                  ),
+                  const SizedBox(height: 16),
+                  Text('Level ${profile.level} Saver', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                  Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                  const SizedBox(height: 24),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                       value: profile.progressToNextLevel,
+                       minHeight: 12,
+                       backgroundColor: theme.primaryColor.withOpacity(0.1),
+                       valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                    )
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                       Text('Level ${profile.level}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                       Text('${500 - (profile.xp % 500)} XP to Level ${profile.level + 1}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(24).copyWith(top: 16),
+                children: [
+                  const Text('Active Streak', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  Container(
+                     padding: const EdgeInsets.all(16),
+                     decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                     ),
+                     child: Row(
+                        children: [
+                           const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 32),
+                           const SizedBox(width: 16),
+                           Expanded(
+                             child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                   Text('${profile.streakDays} Days Fire Streak!', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.orange, fontSize: 16)),
+                                   Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: Colors.orange.withOpacity(0.8))),
+                                ]
+                             )
+                           )
+                        ]
+                     )
+                  ),
+                  const SizedBox(height: 32),
+                  const Text('Badges', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(height: 12),
+                  ...profile.badges.map((badge) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: CircleAvatar(
+                         backgroundColor: badge.isUnlocked ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                         child: Text(badge.icon, style: const TextStyle(fontSize: 20)),
+                      ),
+                      title: Text(badge.title, style: TextStyle(fontWeight: FontWeight.bold, color: badge.isUnlocked ? theme.textTheme.bodyMedium?.color : Colors.grey)),
+                      subtitle: Text(badge.description, style: TextStyle(fontSize: 12, color: badge.isUnlocked ? theme.textTheme.bodyMedium?.color?.withOpacity(0.6) : Colors.grey.withOpacity(0.6))),
+                      trailing: badge.isUnlocked ? const Icon(Icons.check_circle_rounded, color: Colors.green) : const Icon(Icons.lock_rounded, color: Colors.grey),
+                    ),
+                  )),
+                ],
+              )
+            )
+          ]
+        ),
+      ),
     );
   }
 

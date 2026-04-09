@@ -144,6 +144,13 @@ class PlanningView extends StatelessWidget {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBudgetScreen(accountKey: accountKey)));
               if (result == true) onRefresh();
             },
+            summary: thisMonthBudgets.isNotEmpty
+              ? _BudgetTotalSummary(
+                  spent: totalBudgetSpent,
+                  limit: totalBudgetLimit,
+                  pct: budgetUsedPct,
+                )
+              : null,
             child: (budgets.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
               : Column(
@@ -632,6 +639,131 @@ class _ShakeWidgetState extends State<_ShakeWidget> with SingleTickerProviderSta
   }
 }
 
+class _BudgetTotalSummary extends StatelessWidget {
+  final double spent;
+  final double limit;
+  final double pct;
+
+  const _BudgetTotalSummary({
+    required this.spent,
+    required this.limit,
+    required this.pct,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isOver = spent > limit;
+    final barColor = isOver ? Colors.red : Colors.blue;
+    final remaining = (limit - spent).clamp(0.0, double.infinity);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: barColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: barColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'TOTAL THIS MONTH',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: barColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isOver ? 'OVER BUDGET' : '${pct.toStringAsFixed(0)}% used',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: barColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '₱${spent.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: barColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  '/ ₱${limit.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (!isOver)
+                Text(
+                  '₱${remaining.toStringAsFixed(0)} left',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.withOpacity(0.7),
+                  ),
+                )
+              else
+                Text(
+                  '₱${(spent - limit).toStringAsFixed(0)} over',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: (pct / 100).clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, val, __) => LinearProgressIndicator(
+                value: val,
+                minHeight: 8,
+                backgroundColor: barColor.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _SectionCard extends StatelessWidget {
   final GlobalKey? sectionKey;
   final GlobalKey? addKey;
@@ -641,6 +773,7 @@ class _SectionCard extends StatelessWidget {
   final int count;
   final VoidCallback onAdd;
   final Widget child;
+  final Widget? summary;
 
   const _SectionCard({
     this.sectionKey,
@@ -651,6 +784,7 @@ class _SectionCard extends StatelessWidget {
     required this.count,
     required this.onAdd,
     required this.child,
+    this.summary,
   });
 
   @override
@@ -705,6 +839,7 @@ class _SectionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          if (summary != null) summary!,
           child,
         ],
       ),

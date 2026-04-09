@@ -120,6 +120,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _refresh() => setState(() {});
 
   // ---------------------------------------------------------------------------
+  // Branded title widget
+  // ---------------------------------------------------------------------------
+
+  Widget _buildRootExpTitle(ThemeData theme) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          'Root',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w500,
+            letterSpacing: -0.5,
+          ),
+        ),
+        const SizedBox(width: 3),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+          decoration: BoxDecoration(
+            color: theme.primaryColor,
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Text(
+            'EXP',
+            style: TextStyle(
+              color: theme.colorScheme.onPrimary,
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // App Bar
   // ---------------------------------------------------------------------------
 
@@ -128,7 +165,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     2 => 'Wallets',
     3 => 'Planning',
     4 => 'Assistant',
-    _ => 'AJWallet',
+    _ => 'RootEXP',
   };
 
   @override
@@ -525,7 +562,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(_appBarTitle, style: theme.textTheme.titleLarge),
+        title: _selectedIndex == 0
+            ? _buildRootExpTitle(theme)
+            : Text(_appBarTitle, style: theme.textTheme.titleLarge),
         automaticallyImplyLeading: false,
         actions: [_buildProfileMenu(context, theme)],
       ),
@@ -795,7 +834,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _buildPopupItem(Icons.palette_outlined, 'Theme Settings', 'theme'),
           _buildPopupItem(Icons.account_circle_outlined, 'Account', 'account'),
           _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
-          _buildPopupItem(Icons.info_outline_rounded, 'About AJ Wallet', 'about'),
+          _buildPopupItem(Icons.info_outline_rounded, 'About RootEXP', 'about'),
           const PopupMenuDivider(),
           _buildPopupItem(
             Icons.logout_rounded,

@@ -3,6 +3,7 @@ import 'services/database_service.dart';
 import 'models/wallet.dart';
 import 'widgets/calculator_input.dart';
 import 'widgets/onboarding_overlay.dart';
+import 'widgets/institution_selector.dart';
 
 class WalletFormScreen extends StatefulWidget {
   final int accountKey;
@@ -34,8 +35,9 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   late TextEditingController _balanceController;
   late String _selectedType;
   late bool _isExcluded;
+  String? _selectedIconPath;
 
-  final List<String> _walletTypes = ['Wallet', 'Cash', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
+  final List<String> _walletTypes = ['Wallet', 'Cash', 'Credit Card', 'Debit Card', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
 
   @override
   void initState() {
@@ -45,11 +47,13 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
       _balanceController = TextEditingController(text: '5000.00');
       _selectedType = 'Bank';
       _isExcluded = true;
+      _selectedIconPath = null;
     } else {
       _nameController = TextEditingController(text: widget.wallet?.name ?? '');
       _balanceController = TextEditingController(text: widget.wallet?.balance.toString() ?? '0');
       _selectedType = widget.wallet?.type ?? 'Wallet';
       _isExcluded = widget.wallet?.isExcluded ?? false;
+      _selectedIconPath = widget.wallet?.iconPath;
     }
   }
 
@@ -62,6 +66,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         widget.wallet!.balance = double.parse(_balanceController.text);
         widget.wallet!.type = _selectedType;
         widget.wallet!.isExcluded = _isExcluded;
+        widget.wallet!.iconPath = _selectedIconPath;
         await DatabaseService.updateWallet(widget.wallet!);
       } else {
         // Create new
@@ -71,6 +76,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           type: _selectedType,
           accountKey: widget.accountKey,
           isExcluded: _isExcluded,
+          iconPath: _selectedIconPath,
         );
         await DatabaseService.saveWallet(wallet);
       }
@@ -78,6 +84,25 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
       if (mounted) {
         Navigator.pop(context, true);
       }
+    }
+  }
+
+  void _showInstitutionSelector() async {
+    final result = await showModalBottomSheet<Institution>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => InstitutionSelector(),
+    );
+
+    if (result != null) {
+      setState(() {
+        _selectedIconPath = result.logoPath;
+        if (_nameController.text.isEmpty) {
+          _nameController.text = result.name;
+        }
+        _selectedType = result.category;
+      });
     }
   }
 
@@ -149,6 +174,57 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Text('Institution', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _showInstitutionSelector,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.dividerColor, width: 0.5),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        alignment: Alignment.center,
+                        child: _selectedIconPath != null
+                            ? Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.asset(_selectedIconPath!, fit: BoxFit.contain),
+                                ),
+                              )
+                            : Icon(Icons.account_balance_rounded, color: theme.primaryColor),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          _selectedIconPath != null 
+                              ? 'Change Institution'
+                              : 'Select Bank or E-Wallet',
+                          style: TextStyle(
+                            color: _selectedIconPath != null ? null : theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Icon(Icons.chevron_right_rounded, color: theme.dividerColor),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
               Text('Wallet Name', style: theme.textTheme.titleMedium),
               const SizedBox(height: 8),
               Container(

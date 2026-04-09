@@ -58,8 +58,10 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   void _applyTheme(AppTheme theme) {
     if (theme.isDark) {
       ThemeService.setDarkTheme(theme);
+      ThemeService.setThemeMode(ThemeMode.dark);
     } else {
       ThemeService.setLightTheme(theme);
+      ThemeService.setThemeMode(ThemeMode.light);
     }
     _loadFromState(theme);
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -153,11 +155,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           physics: const BouncingScrollPhysics(),
           children: [
-            _buildSectionHeader('DISPLAY MODE', Icons.brightness_6_rounded, activeTheme),
-            const SizedBox(height: 16),
-            _buildModeSwitcher(activeTheme),
-            
-            const SizedBox(height: 40),
             _buildSectionHeader('PRESET PALETTES', Icons.palette_rounded, activeTheme),
             const SizedBox(height: 16),
             _buildPresetsGrid(context, activeTheme),
@@ -194,73 +191,30 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  Widget _buildModeSwitcher(ThemeData themeData) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: themeData.cardColor,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: themeData.dividerColor),
-      ),
-      child: ValueListenableBuilder<ThemeState>(
-        valueListenable: ThemeService.themeNotifier,
-        builder: (context, state, _) {
-          return Row(
-            children: [
-              _modeButton('System', ThemeMode.system, state.themeMode, themeData),
-              _modeButton('Light', ThemeMode.light, state.themeMode, themeData),
-              _modeButton('Dark', ThemeMode.dark, state.themeMode, themeData),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _modeButton(String label, ThemeMode mode, ThemeMode current, ThemeData theme) {
-    final isSelected = mode == current;
-    return Expanded(
-      child: InkWell(
-        onTap: () {
-          ThemeService.setThemeMode(mode);
-          _loadActiveTheme();
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected ? theme.primaryColor : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildPresetsGrid(BuildContext context, ThemeData theme) {
-    return ValueListenableBuilder<List<AppTheme>>(
-      valueListenable: ThemeService.savedThemesNotifier,
-      builder: (context, themes, _) {
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: themes.map((t) => _buildPresetItem(t)).toList(),
+    return ValueListenableBuilder<ThemeState>(
+      valueListenable: ThemeService.themeNotifier,
+      builder: (context, themeState, _) {
+        return ValueListenableBuilder<List<AppTheme>>(
+          valueListenable: ThemeService.savedThemesNotifier,
+          builder: (context, themes, _) {
+            final isPlatformDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+            final isCurrentlyDark = themeState.themeMode == ThemeMode.dark || 
+                (themeState.themeMode == ThemeMode.system && isPlatformDark);
+            final activeThemeId = isCurrentlyDark ? themeState.darkTheme.id : themeState.lightTheme.id;
+
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: themes.map((t) => _buildPresetItem(t, t.id == activeThemeId)).toList(),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildPresetItem(AppTheme t) {
+  Widget _buildPresetItem(AppTheme t, bool isSelected) {
     return InkWell(
       onTap: () => _applyTheme(t),
       onLongPress: () {
@@ -275,32 +229,55 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         decoration: BoxDecoration(
           color: Color(t.cardColor),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Color(t.textColor).withOpacity(0.1)),
+          border: Border.all(
+            color: isSelected ? Color(t.primaryColor) : Color(t.textColor).withOpacity(0.1),
+            width: isSelected ? 2.0 : 1.0,
+          ),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+            if (isSelected)
+              BoxShadow(color: Color(t.primaryColor).withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
+            else
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
-        child: Column(
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                _miniDot(Color(t.primaryColor)),
-                const SizedBox(width: 8),
-                _miniDot(Color(t.backgroundColor)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _miniDot(Color(t.primaryColor)),
+                    const SizedBox(width: 8),
+                    _miniDot(Color(t.backgroundColor)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  t.name,
+                  style: TextStyle(color: Color(t.textColor), fontSize: 13, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  t.isDark ? 'Dark Palette' : 'Light Palette',
+                  style: TextStyle(color: Color(t.textColor).withOpacity(0.5), fontSize: 10),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              t.name,
-              style: TextStyle(color: Color(t.textColor), fontSize: 13, fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              t.isDark ? 'Dark Palette' : 'Light Palette',
-              style: TextStyle(color: Color(t.textColor).withOpacity(0.5), fontSize: 10),
-            ),
+            if (isSelected)
+              Positioned(
+                top: -8,
+                right: -8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: Color(t.primaryColor),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.check, size: 12, color: t.isDark ? Colors.black : Colors.white),
+                ),
+              ),
           ],
         ),
       ),

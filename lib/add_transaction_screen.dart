@@ -4,6 +4,7 @@ import 'services/database_service.dart';
 import 'models/transaction_model.dart';
 import '../models/wallet.dart';
 import '../models/budget.dart';
+import '../models/debt.dart';
 import 'package:hive/hive.dart';
 import 'widgets/calculator_input.dart';
 import 'widgets/onboarding_overlay.dart';
@@ -59,6 +60,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   List<Budget> _budgets = [];
   List<Transaction> _transactions = [];
+  List<Debt> _debts = [];
 
   int? _selectedGoalKey;
   int? _selectedBudgetKey;
@@ -72,6 +74,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.initState();
     _budgets = DatabaseService.getBudgets(widget.accountKey);
     _transactions = DatabaseService.getTransactions(widget.accountKey);
+    _debts = DatabaseService.getDebts(widget.accountKey);
     
     if (widget.isTutorialMode) {
       _showTutorial = true;
@@ -176,6 +179,46 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     } catch (_) {
       return null;
     }
+  }
+
+  List<String> _getSafetyAlerts() {
+    List<String> alerts = [];
+    final amount = double.tryParse(_amountController.text) ?? 0.0;
+    final now = DateTime.now();
+
+    // 1. Budget Exceed Warning
+    if (_selectedType == TransactionType.expense && amount > 0) {
+      try {
+        final budget = _budgets.firstWhere(
+            (b) => b.category == _selectedCategory && b.month == now.month && b.year == now.year);
+        
+        final spent = _transactions
+            .where((tx) => tx.type == TransactionType.expense && tx.category == _selectedCategory && tx.date.month == now.month && tx.date.year == now.year)
+            .fold(0.0, (sum, tx) => sum + tx.amount);
+            
+        final remaining = budget.amountLimit - spent;
+        if (amount > remaining && remaining > 0) {
+          alerts.add("⚠️ You're about to exceed your $_selectedCategory budget!");
+        } else if (amount <= remaining && (remaining - amount) <= 500 && (remaining - amount) > 0) {
+           alerts.add("💡 You'll only have ₱${(remaining - amount).toStringAsFixed(0)} left for your $_selectedCategory budget.");
+        }
+      } catch (_) {}
+    }
+
+    // 2. Debts Due Soon
+    final dueSoonDebts = _debts.where((d) {
+       if (d.dueDate == null || d.isOwedToMe || (d.totalAmount - d.paidAmount) <= 0) return false;
+       final diff = d.dueDate!.difference(now).inDays;
+       return diff >= 0 && diff <= 3;
+    });
+
+    for (var d in dueSoonDebts) {
+       final diff = d.dueDate!.difference(now).inDays;
+       final timeWords = diff == 0 ? "today" : diff == 1 ? "tomorrow" : "in $diff days";
+       alerts.add("🔔 Debt due $timeWords: ${d.personName} (₱${(d.totalAmount - d.paidAmount).toStringAsFixed(0)})");
+    }
+
+    return alerts;
   }
 
   void _saveTransaction() async {
@@ -373,6 +416,28 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                  if (_getSafetyAlerts().isNotEmpty) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.only(bottom: 24),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withOpacity(0.1),
+                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: _getSafetyAlerts().map((alert) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            alert,
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                          ),
+                        )).toList(),
+                      ),
+                    ),
+                  ],
                   // Transaction Type Selector
                   Row(
                     key: _typeKey,

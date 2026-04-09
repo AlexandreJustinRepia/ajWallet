@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
+import '../services/financial_insights_service.dart';
 import '../models/budget.dart';
+import '../models/transaction_model.dart';
 import '../widgets/calculator_input.dart';
 
 import '../widgets/onboarding_overlay.dart';
@@ -18,6 +20,8 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
   String _selectedCategory = 'Food & Drinks';
+  double _suggestedBudget = 0.0;
+  List<Transaction> _transactions = [];
 
   final GlobalKey _categoryKey = GlobalKey();
   final GlobalKey _amountKey = GlobalKey();
@@ -26,10 +30,19 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   @override
   void initState() {
     super.initState();
+    _transactions = DatabaseService.getTransactions(widget.accountKey);
+    
     if (widget.isTutorialMode) {
       _selectedCategory = 'Food & Drinks';
       _amountController.text = '2000';
     }
+    _updateSuggestion();
+  }
+
+  void _updateSuggestion() {
+    setState(() {
+      _suggestedBudget = FinancialInsightsService.suggestBudget(_selectedCategory, _transactions);
+    });
   }
 
   final List<String> _categories = [
@@ -107,10 +120,50 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                     value: _selectedCategory,
                     isExpanded: true,
                     items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                    onChanged: (val) => setState(() => _selectedCategory = val!),
+                    onChanged: (val) {
+                      if (val != null) {
+                        _selectedCategory = val;
+                        _updateSuggestion();
+                      }
+                    },
                   ),
                 ),
               ),
+              if (_suggestedBudget > 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _amountController.text = _suggestedBudget.toStringAsFixed(2);
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.auto_awesome, size: 14, color: theme.primaryColor),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Recommended: ₱${_suggestedBudget.toStringAsFixed(0)} (based on past 3 months)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: theme.primaryColor,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 24),
               CalculatorInputField(
                 key: _amountKey,

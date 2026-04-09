@@ -1,16 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import '../services/database_service.dart';
 import '../services/session_service.dart';
-import '../models/transaction_model.dart';
 import '../models/wallet.dart';
 import '../widgets/animated_count_text.dart';
 import '../widgets/slide_in_list_item.dart';
 import '../widgets/quick_add_input.dart';
 import '../widgets/transaction_card.dart';
 import '../services/financial_insights_service.dart';
+import '../services/gamification_service.dart';
+import '../models/transaction_model.dart';
+import '../models/goal.dart';
+import '../models/budget.dart';
+import '../models/debt.dart';
 import 'insight_card.dart';
 import 'dashboard_helpers.dart';
+
 
 class HomeView extends StatefulWidget {
   final VoidCallback onRefresh;
@@ -82,6 +88,9 @@ class _HomeViewState extends State<HomeView> {
     
     List<Transaction> transactions;
     List<Wallet> wallets;
+    List<Budget> budgets = [];
+    List<Goal> goals = [];
+    List<Debt> debts = [];
 
     if (widget.isTutorialActive) {
       transactions = _tutorialTransactions;
@@ -93,6 +102,11 @@ class _HomeViewState extends State<HomeView> {
       wallets = account != null
           ? DatabaseService.getWallets(account.key as int)
           : <Wallet>[];
+      if (account != null) {
+        budgets = DatabaseService.getBudgets(account.key as int);
+        goals = DatabaseService.getGoals(account.key as int);
+        debts = DatabaseService.getDebts(account.key as int);
+      }
     }
 
     final double totalBalance = wallets
@@ -113,14 +127,21 @@ class _HomeViewState extends State<HomeView> {
       });
     }
 
+    final gamification = GamificationService.generateProfile(
+      transactions: transactions, 
+      budgets: budgets, 
+      goals: goals, 
+      debts: debts
+    );
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(context, account?.name ?? 'User'),
-          const SizedBox(height: 32),
+          _buildHeader(context, account?.name ?? 'User', gamification),
+          const SizedBox(height: 24),
           _buildBalanceCard(context, totalBalance, _isNetWorthMode, (val) {
             setState(() => _isNetWorthMode = val);
           }, key: widget.balanceKey),
@@ -199,26 +220,74 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, String name) {
+  Widget _buildHeader(BuildContext context, String name, GamificationProfile profile) {
     final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          'Good Day,',
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
-            letterSpacing: 0.5,
-          ),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Good Day,',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                letterSpacing: 0.5,
+              ),
+            ),
+            Text(
+              name,
+              style: theme.textTheme.displaySmall?.copyWith(
+                fontWeight: FontWeight.w800,
+                letterSpacing: -1,
+              ),
+            ),
+          ],
         ),
-        Text(
-          name,
-          style: theme.textTheme.displaySmall?.copyWith(
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
+        InkWell(
+          onTap: () => _showGamificationSheet(context, profile, theme),
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: theme.primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${profile.streakDays} Days', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Text('Lvl ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 16)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ],
+    );
+  }
+
+  void _showGamificationSheet(BuildContext context, GamificationProfile profile, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _GamificationSheet(profile: profile, theme: theme),
     );
   }
 
@@ -439,6 +508,287 @@ class _HomeViewState extends State<HomeView> {
           ),
         );
       },
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gamification bottom sheet with live daily-quest countdown
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _GamificationSheet extends StatefulWidget {
+  final GamificationProfile profile;
+  final ThemeData theme;
+
+  const _GamificationSheet({required this.profile, required this.theme});
+
+  @override
+  State<_GamificationSheet> createState() => _GamificationSheetState();
+}
+
+class _GamificationSheetState extends State<_GamificationSheet> {
+  late Duration _timeUntilReset;
+  Timer? _countdownTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timeUntilReset = _calcTimeUntilMidnight();
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) {
+        setState(() => _timeUntilReset = _calcTimeUntilMidnight());
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  Duration _calcTimeUntilMidnight() {
+    final now = DateTime.now();
+    final midnight = DateTime(now.year, now.month, now.day + 1);
+    return midnight.difference(now);
+  }
+
+  String _formatDuration(Duration d) {
+    final h = d.inHours.toString().padLeft(2, '0');
+    final m = (d.inMinutes % 60).toString().padLeft(2, '0');
+    final s = (d.inSeconds % 60).toString().padLeft(2, '0');
+    return '$h:$m:$s';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final profile = widget.profile;
+    final theme = widget.theme;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: BoxDecoration(
+        color: theme.scaffoldBackgroundColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(24).copyWith(top: 0),
+            child: Column(
+              children: [
+                CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.amber.withOpacity(0.2),
+                  child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
+                ),
+                const SizedBox(height: 16),
+                Text('Level ${profile.level} Saver', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                const SizedBox(height: 24),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: LinearProgressIndicator(
+                    value: profile.progressToNextLevel,
+                    minHeight: 12,
+                    backgroundColor: theme.primaryColor.withOpacity(0.1),
+                    valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Level ${profile.level}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    Text('${500 - (profile.xp % 500)} XP to Level ${profile.level + 1}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const Divider(),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24).copyWith(top: 16),
+              children: [
+                // ── Streak ────────────────────────────────────────────────
+                const Text('Active Streak', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 32),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${profile.streakDays} Days Fire Streak!', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.orange, fontSize: 16)),
+                            Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: Colors.orange.withOpacity(0.8))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 32),
+
+                // ── Daily Quests with countdown ───────────────────────────
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Today\'s Quests', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.refresh_rounded, size: 12, color: theme.primaryColor.withOpacity(0.7)),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Resets in ${_formatDuration(_timeUntilReset)}',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor.withOpacity(0.8),
+                              fontFeatures: const [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ...profile.dailyQuests.map((quest) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: quest.isCompleted ? Colors.green.withOpacity(0.5) : theme.dividerColor,
+                        width: 1,
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: quest.isCompleted ? Colors.green.withOpacity(0.2) : theme.primaryColor.withOpacity(0.1),
+                        child: Icon(
+                          quest.isCompleted ? Icons.check_circle_rounded : Icons.star_rounded,
+                          color: quest.isCompleted ? Colors.green : theme.primaryColor,
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(child: Text(quest.title, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('+${quest.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(quest.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                    ),
+                  );
+                }),
+
+                const SizedBox(height: 32),
+
+                // ── Achievements ──────────────────────────────────────────
+                const Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                ...profile.achievements.map((achievement) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: achievement.isUnlocked ? Colors.amber.withOpacity(0.5) : theme.dividerColor,
+                        width: 0.5,
+                      ),
+                      boxShadow: [
+                        if (achievement.isUnlocked)
+                          BoxShadow(color: Colors.amber.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          backgroundColor: achievement.isUnlocked ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                          radius: 24,
+                          child: Text(achievement.icon, style: const TextStyle(fontSize: 24)),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(achievement.title, style: TextStyle(fontWeight: FontWeight.bold, color: achievement.isUnlocked ? theme.textTheme.bodyMedium?.color : Colors.grey)),
+                                  if (achievement.isUnlocked)
+                                    const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 16)
+                                  else
+                                    Text(
+                                      '${achievement.currentProgress.toStringAsFixed(0)} / ${achievement.targetProgress.toStringAsFixed(0)} ${achievement.unit}',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.primaryColor),
+                                    ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(achievement.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                              const SizedBox(height: 8),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: LinearProgressIndicator(
+                                  value: achievement.progressPercentage,
+                                  minHeight: 6,
+                                  backgroundColor: theme.dividerColor.withOpacity(0.1),
+                                  valueColor: AlwaysStoppedAnimation<Color>(achievement.isUnlocked ? Colors.amber : theme.primaryColor),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

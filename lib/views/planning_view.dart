@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/session_service.dart';
 import '../services/database_service.dart';
+import '../services/planning_intelligence_service.dart';
 import '../screens/add_budget_screen.dart';
 import '../screens/add_goal_screen.dart';
 import '../screens/add_debt_screen.dart';
 import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
-
+import '../models/debt.dart';
+import '../widgets/financial_health_strip.dart';
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
   final bool isTutorialActive;
@@ -52,6 +54,47 @@ class PlanningView extends StatelessWidget {
 
     final theme = Theme.of(context);
 
+    final transactions = DatabaseService.getTransactions(accountKey);
+    final wallets = DatabaseService.getWallets(accountKey);
+    final totalBalance = wallets
+        .where((w) => !w.isExcluded)
+        .fold(0.0, (sum, w) => sum + w.balance);
+
+    final now = DateTime.now();
+
+    // 1. Budget Used %
+    final thisMonthBudgets = budgets.where((b) => b.month == now.month && b.year == now.year).toList();
+    double totalBudgetLimit = 0;
+    double totalBudgetSpent = 0;
+    for (var b in thisMonthBudgets) {
+      totalBudgetLimit += b.amountLimit;
+      final spent = transactions
+          .where((e) =>
+              (e.budgetKey == b.key ||
+               (e.category == b.category && e.date.month == now.month && e.date.year == now.year)) &&
+              e.type == TransactionType.expense)
+          .fold(0.0, (s, e) => s + e.amount);
+      totalBudgetSpent += spent;
+    }
+    final budgetUsedPct = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit * 100).clamp(0.0, 100.0) : 0.0;
+
+    // 2. Savings Progress %
+    final totalGoalTarget = goals.fold(0.0, (s, g) => s + g.targetAmount);
+    final totalGoalSaved = goals.fold(0.0, (s, g) => s + g.savedAmount);
+    final savingsPct = totalGoalTarget > 0 ? (totalGoalSaved / totalGoalTarget * 100).clamp(0.0, 100.0) : 0.0;
+
+    // 3. Active Debts
+    final activeDebtAmount = debts.where((d) => !d.isOwedToMe).fold(0.0, (s, d) => s + (d.totalAmount - d.paidAmount).clamp(0.0, double.infinity));
+
+    final insights = PlanningIntelligenceService.generate(
+      transactions: transactions,
+      budgets: budgets,
+      goals: goals,
+      debts: debts,
+      totalBalance: totalBalance,
+      wallets: wallets,
+    );
+
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
@@ -70,6 +113,24 @@ class PlanningView extends StatelessWidget {
           ),
         ),
 
+        // ── Health Snapshot Strip ────────────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24, top: 8),
+            child: FinancialHealthStrip(
+              budgetUsedPct: budgetUsedPct,
+              savingsPct: savingsPct,
+              activeDebtAmount: activeDebtAmount,
+            ),
+          ),
+        ),
+
+        // ── Financial Intelligence Panel ─────────────────────────────
+        if (insights.isNotEmpty)
+          SliverToBoxAdapter(
+            child: _IntelligencePanel(insights: insights),
+          ),
+
         // Budgets Section
         SliverToBoxAdapter(
           child: _SectionCard(
@@ -83,6 +144,13 @@ class PlanningView extends StatelessWidget {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBudgetScreen(accountKey: accountKey)));
               if (result == true) onRefresh();
             },
+            summary: thisMonthBudgets.isNotEmpty
+              ? _BudgetTotalSummary(
+                  spent: totalBudgetSpent,
+                  limit: totalBudgetLimit,
+                  pct: budgetUsedPct,
+                )
+              : null,
             child: (budgets.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
               : Column(
@@ -118,6 +186,7 @@ class PlanningView extends StatelessWidget {
                         trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
                         progress: progress,
                         progressColor: isOver ? Colors.red : Colors.blue,
+                        isOverspent: isOver,
                         onDelete: () async {
                           await DatabaseService.deleteBudget(b);
                           onRefresh();
@@ -219,39 +288,159 @@ class PlanningView extends StatelessWidget {
             child: (debts.isEmpty && !isTutorialActive)
               ? const _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
               : Column(
-                  children: debts.map((d) {
-                    final total = d.totalAmount;
-                    final paid = d.paidAmount;
-                    final remaining = total - paid;
-                    final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
-                    
-                    return _PlanningItem(
-                      title: d.personName,
-                      subtitle: d.isOwedToMe ? 'Lent (Remaining)' : 'Borrowed (Remaining)',
-                      trailingText: '₱${remaining.toStringAsFixed(0)}',
-                      progress: progress,
-                      progressColor: Colors.orange,
-                      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
-                      onPrimaryAction: () async {
-                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
-                          accountKey: accountKey,
-                          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
-                          initialDebtKey: d.key as int,
-                        )));
-                        if (res == true) onRefresh();
-                      },
-                      onDelete: () async {
-                        await DatabaseService.deleteDebt(d);
-                        onRefresh();
-                      },
-                    );
-                  }).toList(),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (debts.any((d) => !d.isOwedToMe)) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_drop_down, color: Colors.red, size: 20),
+                            Text('YOU OWE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          ],
+                        ),
+                      ),
+                      ...debts.where((d) => !d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
+                      const SizedBox(height: 16),
+                    ],
+                    if (debts.any((d) => d.isOwedToMe)) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8, top: 4),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.arrow_drop_up, color: Colors.green, size: 20),
+                            Text('OWED TO YOU', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          ],
+                        ),
+                      ),
+                      ...debts.where((d) => d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
+                    ],
+                  ],
                 ),
           ),
         ),
 
         const SliverToBoxAdapter(child: SizedBox(height: 100)),
       ],
+    );
+  }
+
+  Widget _buildDebtItem(BuildContext context, Debt d, int accountKey) {
+    final total = d.totalAmount;
+    final paid = d.paidAmount;
+    final remaining = total - paid;
+    final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
+    
+    return _PlanningItem(
+      title: d.personName,
+      subtitle: d.dueDate != null ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}' : 'No due date',
+      trailingText: '₱${remaining.toStringAsFixed(0)}',
+      progress: progress,
+      progressColor: Colors.orange,
+      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
+      onPrimaryAction: () async {
+        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
+          accountKey: accountKey,
+          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
+          initialDebtKey: d.key as int,
+        )));
+        if (res == true) onRefresh();
+      },
+      onSecondaryAction: () => _showDebtHistory(context, d, accountKey),
+      secondaryActionLabel: 'History',
+      secondaryActionIcon: Icons.history_rounded,
+      onDelete: () async {
+        await DatabaseService.deleteDebt(d);
+        onRefresh();
+      },
+    );
+  }
+
+  void _showDebtHistory(BuildContext context, Debt debt, int accountKey) {
+    final transactions = DatabaseService.getTransactions(accountKey)
+        .where((t) => t.debtKey == debt.key)
+        .toList()
+        ..sort((a, b) => b.date.compareTo(a.date));
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(24).copyWith(top: 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: (debt.isOwedToMe ? Colors.green : Colors.red).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.history_rounded, color: debt.isOwedToMe ? Colors.green : Colors.red),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('${debt.personName}\'s History', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: transactions.isEmpty 
+                    ? const Center(child: Text('No transaction history yet'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(24),
+                        itemCount: transactions.length,
+                        itemBuilder: (context, index) {
+                          final tx = transactions[index];
+                          // Payment happens when I receive money for a loan (income) or I pay money for a debt (expense)
+                          final isPayment = tx.type == (debt.isOwedToMe ? TransactionType.income : TransactionType.expense);
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(
+                              backgroundColor: isPayment ? Colors.blue.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                              child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? Colors.blue : Colors.orange, size: 20),
+                            ),
+                            title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.date), style: const TextStyle(fontSize: 12)),
+                            trailing: Text(
+                              '${isPayment ? '+' : ''}₱${tx.amount.toStringAsFixed(0)}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900, 
+                                color: isPayment ? Colors.green : Colors.red,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -268,7 +457,9 @@ class _PlanningItem extends StatelessWidget {
   final String? secondaryActionLabel;
   final GlobalKey? secondaryActionKey;
   final VoidCallback? onSecondaryAction;
+  final IconData? secondaryActionIcon;
   final VoidCallback onDelete;
+  final bool isOverspent;
 
   const _PlanningItem({
     required this.title,
@@ -282,13 +473,15 @@ class _PlanningItem extends StatelessWidget {
     this.secondaryActionLabel,
     this.secondaryActionKey,
     this.onSecondaryAction,
+    this.secondaryActionIcon,
     required this.onDelete,
+    this.isOverspent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Padding(
+    final itemWidget = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -300,7 +493,15 @@ class _PlanningItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Row(
+                      children: [
+                        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        if (isOverspent) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                        ]
+                      ],
+                    ),
                     Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
                   ],
                 ),
@@ -315,11 +516,18 @@ class _PlanningItem extends StatelessWidget {
           const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: progressColor.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-              minHeight: 8,
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: progress),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, _) {
+                return LinearProgressIndicator(
+                  value: val,
+                  backgroundColor: progressColor.withOpacity(0.1),
+                  valueColor: AlwaysStoppedAnimation<Color>(progressColor),
+                  minHeight: 8,
+                );
+              },
             ),
           ),
           const SizedBox(height: 8),
@@ -337,7 +545,7 @@ class _PlanningItem extends StatelessWidget {
                     TextButton.icon(
                       key: secondaryActionKey,
                       onPressed: onSecondaryAction,
-                      icon: Icon(Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
+                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
                       label: Text(
                         secondaryActionLabel ?? 'Remove',
                         style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withOpacity(0.7)),
@@ -372,6 +580,187 @@ class _PlanningItem extends StatelessWidget {
         ],
       ),
     );
+
+    return isOverspent ? _ShakeWidget(animate: true, child: itemWidget) : itemWidget;
+  }
+}
+
+class _ShakeWidget extends StatefulWidget {
+  final Widget child;
+  final bool animate;
+
+  const _ShakeWidget({required this.child, required this.animate});
+
+  @override
+  State<_ShakeWidget> createState() => _ShakeWidgetState();
+}
+
+class _ShakeWidgetState extends State<_ShakeWidget> with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _animation = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 10.0).chain(CurveTween(curve: Curves.easeOut)), weight: 1),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
+      TweenSequenceItem(tween: Tween(begin: -10.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 1),
+    ]).animate(_controller);
+
+    if (widget.animate) {
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) _controller.forward();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_animation.value, 0),
+          child: child,
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _BudgetTotalSummary extends StatelessWidget {
+  final double spent;
+  final double limit;
+  final double pct;
+
+  const _BudgetTotalSummary({
+    required this.spent,
+    required this.limit,
+    required this.pct,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isOver = spent > limit;
+    final barColor = isOver ? Colors.red : Colors.blue;
+    final remaining = (limit - spent).clamp(0.0, double.infinity);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: barColor.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: barColor.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'TOTAL THIS MONTH',
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: barColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  isOver ? 'OVER BUDGET' : '${pct.toStringAsFixed(0)}% used',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: barColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                '₱${spent.toStringAsFixed(0)}',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                  color: barColor,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Text(
+                  '/ ₱${limit.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  ),
+                ),
+              ),
+              const Spacer(),
+              if (!isOver)
+                Text(
+                  '₱${remaining.toStringAsFixed(0)} left',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue.withOpacity(0.7),
+                  ),
+                )
+              else
+                Text(
+                  '₱${(spent - limit).toStringAsFixed(0)} over',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: (pct / 100).clamp(0.0, 1.0)),
+              duration: const Duration(milliseconds: 800),
+              curve: Curves.easeOutCubic,
+              builder: (_, val, __) => LinearProgressIndicator(
+                value: val,
+                minHeight: 8,
+                backgroundColor: barColor.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(barColor),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -384,6 +773,7 @@ class _SectionCard extends StatelessWidget {
   final int count;
   final VoidCallback onAdd;
   final Widget child;
+  final Widget? summary;
 
   const _SectionCard({
     this.sectionKey,
@@ -394,6 +784,7 @@ class _SectionCard extends StatelessWidget {
     required this.count,
     required this.onAdd,
     required this.child,
+    this.summary,
   });
 
   @override
@@ -448,6 +839,7 @@ class _SectionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
+          if (summary != null) summary!,
           child,
         ],
       ),
@@ -478,3 +870,178 @@ class _EmptyState extends StatelessWidget {
     );
   }
 }
+
+// ============================================================================
+// Financial Intelligence Panel
+// ============================================================================
+
+class _IntelligencePanel extends StatelessWidget {
+  final List<PlanningInsight> insights;
+
+  const _IntelligencePanel({required this.insights});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: theme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 14,
+                  color: theme.primaryColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'FINANCIAL INTELLIGENCE',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 10,
+                  color: theme.primaryColor.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+            itemCount: insights.length,
+            itemBuilder: (context, index) {
+              return _InsightCard(insight: insights[index]);
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final PlanningInsight insight;
+
+  const _InsightCard({required this.insight});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = insight.color;
+
+    return Container(
+      width: 220,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: color.withOpacity(0.25),
+          width: 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.07),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(insight.icon, size: 16, color: color),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  insight.badgeLabel,
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                    color: color,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Text(
+              insight.message,
+              style: theme.textTheme.bodySmall?.copyWith(
+                height: 1.45,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Urgency dot indicator
+          Row(
+            children: [
+              Container(
+                width: 6,
+                height: 6,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(
+                    insight.urgency == InsightUrgency.high
+                        ? 1.0
+                        : insight.urgency == InsightUrgency.medium
+                            ? 0.6
+                            : 0.3,
+                  ),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Text(
+                insight.urgency == InsightUrgency.high
+                    ? 'High priority'
+                    : insight.urgency == InsightUrgency.medium
+                        ? 'Worth acting on'
+                        : 'Good to know',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// End of Planning View
+// ============================================================================

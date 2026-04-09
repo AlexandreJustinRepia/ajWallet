@@ -183,6 +183,26 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
               ),
               child: Column(
                 children: [
+                  if (widget.wallet.iconPath != null) ...[
+                    Container(
+                      width: 60,
+                      height: 60,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: theme.dividerColor, width: 0.5),
+                        boxShadow: [
+                           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                        ]
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.asset(widget.wallet.iconPath!, fit: BoxFit.contain),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   Text(
                     'CURRENT BALANCE',
                     style: TextStyle(

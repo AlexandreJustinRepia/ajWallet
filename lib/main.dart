@@ -38,7 +38,7 @@ class MyApp extends StatelessWidget {
       valueListenable: ThemeService.themeNotifier,
       builder: (context, themeState, _) {
         return MaterialApp(
-          title: 'AJ Wallet',
+          title: 'RootEXP',
           debugShowCheckedModeBanner: false,
           theme: themeState.lightTheme.toThemeData(),
           darkTheme: themeState.darkTheme.toThemeData(),

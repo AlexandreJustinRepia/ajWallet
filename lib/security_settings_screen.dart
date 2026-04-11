@@ -207,105 +207,153 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     final theme = Theme.of(context);
     final pinController = TextEditingController();
 
-    final pinConfirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(isExport ? 'Export Backup' : 'Import Backup'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              isExport
-                  ? 'Enter your PIN to encrypt the backup file.'
-                  : 'Enter the PIN used to encrypt this backup.',
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
+    bool hasPin = _account.pin != null && _account.pin!.isNotEmpty;
+    bool hasBio = _account.isBiometricEnabled;
+    bool needsAuth = hasPin || hasBio;
+
+    String pinToUse;
+    if (!needsAuth) {
+      pinToUse = BackupService.defaultPin;
+    } else {
+      bool useBiometric = false;
+      final pinConfirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) => AlertDialog(
+            title: Text(isExport ? 'Export Backup' : 'Import Backup'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isExport
+                      ? 'Authenticate to encrypt the backup file.'
+                      : 'Enter the PIN used to encrypt this backup or use biometric.',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 16),
+                if (!useBiometric)
+                  TextField(
+                    controller: pinController,
+                    decoration: const InputDecoration(
+                      hintText: 'Enter 4-digit PIN',
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    obscureText: true,
+                    maxLength: 4,
+                  ),
+                if (hasBio && !useBiometric) ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () async {
+                      final success =
+                          await SecurityService.authenticateWithBiometrics(
+                        reason:
+                            'Authenticate to ${isExport ? 'export' : 'import'} backup.',
+                      );
+                      if (success) {
+                        setState(() => useBiometric = true);
+                      } else {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Biometric authentication failed.'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Use Biometric'),
+                  ),
+                ],
+                if (useBiometric)
+                  const Text(
+                    'Biometric authentication successful.',
+                    style: TextStyle(color: Colors.green),
+                  ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: pinController,
-              decoration: const InputDecoration(
-                hintText: 'Enter 4-digit PIN',
-                border: OutlineInputBorder(),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
               ),
-              keyboardType: TextInputType.number,
-              obscureText: true,
-              maxLength: 4,
-            ),
-          ],
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: Text(isExport ? 'Export' : 'Import'),
+              ),
+            ],
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(isExport ? 'Export' : 'Import'),
-          ),
-        ],
-      ),
-    );
+      );
 
-    if (pinConfirmed == true && pinController.text.length == 4) {
-      final enteredPin = pinController.text;
+      if (pinConfirmed != true) return;
 
-      if (isExport) {
-        // Verification: If account has a PIN, it must match.
-        if (_account.pin != null && _account.pin != enteredPin) {
+      if (useBiometric) {
+        pinToUse = _account.pin!;
+      } else {
+        final enteredPin = pinController.text;
+        if (enteredPin.length != 4) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Incorrect account PIN. Export aborted.'),
-              ),
+              const SnackBar(content: Text('Please enter a 4-digit PIN.')),
             );
           }
           return;
         }
+        if (isExport && hasPin && enteredPin != _account.pin) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Incorrect PIN. Export aborted.')),
+            );
+          }
+          return;
+        }
+        pinToUse = enteredPin;
+      }
+    }
 
-        final success = await BackupService.exportBackup(
-          enteredPin,
-          _account.key as int,
+    if (isExport) {
+      final success = await BackupService.exportBackup(
+        pinToUse,
+        _account.key as int,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success ? 'Backup exported successfully' : 'Export failed',
+            ),
+          ),
         );
-        if (mounted) {
+        _refreshBackupHistory();
+      }
+    } else {
+      final success = await BackupService.importBackup(
+        pinToUse,
+        _account.key as int,
+      );
+      if (mounted) {
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
+            const SnackBar(
+              content: Text('Data restored successfully into this account.'),
+            ),
+          );
+          setState(() {
+            _account = SessionService.activeAccount!;
+          });
+          _refreshBackupHistory();
+          if (mounted) Navigator.pop(context, true);
+        } else {
+          _refreshBackupHistory();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
               content: Text(
-                success ? 'Backup exported successfully' : 'Export failed',
+                'Import failed. Check your PIN or file integrity.',
               ),
             ),
           );
-          _refreshBackupHistory();
-        }
-      } else {
-        // Import into current account
-        final success = await BackupService.importBackup(
-          enteredPin,
-          _account.key as int,
-        );
-        if (mounted) {
-          if (success) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Data restored successfully into this account.'),
-              ),
-            );
-            // Refresh to show updated data
-            setState(() {
-              _account = SessionService.activeAccount!;
-            });
-            _refreshBackupHistory();
-            // Signal success to parent for full refresh
-            if (mounted) Navigator.pop(context, true);
-          } else {
-            _refreshBackupHistory();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Import failed. Check your PIN or file integrity.',
-                ),
-              ),
-            );
-          }
         }
       }
     }

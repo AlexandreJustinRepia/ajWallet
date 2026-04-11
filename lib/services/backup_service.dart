@@ -15,6 +15,7 @@ import 'database_service.dart';
 
 class BackupService {
   static const String _magicHeader = "AJ_BACKUP_V1";
+  static const String defaultPin = "0000";
 
   static Future<bool> exportBackup(String pin, int accountKey) async {
     try {

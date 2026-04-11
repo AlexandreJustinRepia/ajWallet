@@ -39,7 +39,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   final _headerKey = GlobalKey();
   final _inputKey = GlobalKey();
   final _suggestionsKey = GlobalKey();
-  final _analyticsKey = GlobalKey();
 
   final List<String> _suggestions = [
     "How much money do I have?",
@@ -296,8 +295,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
           style: TextStyle(color: Colors.grey),
         ),
         const SizedBox(height: 40),
-        Container(key: _analyticsKey, child: _buildQuickInsights(theme)),
-        const SizedBox(height: 40),
+
       ],
     );
   }
@@ -645,34 +643,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     }
   }
 
-  Widget _buildQuickInsights(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'QUICK ANALYTICS',
-          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.5),
-        ),
-        const SizedBox(height: 16),
-        _buildInsightMiniCard(
-          'Cashflow Forecast', 
-          'AI is projecting your runway.', 
-          Icons.trending_up, 
-          const Color(0xFF2E7D32),
-          onTap: () => _handleQuery("Check my runway"),
-        ),
-        const SizedBox(height: 12),
-        _buildInsightMiniCard(
-          'Strategic Optimization', 
-          '2 new strategies detected.', 
-          Icons.auto_fix_high, 
-          const Color(0xFF1976D2),
-          onTap: () => _handleQuery("Show my financial status"),
-        ),
-      ],
-    );
-  }
-
   Widget _buildInsightMiniCard(String title, String subtitle, IconData icon, Color accent, {VoidCallback? onTap}) {
     final theme = Theme.of(context);
     return Material(
@@ -774,11 +744,6 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         targetKey: _inputKey,
         title: 'Quick Add & Query',
         description: 'Ask questions like "How was my spending this week?" or use Quick Add like "500 food and drinks mcdo" to record expenses instantly.',
-      ),
-      OnboardingStep(
-        targetKey: _analyticsKey,
-        title: 'Proactive Forecasting',
-        description: 'The AI constantly checks for cashflow risks and detects saving strategies across all your wallets.',
       ),
     ];
   }

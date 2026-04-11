@@ -61,20 +61,30 @@ class AchievementService {
     final box = Hive.box(_boxName);
 
     // 1. Check for 3-day under-budget streak
+    // Requires: at least 3 distinct days with actual expense transactions,
+    // and none of those days exceeded ₱1000 in spending.
     final now = DateTime.now();
+    int validDays = 0;
     bool isClean = true;
+
     for (int i = 0; i < 3; i++) {
       final date = now.subtract(Duration(days: i));
       final dayExpenses = transactions
-          .where((t) => t.type == TransactionType.expense && 
-                        t.date.year == date.year && t.date.month == date.month && t.date.day == date.day)
-          .fold(0.0, (sum, t) => sum + t.amount);
-      
-      // Simple rule: if daily spend > 500 without budget, or over any budget
-      if (dayExpenses > 1000) isClean = false; 
+          .where((t) => t.type == TransactionType.expense &&
+                        t.date.year == date.year &&
+                        t.date.month == date.month &&
+                        t.date.day == date.day)
+          .toList();
+
+      if (dayExpenses.isEmpty) continue; // Skip days with no transactions
+
+      validDays++;
+      final total = dayExpenses.fold(0.0, (sum, t) => sum + t.amount);
+      if (total > 1000) isClean = false;
     }
 
-    if (isClean && !box.containsKey('streak_3')) {
+    // Need at least 3 days of actual transactions that were all under budget
+    if (isClean && validDays >= 3 && !box.containsKey('streak_3')) {
       unlock('streak_3');
       unlocked.add(getAchievements().firstWhere((a) => a.id == 'streak_3'));
     }

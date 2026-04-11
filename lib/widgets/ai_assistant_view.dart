@@ -4,6 +4,7 @@ import '../services/session_service.dart';
 import '../services/ai_assistant_service.dart';
 import '../services/achievement_service.dart';
 import '../models/transaction_model.dart';
+import '../models/wallet.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'onboarding_overlay.dart';
 
@@ -126,11 +127,16 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     final goals = DatabaseService.getGoals(accountKey);
     final debts = DatabaseService.getDebts(accountKey);
     final budgets = DatabaseService.getBudgets(accountKey);
+    final wallets = DatabaseService.getWallets(accountKey);
+    final totalBalance = wallets
+        .where((w) => !w.isExcluded)
+        .fold(0.0, (sum, w) => sum + w.balance);
 
     final response = AIAssistantService.processQuery(
       query: userText,
       transactions: transactions,
-      balance: account.budget,
+      balance: totalBalance,
+      wallets: wallets,
       goals: goals,
       debts: debts,
       budgets: budgets,

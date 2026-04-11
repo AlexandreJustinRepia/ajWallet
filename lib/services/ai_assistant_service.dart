@@ -3,6 +3,7 @@ import '../models/transaction_model.dart';
 import '../models/goal.dart';
 import '../models/debt.dart';
 import '../models/budget.dart';
+import '../models/wallet.dart';
 import 'financial_insights_service.dart';
 
 enum AIIntent {
@@ -73,6 +74,7 @@ class AIAssistantService {
     required String query,
     required List<Transaction> transactions,
     required double balance,
+    List<Wallet>? wallets,
     List<Goal>? goals,
     List<Debt>? debts,
     List<Budget>? budgets,
@@ -95,11 +97,11 @@ class AIAssistantService {
     final timeframe = _detectTimeframe(lowerQuery);
     final range = _getRangeForTimeframe(timeframe);
 
-    final response = _process(intent, lowerQuery, expenses, income, range, timeframe, balance, goals, debts, allBudgets);
+    final response = _process(intent, lowerQuery, expenses, income, range, timeframe, balance, goals, debts, allBudgets, wallets ?? []);
     return _applyAdaptiveTone(response, balance, expenses, income, allBudgets);
   }
 
-  static AIResponse _process(AIIntent intent, String lowerQuery, List<Transaction> expenses, List<Transaction> income, DateTimeRange range, String timeframe, double balance, List<Goal>? goals, List<Debt>? debts, List<Budget> budgets) {
+  static AIResponse _process(AIIntent intent, String lowerQuery, List<Transaction> expenses, List<Transaction> income, DateTimeRange range, String timeframe, double balance, List<Goal>? goals, List<Debt>? debts, List<Budget> budgets, [List<Wallet> wallets = const []]) {
     switch (intent) {
       case AIIntent.runway:
         return _processRunway(expenses, balance, budgets);
@@ -119,7 +121,7 @@ class AIAssistantService {
       case AIIntent.incomeTotal:
         return _processIncome(income, range, timeframe);
       case AIIntent.balanceQuery:
-        return _processBalanceQuery(balance, expenses, income, budgets);
+        return _processBalanceQuery(balance, wallets, expenses, income, budgets);
       case AIIntent.spendingTotal:
       case AIIntent.spendingCategory:
         if (lowerQuery.contains('budget for') || lowerQuery.contains('suggest budget')) {
@@ -755,7 +757,7 @@ class AIAssistantService {
     );
   }
 
-  static AIResponse _processBalanceQuery(double balance, List<Transaction> expenses, List<Transaction> income, List<Budget> budgets) {
+  static AIResponse _processBalanceQuery(double balance, List<Wallet> wallets, List<Transaction> expenses, List<Transaction> income, List<Budget> budgets) {
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
     final monthlyExpenses = expenses
@@ -774,9 +776,23 @@ class AIAssistantService {
     final days = runway['days'] as int;
     String runwayNote = days > 0 ? "At your current burn rate, your balance covers ~$days more days." : "";
 
+    // Build wallet breakdown
+    String walletBreakdown = "";
+    if (wallets.isNotEmpty) {
+      walletBreakdown = "\n\n💼 **Wallets:**";
+      for (var w in wallets) {
+        final tag = w.isExcluded ? " *(excluded)*" : "";
+        final icon = w.isExcluded ? "⬜" : "✅";
+        walletBreakdown += "\n$icon ${w.name} — ₱${w.balance.toStringAsFixed(2)}$tag";
+      }
+      if (wallets.any((w) => w.isExcluded)) {
+        walletBreakdown += "\n\n*Excluded wallets are not counted in your total balance.*";
+      }
+    }
+
     return AIResponse(
       result: "₱${balance.toStringAsFixed(2)}",
-      insight: "Your current total balance is ₱${balance.toStringAsFixed(2)}.\n\n$flowNote${runwayNote.isNotEmpty ? '\n$runwayNote' : ''}",
+      insight: "Your total spendable balance is ₱${balance.toStringAsFixed(2)}.\n\n$flowNote${runwayNote.isNotEmpty ? '\n$runwayNote' : ''}$walletBreakdown",
       intent: AIIntent.balanceQuery,
       isPositive: balance > 0,
     );

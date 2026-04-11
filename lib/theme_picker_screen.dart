@@ -48,8 +48,12 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       _background = Color(theme.backgroundColor);
       _text = Color(theme.textColor);
       _card = Color(theme.cardColor);
-      _income = Color(theme.incomeColor ?? (theme.isDark ? 0xFF3DA35D : 0xFF2D5A27));
-      _expense = Color(theme.expenseColor ?? (theme.isDark ? 0xFFE63946 : 0xFF922B21));
+      _income = Color(
+        theme.incomeColor ?? (theme.isDark ? 0xFF3DA35D : 0xFF2D5A27),
+      );
+      _expense = Color(
+        theme.expenseColor ?? (theme.isDark ? 0xFFE63946 : 0xFF922B21),
+      );
     });
   }
 
@@ -65,7 +69,9 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Applied "${theme.name}" as ${theme.isDark ? 'Dark' : 'Light'} Palette'),
+        content: Text(
+          'Applied "${theme.name}" as ${theme.isDark ? 'Dark' : 'Light'} Palette',
+        ),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 1),
       ),
@@ -75,7 +81,9 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   AppTheme _getCurrentThemeObj({String? overrideId, String? overrideName}) {
     final isDark = _background.computeLuminance() < 0.5;
     return AppTheme(
-      id: overrideId ?? 'custom_preview_${DateTime.now().millisecondsSinceEpoch}',
+      id:
+          overrideId ??
+          'custom_preview_${DateTime.now().millisecondsSinceEpoch}',
       isDark: isDark,
       primaryColor: _primary.toARGB32(),
       backgroundColor: _background.toARGB32(),
@@ -97,7 +105,10 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       child: Scaffold(
         backgroundColor: activeTheme.scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Text('Theme Settings', style: TextStyle(color: activeTheme.colorScheme.onSurface)),
+          title: Text(
+            'Theme Settings',
+            style: TextStyle(color: activeTheme.colorScheme.onSurface),
+          ),
           elevation: 0,
           backgroundColor: Colors.transparent,
           foregroundColor: activeTheme.colorScheme.onSurface,
@@ -106,14 +117,24 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
           physics: const BouncingScrollPhysics(),
           children: [
-            _buildSectionHeader('PRESET PALETTES', Icons.palette_rounded, activeTheme),
+            _buildSectionHeader(
+              'PRESET PALETTES',
+              Icons.palette_rounded,
+              activeTheme,
+            ),
             const SizedBox(height: 16),
             _buildPresetsGrid(context, activeTheme),
 
             const SizedBox(height: 40),
-            _buildSectionHeader('LAB PREVIEW', Icons.remove_red_eye_rounded, activeTheme),
+            _buildSectionHeader(
+              'LAB PREVIEW',
+              Icons.remove_red_eye_rounded,
+              activeTheme,
+            ),
             const SizedBox(height: 16),
-            _buildPreviewCard(themeData), // Keep preview card using the new themeData
+            _buildPreviewCard(
+              themeData,
+            ), // Keep preview card using the new themeData
 
             const SizedBox(height: 60),
           ],
@@ -125,14 +146,18 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha:0.5)),
+        Icon(
+          icon,
+          size: 14,
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+        ),
         const SizedBox(width: 8),
         Text(
           title,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onSurface.withValues(alpha:0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
             letterSpacing: 2,
           ),
         ),
@@ -147,15 +172,21 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         return ValueListenableBuilder<List<AppTheme>>(
           valueListenable: ThemeService.savedThemesNotifier,
           builder: (context, themes, _) {
-            final isPlatformDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
-            final isCurrentlyDark = themeState.themeMode == ThemeMode.dark || 
+            final isPlatformDark =
+                MediaQuery.of(context).platformBrightness == Brightness.dark;
+            final isCurrentlyDark =
+                themeState.themeMode == ThemeMode.dark ||
                 (themeState.themeMode == ThemeMode.system && isPlatformDark);
-            final activeThemeId = isCurrentlyDark ? themeState.darkTheme.id : themeState.lightTheme.id;
+            final activeThemeId = isCurrentlyDark
+                ? themeState.darkTheme.id
+                : themeState.lightTheme.id;
 
             return Wrap(
               spacing: 12,
               runSpacing: 12,
-              children: themes.map((t) => _buildPresetItem(t, t.id == activeThemeId)).toList(),
+              children: themes
+                  .map((t) => _buildPresetItem(t, t.id == activeThemeId))
+                  .toList(),
             );
           },
         );
@@ -179,14 +210,24 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           color: Color(t.cardColor),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Color(t.primaryColor) : Color(t.textColor).withValues(alpha:0.1),
+            color: isSelected
+                ? Color(t.primaryColor)
+                : Color(t.textColor).withValues(alpha: 0.1),
             width: isSelected ? 2.0 : 1.0,
           ),
           boxShadow: [
             if (isSelected)
-              BoxShadow(color: Color(t.primaryColor).withValues(alpha:0.2), blurRadius: 15, offset: const Offset(0, 5))
+              BoxShadow(
+                color: Color(t.primaryColor).withValues(alpha: 0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 5),
+              )
             else
-              BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
           ],
         ),
         child: Stack(
@@ -204,13 +245,20 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                 const SizedBox(height: 12),
                 Text(
                   t.name,
-                  style: TextStyle(color: Color(t.textColor), fontSize: 13, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Color(t.textColor),
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 Text(
                   t.isDark ? 'Dark Palette' : 'Light Palette',
-                  style: TextStyle(color: Color(t.textColor).withValues(alpha:0.5), fontSize: 10),
+                  style: TextStyle(
+                    color: Color(t.textColor).withValues(alpha: 0.5),
+                    fontSize: 10,
+                  ),
                 ),
               ],
             ),
@@ -224,7 +272,11 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                     color: Color(t.primaryColor),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.check, size: 12, color: t.isDark ? Colors.black : Colors.white),
+                  child: Icon(
+                    Icons.check,
+                    size: 12,
+                    color: t.isDark ? Colors.black : Colors.white,
+                  ),
                 ),
               ),
           ],
@@ -240,7 +292,10 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         title: const Text('Delete Preset?'),
         content: Text('Remove "${t.name}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(c),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               ThemeService.deleteCustomTheme(t);
@@ -255,11 +310,15 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
 
   Widget _miniDot(Color c) {
     return Container(
-      width: 20, height: 20,
+      width: 20,
+      height: 20,
       decoration: BoxDecoration(
-        color: c, 
-        shape: BoxShape.circle, 
-        border: Border.all(color: Colors.grey.withValues(alpha:0.3), width: 1.5)
+        color: c,
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.grey.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
       ),
     );
   }
@@ -272,7 +331,11 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: t.dividerColor, width: 1.5),
         boxShadow: [
-          BoxShadow(color: t.primaryColor.withValues(alpha:0.05), blurRadius: 30, offset: const Offset(0, 15)),
+          BoxShadow(
+            color: t.primaryColor.withValues(alpha: 0.05),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+          ),
         ],
       ),
       child: Column(
@@ -281,12 +344,20 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Available Balance', style: t.textTheme.labelLarge?.copyWith(letterSpacing: 1)),
+              Text(
+                'Available Balance',
+                style: t.textTheme.labelLarge?.copyWith(letterSpacing: 1),
+              ),
               Icon(Icons.shield_moon_outlined, color: t.primaryColor, size: 20),
             ],
           ),
           const SizedBox(height: 8),
-          Text('\$12,450.00', style: t.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Text(
+            '\$12,450.00',
+            style: t.textTheme.headlineMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 24),
           Row(
             children: [
@@ -304,11 +375,12 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
               borderRadius: BorderRadius.circular(14),
             ),
             child: Center(
-              child: Text('Simulated Action', 
+              child: Text(
+                'Simulated Action',
                 style: TextStyle(
-                  color: t.colorScheme.onPrimary, 
-                  fontWeight: FontWeight.bold
-                )
+                  color: t.colorScheme.onPrimary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
@@ -322,15 +394,22 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withValues(alpha:0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha:0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Row(
           children: [
             Icon(icon, size: 14, color: color),
             const SizedBox(width: 8),
-            Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 12)),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
           ],
         ),
       ),

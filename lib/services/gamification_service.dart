@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import '../models/transaction_model.dart';
 import '../models/budget.dart';
 import '../models/goal.dart';
@@ -140,6 +141,55 @@ class GamificationService {
           t.type == TransactionType.expense,
     ); // Expense to wallet = funding a goal
 
+    final pendingGoals = goals
+        .where((g) => g.targetAmount > g.savedAmount)
+        .toList();
+
+    Goal? selectedGoal;
+    if (pendingGoals.isNotEmpty) {
+      selectedGoal = pendingGoals.reduce((a, b) {
+        if (a.targetDate == null && b.targetDate == null) {
+          final aRemaining = a.targetAmount - a.savedAmount;
+          final bRemaining = b.targetAmount - b.savedAmount;
+          return aRemaining >= bRemaining ? a : b;
+        }
+        if (a.targetDate == null) return b;
+        if (b.targetDate == null) return a;
+        return a.targetDate!.isBefore(b.targetDate!) ? a : b;
+      });
+    }
+
+    int goalMissionTarget = 0;
+    String goalMissionName = '';
+    bool goalMissionCompleted = false;
+    if (selectedGoal != null) {
+      final goalRemaining =
+          selectedGoal.targetAmount - selectedGoal.savedAmount;
+      final daysLeft = selectedGoal.targetDate != null
+          ? math.max(1, selectedGoal.targetDate!.difference(today).inDays)
+          : 30;
+      final suggested = selectedGoal.targetDate != null
+          ? (goalRemaining / daysLeft)
+          : math.min(500.0, goalRemaining);
+      goalMissionTarget = math.max(1, suggested.round());
+      if (goalMissionTarget > goalRemaining) {
+        goalMissionTarget = goalRemaining.ceil();
+      }
+      goalMissionName = selectedGoal.name;
+      final goalKeyValue = selectedGoal.key as int?;
+      final todayGoalSavings = goalKeyValue != null
+          ? transactions
+                .where(
+                  (t) =>
+                      t.goalKey == goalKeyValue &&
+                      t.type == TransactionType.expense &&
+                      DateFormat('yyyy-MM-dd').format(t.date) == todayStr,
+                )
+                .fold(0.0, (sum, t) => sum + t.amount)
+          : 0.0;
+      goalMissionCompleted = todayGoalSavings >= goalMissionTarget;
+    }
+
     DateTime? lastActiveDate = transactions.isEmpty
         ? null
         : transactions.reduce((a, b) => a.date.isAfter(b.date) ? a : b).date;
@@ -222,12 +272,19 @@ class GamificationService {
         xpReward: 10,
         isCompleted: hasActiveBudget,
       ),
-      DailyQuest(
-        title: 'Wealth Builder',
-        description: 'Add money to any savings goal today.',
-        xpReward: 30,
-        isCompleted: fundedGoalToday,
-      ),
+      selectedGoal != null
+          ? DailyQuest(
+              title: 'Save ₱$goalMissionTarget toward $goalMissionName',
+              description: 'Move closer to your $goalMissionName goal today.',
+              xpReward: 35,
+              isCompleted: goalMissionCompleted,
+            )
+          : DailyQuest(
+              title: 'Wealth Builder',
+              description: 'Add money to any savings goal today.',
+              xpReward: 30,
+              isCompleted: fundedGoalToday,
+            ),
     ];
 
     DailyQuest dynamicQuest;

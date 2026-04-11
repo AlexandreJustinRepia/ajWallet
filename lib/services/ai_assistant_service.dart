@@ -20,6 +20,7 @@ enum AIIntent {
   subscriptions,
   simulation,
   quickAddTransaction,
+  balanceQuery,
   unknown
 }
 
@@ -117,6 +118,8 @@ class AIAssistantService {
         return _processSimulation(lowerQuery, expenses, balance, goals ?? []);
       case AIIntent.incomeTotal:
         return _processIncome(income, range, timeframe);
+      case AIIntent.balanceQuery:
+        return _processBalanceQuery(balance, expenses, income, budgets);
       case AIIntent.spendingTotal:
       case AIIntent.spendingCategory:
         if (lowerQuery.contains('budget for') || lowerQuery.contains('suggest budget')) {
@@ -133,8 +136,8 @@ class AIAssistantService {
         return _processAdvice(lowerQuery, expenses, income, balance, budgets, goals ?? []);
       case AIIntent.unknown:
         return AIResponse(
-          result: "I'm not quite sure how to analyze that yet.",
-          insight: "Try asking about your 'spending', 'runway', 'goals', or ask a simulation like 'What if I save ₱100 more per day?'",
+          result: "Not sure yet",
+          insight: "Try asking: 'How much money do I have?', 'Check my runway', 'What did I spend this month?', 'Show my debts', or quick-add like '250 food grab' to log a transaction.",
           intent: AIIntent.unknown,
         );
     }
@@ -142,6 +145,7 @@ class AIAssistantService {
 
   static AIIntent _detectIntent(String query) {
     if (query.contains('what if') || query.contains('if i ') || query.contains('simulate')) return AIIntent.simulation;
+    if (query.contains('how much money') || query.contains('my balance') || query.contains('my money') || query.contains('how much do i have') || query.contains('how much have i') || query.contains('wallet balance') || query.contains('total balance') || query.contains('do i have')) return AIIntent.balanceQuery;
     if (query.contains('runway') || query.contains('how long') || query.contains('last')) return AIIntent.runway;
     if (query.contains('largest') || query.contains('biggest') || query.contains('highest') || query.contains('most expensive')) return AIIntent.largestExpense;
     if (query.contains('unusual') || query.contains('anomaly') || query.contains('spike')) return AIIntent.anomalies;
@@ -751,10 +755,37 @@ class AIAssistantService {
     );
   }
 
+  static AIResponse _processBalanceQuery(double balance, List<Transaction> expenses, List<Transaction> income, List<Budget> budgets) {
+    final now = DateTime.now();
+    final monthStart = DateTime(now.year, now.month, 1);
+    final monthlyExpenses = expenses
+        .where((e) => e.date.isAfter(monthStart))
+        .fold(0.0, (sum, e) => sum + e.amount);
+    final monthlyIncome = income
+        .where((e) => e.date.isAfter(monthStart))
+        .fold(0.0, (sum, e) => sum + e.amount);
+    final netFlow = monthlyIncome - monthlyExpenses;
+
+    String flowNote = netFlow >= 0
+        ? "This month you are net +₱${netFlow.toStringAsFixed(0)} (earned more than spent)."
+        : "This month you are net -₱${netFlow.abs().toStringAsFixed(0)} (spent more than earned).";
+
+    final runway = FinancialInsightsService.projectCashflow(expenses, balance, budgets);
+    final days = runway['days'] as int;
+    String runwayNote = days > 0 ? "At your current burn rate, your balance covers ~$days more days." : "";
+
+    return AIResponse(
+      result: "₱${balance.toStringAsFixed(2)}",
+      insight: "Your current total balance is ₱${balance.toStringAsFixed(2)}.\n\n$flowNote${runwayNote.isNotEmpty ? '\n$runwayNote' : ''}",
+      intent: AIIntent.balanceQuery,
+      isPositive: balance > 0,
+    );
+  }
+
   static AIResponse _processUnknown() {
     return AIResponse(
-      result: "I'm not quite sure how to analyze that yet.",
-      insight: "Try asking about your 'spending', 'runway', 'goals', or ask a simulation like 'What if I save ₱100 more per day?'",
+      result: "Not sure yet",
+      insight: "Try asking: 'How much money do I have?', 'Check my runway', 'What did I spend this month?', 'Show my debts', or quick-add like '250 food grab' to log a transaction.",
       intent: AIIntent.unknown,
     );
   }
@@ -770,30 +801,63 @@ class AIAssistantService {
     String rawCat = match.group(2)!.toLowerCase();
     String desc = match.group(3) ?? "";
 
-    // Map raw input to official categories
-    final expenseCats = ['food & drinks', 'transportation', 'shopping', 'entertainment', 'health', 'utilities', 'education', 'others'];
-    final incomeCats = ['salary', 'bonus', 'dividend', 'gift', 'investment', 'others'];
+    // Map raw input to official categories using keywords
+    // Income categories (checked first)
+    final Map<String, List<String>> incomeCatKeywords = {
+      'Salary': ['salary', 'paycheck', 'work', 'freelance', 'job', 'wage'],
+      'Bonus': ['bonus', 'extra'],
+      'Dividend': ['dividend', 'stock', 'share'],
+      'Gift': ['gift', 'present'],
+      'Investment': ['investment', 'crypto', 'bitcoin', 'profit', 'trade'],
+    };
+
+    // Expense categories with sub-item keywords
+    final Map<String, List<String>> expenseCatKeywords = {
+      'Food & Drinks': ['food', 'eat', 'coffee', 'starbucks', 'dinner', 'lunch', 'breakfast', 'snack', 'restaurant', 'pizza', 'burger', 'drink', 'grocery', 'market', 'mcdo', 'jollibee', 'kfc', 'boba', 'milk', 'juice', 'energen', 'milo', 'rice', 'ulam', 'viand', 'noodle', 'merienda', 'siomai', 'siopao', 'pandesal', 'bread', 'cake', 'dessert', 'tea', 'ice cream'],
+      'Transportation': ['taxi', 'uber', 'grab', 'bus', 'train', 'gas', 'fuel', 'oil', 'parking', 'toll', 'ticket', 'flight', 'travel', 'car', 'jeep', 'jeepney', 'tricycle', 'tric', 'e-tric', 'etric', 'joyride', 'angkas', 'motorcycle', 'bike', 'commute', 'fare', 'transport'],
+      'Shopping': ['shop', 'clothe', 'shirt', 'shoe', 'mall', 'amazon', 'lazada', 'shopee', 'purchase', 'gadget', 'phone'],
+      'Entertainment': ['movie', 'netflix', 'game', 'party', 'concert', 'club', 'spotify', 'subscription', 'fun', 'entertainment'],
+      'Health': ['doctor', 'med', 'pharmacy', 'hospital', 'dentist', 'clinic', 'gym', 'workout', 'fitness', 'health', 'medicine'],
+      'Utilities': ['rent', 'bill', 'electric', 'internet', 'wifi', 'cleaning', 'maintenance', 'repair', 'meralco', 'globe', 'smart', 'pldt', 'utilities'],
+      'Education': ['school', 'course', 'book', 'tuition', 'class', 'study', 'education'],
+      'Pet Food': ['pet', 'dog', 'cat', 'dogfood', 'catfood', 'pedigree', 'whiskas', 'purina', 'alpo', 'petfood', 'kibble', 'treats'],
+      'Others': ['others'],
+    };
 
     String? category;
     TransactionType type = TransactionType.expense;
 
-    // Check income first
-    for (var cat in incomeCats) {
-      if (rawCat.contains(cat.replaceAll(' & ', ' and ').toLowerCase())) {
-        category = cat == 'food & drinks' ? 'Food & Drinks' : cat[0].toUpperCase() + cat.substring(1);
-        type = TransactionType.income;
-        break;
-      }
-    }
-
-    if (category == null) {
-      for (var cat in expenseCats) {
-        if (rawCat.contains(cat.replaceAll(' & ', ' and ').toLowerCase())) {
-          category = cat == 'food & drinks' ? 'Food & Drinks' : cat[0].toUpperCase() + cat.substring(1);
-          type = TransactionType.expense;
+    // Check income categories first
+    for (var entry in incomeCatKeywords.entries) {
+      for (var kw in entry.value) {
+        if (rawCat.contains(kw)) {
+          category = entry.key;
+          type = TransactionType.income;
           break;
         }
       }
+      if (category != null) break;
+    }
+
+    // Check expense categories if not income
+    if (category == null) {
+      for (var entry in expenseCatKeywords.entries) {
+        for (var kw in entry.value) {
+          if (rawCat.contains(kw)) {
+            category = entry.key;
+            type = TransactionType.expense;
+            break;
+          }
+        }
+        if (category != null) break;
+      }
+    }
+
+    // Also handle 'water' specially: could be Food & Drinks (drinking water) vs Utilities (water bill)
+    // Default 'water' alone → Food & Drinks (most common for quick-add in PH context)
+    if (category == null && rawCat.trim() == 'water') {
+      category = 'Food & Drinks';
+      type = TransactionType.expense;
     }
 
     if (category == null) return null;

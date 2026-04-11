@@ -22,13 +22,14 @@ class QuickAddResult {
 class QuickAddService {
   static final Map<String, List<String>> _categoryKeywords = {
     // Expense Categories
-    'Food & Drinks': ['food', 'eat', 'coffee', 'starbucks', 'dinner', 'lunch', 'breakfast', 'snack', 'restaurant', 'pizza', 'burger', 'drink', 'water', 'grocery', 'market'],
-    'Transportation': ['taxi', 'uber', 'grab', 'bus', 'train', 'gas', 'fuel', 'oil', 'parking', 'toll', 'ticket', 'flight', 'travel', 'car', 'jeep', 'tricycle', 'e-tric'],
+    'Food & Drinks': ['food', 'eat', 'coffee', 'starbucks', 'dinner', 'lunch', 'breakfast', 'snack', 'restaurant', 'pizza', 'burger', 'drink', 'grocery', 'market', 'mcdo', 'jollibee', 'kfc', 'boba', 'milk', 'juice', 'energen', 'milo', 'water', 'rice', 'ulam', 'viand', 'noodle', 'merienda', 'siomai', 'siopao', 'pandesal', 'bread', 'cake', 'dessert', 'tea', 'ice cream'],
+    'Transportation': ['taxi', 'uber', 'grab', 'bus', 'train', 'gas', 'fuel', 'oil', 'parking', 'toll', 'ticket', 'flight', 'travel', 'car', 'jeep', 'jeepney', 'tricycle', 'tric', 'e-tric', 'etric', 'joyride', 'angkas', 'motorcycle', 'bike', 'commute', 'fare'],
     'Shopping': ['shop', 'clothe', 'shirt', 'shoe', 'mall', 'amazon', 'lazada', 'shopee', 'gift', 'buy', 'purchase', 'gadget', 'phone'],
     'Entertainment': ['movie', 'netflix', 'game', 'party', 'concert', 'club', 'spotify', 'subscription', 'fun'],
-    'Health': ['doctor', 'med', 'pharmacy', 'hospital', 'dentist', 'clinic', 'gym', 'workout', 'fitness', 'health'],
-    'Utilities': ['rent', 'bill', 'electric', 'water', 'internet', 'wifi', 'cleaning', 'maintenance', 'repair'],
+    'Health': ['doctor', 'med', 'pharmacy', 'hospital', 'dentist', 'clinic', 'gym', 'workout', 'fitness', 'health', 'medicine'],
+    'Utilities': ['rent', 'bill', 'electric', 'internet', 'wifi', 'cleaning', 'maintenance', 'repair', 'meralco', 'globe', 'smart', 'pldt'],
     'Education': ['school', 'course', 'book', 'tuition', 'class', 'study'],
+    'Pet Food': ['pet', 'dog', 'cat', 'dogfood', 'catfood', 'pedigree', 'whiskas', 'purina', 'alpo', 'pet food', 'petfood', 'kibble', 'treats', 'pet treat'],
     
     // Income Categories
     'Salary': ['salary', 'paycheck', 'work', 'freelance', 'job', 'wage'],
@@ -138,6 +139,7 @@ class QuickAddService {
       case 'Health': return Icons.medical_services;
       case 'Utilities': return Icons.home;
       case 'Education': return Icons.school;
+      case 'Pet Food': return Icons.pets;
       
       // Income
       case 'Salary': return Icons.work;

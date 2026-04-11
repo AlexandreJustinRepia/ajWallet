@@ -42,14 +42,21 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
   final _analyticsKey = GlobalKey();
 
   final List<String> _suggestions = [
+    "How much money do I have?",
     "Check my runway",
     "What if I save ₱100 more per day?",
     "Detect subscriptions",
     "Show my debt status",
     "How much did I earn this month?",
-    "Suggest a food budget",
-    "Should I pay my loan today?",
     "Find my biggest expense",
+    "30 grab",
+    "15 jeep",
+    "25 tricycle",
+    "50 taxi",
+    "80 joyride",
+    "25 water",
+    "15 energen",
+    "100 pet food",
     "500 food and drinks mcdo",
   ];
 
@@ -561,11 +568,14 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                      child: Icon(Icons.auto_awesome, size: 14, color: accentColor),
                    ),
                    const SizedBox(width: 8),
-                   Text(
-                     response.result,
-                     style: theme.textTheme.titleMedium?.copyWith(
-                       fontWeight: FontWeight.bold,
-                       color: accentColor,
+                   Flexible(
+                     child: Text(
+                       response.result,
+                       style: theme.textTheme.titleMedium?.copyWith(
+                         fontWeight: FontWeight.bold,
+                         color: accentColor,
+                       ),
+                       overflow: TextOverflow.ellipsis,
                      ),
                    ),
                 ],

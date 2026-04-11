@@ -146,6 +146,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     'Health': Icons.medical_services,
     'Utilities': Icons.home,
     'Education': Icons.school,
+    'Pet Food': Icons.pets,
     'Others': Icons.more_horiz,
   };
 

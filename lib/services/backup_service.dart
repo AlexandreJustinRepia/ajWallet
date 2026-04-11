@@ -10,6 +10,7 @@ import '../models/transaction_model.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/debt.dart';
+import '../models/backup_history.dart';
 import 'database_service.dart';
 
 class BackupService {
@@ -81,10 +82,30 @@ class BackupService {
           await file.writeAsBytes(combined.toBytes());
         }
       }
+      final success = outputPath != null;
 
-      return outputPath != null;
+      await DatabaseService.saveBackupHistory(
+        BackupHistory(
+          accountKey: accountKey,
+          type: 'export',
+          timestamp: DateTime.now(),
+          filePath: outputPath,
+          success: success,
+        ),
+      );
+
+      return success;
     } catch (e) {
       debugPrint('Export error: $e');
+      await DatabaseService.saveBackupHistory(
+        BackupHistory(
+          accountKey: accountKey,
+          type: 'export',
+          timestamp: DateTime.now(),
+          filePath: null,
+          success: false,
+        ),
+      );
       return false;
     }
   }
@@ -211,10 +232,29 @@ class BackupService {
         // Save silently to avoid re-applying effects to already correct balances
         await DatabaseService.saveTransaction(transaction, silent: true);
       }
+      await DatabaseService.saveBackupHistory(
+        BackupHistory(
+          accountKey: targetAccountKey,
+          type: 'import',
+          timestamp: DateTime.now(),
+          filePath: result.files.single.path,
+          success: true,
+        ),
+      );
 
       return true;
     } catch (e) {
       debugPrint('Import error: $e');
+      
+      await DatabaseService.saveBackupHistory(
+        BackupHistory(
+          accountKey: targetAccountKey,
+          type: 'import',
+          timestamp: DateTime.now(),
+          filePath: null,
+          success: false,
+        ),
+      );
       return false;
     }
   }

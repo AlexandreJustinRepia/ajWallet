@@ -6,6 +6,7 @@ import '../models/wallet.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/debt.dart';
+import '../models/backup_history.dart';
 
 class DatabaseService {
   static const String _boxName = 'accounts';
@@ -14,6 +15,7 @@ class DatabaseService {
   static const String _goalBoxName = 'goals';
   static const String _budgetBoxName = 'budgets';
   static const String _debtBoxName = 'debts';
+  static const String _backupHistoryBoxName = 'backup_history';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -70,6 +72,13 @@ class DatabaseService {
     } catch (_) {
       await Hive.deleteBoxFromDisk(_debtBoxName);
       await Hive.openBox<Debt>(_debtBoxName);
+    }
+
+    try {
+      await Hive.openBox(_backupHistoryBoxName);
+    } catch (_) {
+      await Hive.deleteBoxFromDisk(_backupHistoryBoxName);
+      await Hive.openBox(_backupHistoryBoxName);
     }
   }
 
@@ -269,6 +278,22 @@ class DatabaseService {
         await debt.save();
       }
     }
+  }
+
+  static Box<dynamic> get _backupHistoryBox => Hive.box(_backupHistoryBoxName);
+
+  static Future<int> saveBackupHistory(BackupHistory history) async {
+    final box = _backupHistoryBox;
+    return await box.add(history.toMap());
+  }
+
+  static List<BackupHistory> getBackupHistory(int accountKey) {
+    final box = _backupHistoryBox;
+    return box.values
+        .map((e) => BackupHistory.fromMap(Map<String, dynamic>.from(e)))
+        .where((h) => h.accountKey == accountKey)
+        .toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
   }
 
   static List<Transaction> getTransactions(int accountKey) {

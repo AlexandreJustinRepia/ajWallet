@@ -4,6 +4,7 @@ import 'services/session_service.dart';
 import 'services/backup_service.dart';
 import 'services/security_service.dart';
 import 'models/account.dart';
+import 'models/backup_history.dart';
 import 'pin_setup_screen.dart';
 
 class SecuritySettingsScreen extends StatefulWidget {
@@ -15,11 +16,13 @@ class SecuritySettingsScreen extends StatefulWidget {
 
 class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
   late Account _account;
+  List<BackupHistory> _backupHistory = [];
 
   @override
   void initState() {
     super.initState();
     _account = SessionService.activeAccount!;
+    _backupHistory = DatabaseService.getBackupHistory(_account.key as int);
   }
 
   @override
@@ -163,6 +166,9 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             subtitle: const Text('Restore data from an encrypted file.'),
             onTap: () => _handleBackup(context, isExport: false),
           ),
+          const SizedBox(height: 24),
+          _buildSectionTitle('Backup History'),
+          _buildBackupHistoryList(),
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () async {
@@ -268,6 +274,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               ),
             ),
           );
+          _refreshBackupHistory();
         }
       } else {
         // Import into current account
@@ -286,9 +293,11 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             setState(() {
               _account = SessionService.activeAccount!;
             });
+            _refreshBackupHistory();
             // Signal success to parent for full refresh
             if (mounted) Navigator.pop(context, true);
           } else {
+            _refreshBackupHistory();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
@@ -300,6 +309,48 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         }
       }
     }
+  }
+
+  void _refreshBackupHistory() {
+    setState(() {
+      _backupHistory = DatabaseService.getBackupHistory(_account.key as int);
+    });
+  }
+
+  Widget _buildBackupHistoryList() {
+    if (_backupHistory.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Text(
+          'No backup history yet.',
+          style: TextStyle(
+            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _backupHistory.map((history) {
+        final icon = history.type == 'export' ? Icons.upload_file : Icons.download;
+        final color = history.success ? Colors.green : Colors.red;
+        final status = history.success ? 'Success' : 'Failed';
+        final typeLabel = history.type == 'export' ? 'Export' : 'Import';
+        final formattedDate = history.timestamp.toLocal().toString().split('.').first;
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 10),
+          child: ListTile(
+            leading: Icon(icon, color: color),
+            title: Text('$typeLabel • $status'),
+            subtitle: Text(
+              '$formattedDate${history.filePath != null ? '\n${history.filePath}' : ''}',
+            ),
+            isThreeLine: history.filePath != null,
+          ),
+        );
+      }).toList(),
+    );
   }
 
   void _showPinRequiredDialog() {

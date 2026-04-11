@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:uuid/uuid.dart';
 import 'models/app_theme.dart';
 import 'services/theme_service.dart';
 
@@ -74,28 +72,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  void _pickColor(String title, Color current, ValueChanged<Color> onSelected) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Pick $title'),
-        content: SingleChildScrollView(
-          child: ColorPicker(
-            pickerColor: current,
-            onColorChanged: onSelected,
-            enableAlpha: false,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Done'),
-          ),
-        ],
-      ),
-    );
-  }
-
   AppTheme _getCurrentThemeObj({String? overrideId, String? overrideName}) {
     final isDark = _background.computeLuminance() < 0.5;
     return AppTheme(
@@ -109,31 +85,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       expenseColor: _expense.toARGB32(),
       name: overrideName ?? 'Custom Lab Look',
     );
-  }
-
-  Future<void> _saveAsNewTheme() async {
-    final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Save Local Preset'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(hintText: 'Theme Name (e.g., Midnight Blue)'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(context, controller.text), child: const Text('Save')),
-        ],
-      ),
-    );
-
-    if (name != null && name.trim().isNotEmpty) {
-      final newTheme = _getCurrentThemeObj(overrideId: const Uuid().v4(), overrideName: name.trim());
-      await ThemeService.saveCustomTheme(newTheme);
-      _applyTheme(newTheme);
-    }
   }
 
   @override
@@ -164,8 +115,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
             const SizedBox(height: 16),
             _buildPreviewCard(themeData), // Keep preview card using the new themeData
 
-            const SizedBox(height: 40),
-            _buildAdvancedSection(activeTheme),
             const SizedBox(height: 60),
           ],
         ),
@@ -312,61 +261,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         shape: BoxShape.circle, 
         border: Border.all(color: Colors.grey.withValues(alpha:0.3), width: 1.5)
       ),
-    );
-  }
-
-  Widget _buildAdvancedSection(ThemeData theme) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor.withValues(alpha:0.5),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: ExpansionTile(
-        title: const Text('Advanced Custom Lab', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-        subtitle: const Text('Manually tweak every color', style: TextStyle(fontSize: 10, color: Colors.grey)),
-        childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-        children: [
-          _colorTile('Primary', _primary, (c) => setState(() => _primary = c)),
-          _colorTile('Background', _background, (c) => setState(() => _background = c)),
-          _colorTile('Text', _text, (c) => setState(() => _text = c)),
-          _colorTile('Card', _card, (c) => setState(() => _card = c)),
-          const Divider(height: 24),
-          _colorTile('Income', _income, (c) => setState(() => _income = c)),
-          _colorTile('Expense', _expense, (c) => setState(() => _expense = c)),
-          const SizedBox(height: 24),
-            SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _saveAsNewTheme,
-              icon: const Icon(Icons.add_task),
-              label: const Text('Save as New Preset'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: theme.primaryColor,
-                foregroundColor: theme.colorScheme.onPrimary,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _colorTile(String title, Color color, ValueChanged<Color> onTap) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: Text(title, style: const TextStyle(fontSize: 14)),
-      trailing: Container(
-        width: 28, height: 28,
-        decoration: BoxDecoration(
-          color: color,
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.withValues(alpha:0.3)),
-        ),
-      ),
-      onTap: () => _pickColor(title, color, onTap),
     );
   }
 

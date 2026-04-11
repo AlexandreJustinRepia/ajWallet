@@ -93,7 +93,7 @@ class _CalendarViewState extends State<CalendarView> {
                       fontWeight: FontWeight.w900,
                       fontSize: 10,
                       color:
-                          theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                          theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                     ),
                   ),
                   const Text(
@@ -124,20 +124,20 @@ class _CalendarViewState extends State<CalendarView> {
               daysOfWeekStyle: DaysOfWeekStyle(
                 weekdayStyle: TextStyle(
                   color:
-                      theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
                 weekendStyle: TextStyle(
                   color:
-                      theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               calendarStyle: CalendarStyle(
                 todayDecoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
+                  color: theme.primaryColor.withValues(alpha:0.1),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: TextStyle(
@@ -150,7 +150,7 @@ class _CalendarViewState extends State<CalendarView> {
                   boxShadow: [
                     BoxShadow(
                       color: (isDark ? Colors.white : Colors.black)
-                          .withOpacity(0.2),
+                          .withValues(alpha:0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -291,7 +291,7 @@ class _CalendarViewState extends State<CalendarView> {
                         Container(
                           width: 2,
                           height: 60,
-                          color: theme.dividerColor.withOpacity(0.5),
+                          color: theme.dividerColor.withValues(alpha:0.5),
                         ),
                     ],
                   ),

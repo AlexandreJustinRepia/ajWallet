@@ -135,7 +135,7 @@ class _CalculatorInputFieldState extends State<CalculatorInputField> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.primaryColor.withOpacity(0.1),
+                          color: theme.primaryColor.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -312,12 +312,12 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
               color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: theme.primaryColor.withOpacity(0.3),
+                color: theme.primaryColor.withValues(alpha:0.3),
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: theme.primaryColor.withOpacity(0.05),
+                  color: theme.primaryColor.withValues(alpha:0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 4),
                 ),
@@ -381,11 +381,11 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
                             backgroundColor: theme.primaryColor,
                             foregroundColor: theme.colorScheme.onPrimary,
                             elevation: 4,
-                            shadowColor: theme.primaryColor.withOpacity(0.4),
+                            shadowColor: theme.primaryColor.withValues(alpha:0.4),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(24),
                               side: BorderSide(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha:0.2),
                                 width: 1.5,
                               ),
                             ),
@@ -430,8 +430,8 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
                 backgroundColor: isNumber
                     ? theme.cardColor
                     : (isAC
-                          ? Colors.orange.withOpacity(0.1)
-                          : theme.primaryColor.withOpacity(0.1)),
+                          ? Colors.orange.withValues(alpha:0.1)
+                          : theme.primaryColor.withValues(alpha:0.1)),
                 foregroundColor: isNumber
                     ? theme.colorScheme.onSurface
                     : (isAC ? Colors.orange : theme.primaryColor),

@@ -37,13 +37,13 @@ class ColorUtils {
   static Color getSurfaceVariant(Color background, Color primary) {
     final isLight = background.computeLuminance() > 0.5;
     return Color.alphaBlend(
-      primary.withOpacity(isLight ? 0.08 : 0.15),
+      primary.withValues(alpha: isLight ? 0.08 : 0.15),
       background,
     );
   }
 
   /// Derives an outline color
   static Color getOutlineColor(Color background, Color textColor) {
-    return textColor.withOpacity(0.2);
+    return textColor.withValues(alpha: 0.2);
   }
 }

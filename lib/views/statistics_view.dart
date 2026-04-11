@@ -112,7 +112,7 @@ class _BurnRateCard extends StatelessWidget {
           Text(
             'DAILY BURN RATE',
             style: TextStyle(
-              color: theme.scaffoldBackgroundColor.withOpacity(0.6),
+              color: theme.scaffoldBackgroundColor.withValues(alpha:0.6),
               fontSize: 10,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.5,
@@ -133,14 +133,14 @@ class _BurnRateCard extends StatelessWidget {
               _HeroStat(
                 label: 'RUNWAY',
                 value: daysRemaining == -1 ? '∞ Days' : '$daysRemaining Days',
-                bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
+                bgColor: theme.scaffoldBackgroundColor.withValues(alpha:0.1),
                 textColor: theme.scaffoldBackgroundColor,
               ),
               const SizedBox(width: 12),
               _HeroStat(
                 label: 'STATUS',
                 value: status,
-                bgColor: theme.scaffoldBackgroundColor.withOpacity(0.1),
+                bgColor: theme.scaffoldBackgroundColor.withValues(alpha:0.1),
                 textColor: theme.scaffoldBackgroundColor,
               ),
             ],
@@ -191,7 +191,7 @@ class _SpendingTrendCard extends StatelessWidget {
                   dotData: const FlDotData(show: false),
                   belowBarData: BarAreaData(
                     show: true,
-                    color: theme.primaryColor.withOpacity(0.05),
+                    color: theme.primaryColor.withValues(alpha:0.05),
                   ),
                 ),
               ],
@@ -223,9 +223,9 @@ class _CategoryBreakdownCard extends StatelessWidget {
     final colors = [
       theme.primaryColor,
       theme.dividerColor,
-      theme.textTheme.bodyMedium?.color?.withOpacity(0.5) ?? Colors.grey,
-      theme.primaryColor.withOpacity(0.3),
-      theme.primaryColor.withOpacity(0.6),
+      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5) ?? Colors.grey,
+      theme.primaryColor.withValues(alpha:0.3),
+      theme.primaryColor.withValues(alpha:0.6),
     ];
 
     return _SectionCard(
@@ -359,7 +359,7 @@ class _InsightsSection extends StatelessWidget {
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
           ),
         ),
         const SizedBox(height: 16),
@@ -368,7 +368,7 @@ class _InsightsSection extends StatelessWidget {
           padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
           itemCount: insights.length,
-          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
           itemBuilder: (context, index) => SlideInListItem(
             index: index,
             child: InsightCard(insight: insights[index]),
@@ -402,7 +402,7 @@ class _SectionCard extends StatelessWidget {
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
           ),
         ),
         const SizedBox(height: 16),
@@ -448,7 +448,7 @@ class _HeroStat extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: textColor.withOpacity(0.5),
+                color: textColor.withValues(alpha:0.5),
                 fontSize: 8,
                 fontWeight: FontWeight.bold,
               ),

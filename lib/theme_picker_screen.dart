@@ -101,12 +101,12 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     return AppTheme(
       id: overrideId ?? 'custom_preview_${DateTime.now().millisecondsSinceEpoch}',
       isDark: isDark,
-      primaryColor: _primary.value,
-      backgroundColor: _background.value,
-      textColor: _text.value,
-      cardColor: _card.value,
-      incomeColor: _income.value,
-      expenseColor: _expense.value,
+      primaryColor: _primary.toARGB32(),
+      backgroundColor: _background.toARGB32(),
+      textColor: _text.toARGB32(),
+      cardColor: _card.toARGB32(),
+      incomeColor: _income.toARGB32(),
+      expenseColor: _expense.toARGB32(),
       name: overrideName ?? 'Custom Lab Look',
     );
   }
@@ -176,14 +176,14 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
     return Row(
       children: [
-        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.5)),
+        Icon(icon, size: 14, color: theme.colorScheme.onSurface.withValues(alpha:0.5)),
         const SizedBox(width: 8),
         Text(
           title,
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.bold,
-            color: theme.colorScheme.onSurface.withOpacity(0.5),
+            color: theme.colorScheme.onSurface.withValues(alpha:0.5),
             letterSpacing: 2,
           ),
         ),
@@ -230,14 +230,14 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           color: Color(t.cardColor),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Color(t.primaryColor) : Color(t.textColor).withOpacity(0.1),
+            color: isSelected ? Color(t.primaryColor) : Color(t.textColor).withValues(alpha:0.1),
             width: isSelected ? 2.0 : 1.0,
           ),
           boxShadow: [
             if (isSelected)
-              BoxShadow(color: Color(t.primaryColor).withOpacity(0.2), blurRadius: 15, offset: const Offset(0, 5))
+              BoxShadow(color: Color(t.primaryColor).withValues(alpha:0.2), blurRadius: 15, offset: const Offset(0, 5))
             else
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+              BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Stack(
@@ -261,7 +261,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                 ),
                 Text(
                   t.isDark ? 'Dark Palette' : 'Light Palette',
-                  style: TextStyle(color: Color(t.textColor).withOpacity(0.5), fontSize: 10),
+                  style: TextStyle(color: Color(t.textColor).withValues(alpha:0.5), fontSize: 10),
                 ),
               ],
             ),
@@ -310,7 +310,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       decoration: BoxDecoration(
         color: c, 
         shape: BoxShape.circle, 
-        border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1.5)
+        border: Border.all(color: Colors.grey.withValues(alpha:0.3), width: 1.5)
       ),
     );
   }
@@ -318,7 +318,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   Widget _buildAdvancedSection(ThemeData theme) {
     return Container(
       decoration: BoxDecoration(
-        color: theme.cardColor.withOpacity(0.5),
+        color: theme.cardColor.withValues(alpha:0.5),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: theme.dividerColor),
       ),
@@ -363,7 +363,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         decoration: BoxDecoration(
           color: color,
           shape: BoxShape.circle,
-          border: Border.all(color: Colors.grey.withOpacity(0.3)),
+          border: Border.all(color: Colors.grey.withValues(alpha:0.3)),
         ),
       ),
       onTap: () => _pickColor(title, color, onTap),
@@ -378,7 +378,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: t.dividerColor, width: 1.5),
         boxShadow: [
-          BoxShadow(color: t.primaryColor.withOpacity(0.05), blurRadius: 30, offset: const Offset(0, 15)),
+          BoxShadow(color: t.primaryColor.withValues(alpha:0.05), blurRadius: 30, offset: const Offset(0, 15)),
         ],
       ),
       child: Column(
@@ -428,9 +428,9 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha:0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha:0.2)),
         ),
         child: Row(
           children: [

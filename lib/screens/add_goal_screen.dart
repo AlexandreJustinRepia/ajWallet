@@ -43,7 +43,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
         savedAmount: 0.0,
         accountKey: widget.accountKey,
         targetDate: _targetDate,
-        colorValue: _selectedColor.value,
+        colorValue: _selectedColor.toARGB32(),
       );
 
       await DatabaseService.saveGoal(goal);

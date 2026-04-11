@@ -21,65 +21,39 @@ class DatabaseService {
     await Hive.initFlutter();
 
     // Register Adapters
-    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(AccountAdapter());
-    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(AppThemeAdapter());
-    if (!Hive.isAdapterRegistered(2))
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(AccountAdapter());
+    }
+    if (!Hive.isAdapterRegistered(1)) {
+      Hive.registerAdapter(AppThemeAdapter());
+    }
+    if (!Hive.isAdapterRegistered(2)) {
       Hive.registerAdapter(TransactionTypeAdapter());
-    if (!Hive.isAdapterRegistered(3))
+    }
+    if (!Hive.isAdapterRegistered(3)) {
       Hive.registerAdapter(TransactionAdapter());
-    if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(WalletAdapter());
-    if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(GoalAdapter());
-    if (!Hive.isAdapterRegistered(6)) Hive.registerAdapter(BudgetAdapter());
-    if (!Hive.isAdapterRegistered(7)) Hive.registerAdapter(DebtAdapter());
-
-    try {
-      await Hive.openBox<Account>(_boxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_boxName);
-      await Hive.openBox<Account>(_boxName);
+    }
+    if (!Hive.isAdapterRegistered(4)) {
+      Hive.registerAdapter(WalletAdapter());
+    }
+    if (!Hive.isAdapterRegistered(5)) {
+      Hive.registerAdapter(GoalAdapter());
+    }
+    if (!Hive.isAdapterRegistered(6)) {
+      Hive.registerAdapter(BudgetAdapter());
+    }
+    if (!Hive.isAdapterRegistered(7)) {
+      Hive.registerAdapter(DebtAdapter());
     }
 
-    try {
-      await Hive.openBox<Transaction>(_transactionBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_transactionBoxName);
-      await Hive.openBox<Transaction>(_transactionBoxName);
-    }
+    await _openTypedBox<Account>(_boxName);
 
-    try {
-      await Hive.openBox<Wallet>(_walletBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_walletBoxName);
-      await Hive.openBox<Wallet>(_walletBoxName);
-    }
-
-    try {
-      await Hive.openBox<Goal>(_goalBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_goalBoxName);
-      await Hive.openBox<Goal>(_goalBoxName);
-    }
-
-    try {
-      await Hive.openBox<Budget>(_budgetBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_budgetBoxName);
-      await Hive.openBox<Budget>(_budgetBoxName);
-    }
-
-    try {
-      await Hive.openBox<Debt>(_debtBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_debtBoxName);
-      await Hive.openBox<Debt>(_debtBoxName);
-    }
-
-    try {
-      await Hive.openBox(_backupHistoryBoxName);
-    } catch (_) {
-      await Hive.deleteBoxFromDisk(_backupHistoryBoxName);
-      await Hive.openBox(_backupHistoryBoxName);
-    }
+    await _openTypedBox<Transaction>(_transactionBoxName);
+    await _openTypedBox<Wallet>(_walletBoxName);
+    await _openTypedBox<Goal>(_goalBoxName);
+    await _openTypedBox<Budget>(_budgetBoxName);
+    await _openTypedBox<Debt>(_debtBoxName);
+    await _openUntypedBox(_backupHistoryBoxName);
   }
 
   static Box<Account> get _box => Hive.box<Account>(_boxName);
@@ -89,6 +63,50 @@ class DatabaseService {
   static Box<Goal> get _goalBox => Hive.box<Goal>(_goalBoxName);
   static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
   static Box<Debt> get _debtBox => Hive.box<Debt>(_debtBoxName);
+
+  static Future<void> _openTypedBox<T>(String boxName) async {
+    try {
+      await Hive.openBox<T>(boxName);
+      return;
+    } catch (_) {
+      await _safeDeleteBox(boxName);
+    }
+
+    try {
+      await Hive.openBox<T>(boxName);
+      return;
+    } catch (_) {
+      await _safeDeleteBox(boxName);
+    }
+
+    await Hive.openBox<T>(boxName);
+  }
+
+  static Future<void> _openUntypedBox(String boxName) async {
+    try {
+      await Hive.openBox(boxName);
+      return;
+    } catch (_) {
+      await _safeDeleteBox(boxName);
+    }
+
+    try {
+      await Hive.openBox(boxName);
+      return;
+    } catch (_) {
+      await _safeDeleteBox(boxName);
+    }
+
+    await Hive.openBox(boxName);
+  }
+
+  static Future<void> _safeDeleteBox(String boxName) async {
+    try {
+      await Hive.deleteBoxFromDisk(boxName);
+    } catch (_) {
+      // ignore failures when deleting corrupted or incomplete box files
+    }
+  }
 
   static Future<int> saveAccount(Account account) async {
     return await _box.add(account);

@@ -40,7 +40,7 @@ class _InsightCardState extends State<InsightCard> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: widget.insight.color.withOpacity(0.05),
+                color: widget.insight.color.withValues(alpha:0.05),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -56,7 +56,7 @@ class _InsightCardState extends State<InsightCard> {
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w500,
                   fontSize: 13,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.8),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.8),
                 ),
               ),
             ),

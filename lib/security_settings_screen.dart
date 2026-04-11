@@ -172,12 +172,13 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () async {
+              final currentContext = context;
               await DatabaseService.updateAccount(_account);
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(currentContext).showSnackBar(
                   const SnackBar(content: Text('Security settings saved')),
                 );
-                Navigator.pop(context);
+                Navigator.pop(currentContext);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -204,7 +205,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     BuildContext context, {
     required bool isExport,
   }) async {
-    final theme = Theme.of(context);
+    final currentContext = context;
     final pinController = TextEditingController();
 
     bool hasPin = _account.pin != null && _account.pin!.isNotEmpty;
@@ -217,7 +218,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     } else {
       bool useBiometric = false;
       final pinConfirmed = await showDialog<bool>(
-        context: context,
+        context: currentContext,
         builder: (context) => StatefulBuilder(
           builder: (context, setState) => AlertDialog(
             title: Text(isExport ? 'Export Backup' : 'Import Backup'),
@@ -246,6 +247,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () async {
+                      final currentContext2 = context;
                       final success =
                           await SecurityService.authenticateWithBiometrics(
                         reason:
@@ -255,7 +257,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                         setState(() => useBiometric = true);
                       } else {
                         if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
+                          ScaffoldMessenger.of(currentContext2).showSnackBar(
                             const SnackBar(
                               content: Text('Biometric authentication failed.'),
                             ),
@@ -295,7 +297,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         final enteredPin = pinController.text;
         if (enteredPin.length != 4) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(currentContext).showSnackBar(
               const SnackBar(content: Text('Please enter a 4-digit PIN.')),
             );
           }
@@ -303,7 +305,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         }
         if (isExport && hasPin && enteredPin != _account.pin) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            ScaffoldMessenger.of(currentContext).showSnackBar(
               const SnackBar(content: Text('Incorrect PIN. Export aborted.')),
             );
           }
@@ -314,12 +316,39 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     }
 
     if (isExport) {
+      final nameController = TextEditingController();
+      final backupName = await showDialog<String?>(
+        context: currentContext,
+        builder: (context) => AlertDialog(
+          title: const Text('Name Your Backup'),
+          content: TextField(
+            controller: nameController,
+            decoration: const InputDecoration(
+              hintText: 'Enter backup name (optional)',
+              border: OutlineInputBorder(),
+            ),
+            maxLength: 50,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null),
+              child: const Text('Skip'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, nameController.text.trim()),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+
       final success = await BackupService.exportBackup(
         pinToUse,
         _account.key as int,
+        name: backupName,
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
             content: Text(
               success ? 'Backup exported successfully' : 'Export failed',
@@ -335,7 +364,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       );
       if (mounted) {
         if (success) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
               content: Text('Data restored successfully into this account.'),
             ),
@@ -344,10 +373,10 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             _account = SessionService.activeAccount!;
           });
           _refreshBackupHistory();
-          if (mounted) Navigator.pop(context, true);
+          if (mounted) Navigator.pop(currentContext, true);
         } else {
           _refreshBackupHistory();
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
               content: Text(
                 'Import failed. Check your PIN or file integrity.',
@@ -372,7 +401,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         child: Text(
           'No backup history yet.',
           style: TextStyle(
-            color: Theme.of(context).textTheme.bodyMedium?.color?.withOpacity(0.7),
+            color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha:0.7),
           ),
         ),
       );
@@ -413,7 +442,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         content: Text(
           'A backup PIN must be set before you can enable biometric login. This ensures you can always access your vault.',
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha:0.8),
           ),
         ),
         actions: [
@@ -482,7 +511,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       ),
       value: value,
       onChanged: onChanged,
-      activeColor: Theme.of(context).primaryColor,
+      activeThumbColor: Theme.of(context).primaryColor,
     );
   }
 }

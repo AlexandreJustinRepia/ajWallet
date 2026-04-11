@@ -423,8 +423,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       padding: const EdgeInsets.all(16),
                       margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.1),
-                        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        color: Colors.orange.withValues(alpha:0.1),
+                        border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -640,7 +640,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                             });
                           },
                           activeThumbImage: null, // to specify thumb if needed or just use activeColor alternative
-                          activeColor: theme.primaryColor, 
+                          activeThumbColor: theme.primaryColor, 
                           // Flutter 3.31 deprecates activeColor in favor of thumbIcon/trackColor 
                           // we'll just use activeColor as standard if it's simpler
                           activeTrackColor: theme.primaryColor.withValues(alpha: 0.5),
@@ -652,8 +652,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     const SizedBox(height: 12),
                     InkWell(
                       onTap: () async {
+                        final currentContext = context;
                         final pickedDate = await showDatePicker(
-                          context: context,
+                          context: currentContext,
                           initialDate: _selectedDate,
                           firstDate: DateTime(2020),
                           lastDate: DateTime.now(),
@@ -661,10 +662,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         if (pickedDate != null) {
                           if (!mounted) return;
                           final pickedTime = await showTimePicker(
-                            context: context,
+                            context: currentContext,
                             initialTime: TimeOfDay.fromDateTime(_selectedDate),
                           );
                           if (pickedTime != null) {
+                            if (!mounted) return;
                             setState(() {
                               _selectedDate = DateTime(
                                 pickedDate.year,

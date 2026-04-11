@@ -31,7 +31,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
   void _confirmDelete(Account account) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final hintColor = textColor.withOpacity(0.5);
+    final hintColor = textColor.withValues(alpha:0.5);
 
     showDialog(
       context: context,
@@ -51,10 +51,14 @@ class _AccountListScreenState extends State<AccountListScreen> {
                 Navigator.pop(context);
                 _loadAccounts();
                 if (_accounts.isEmpty) {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
-                  );
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
+                      );
+                    }
+                  });
                 }
               }
             },
@@ -69,7 +73,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withOpacity(0.5);
+    final hintColor = textColor.withValues(alpha:0.5);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -135,7 +139,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
                             border: Border.all(color: theme.dividerColor),
                             boxShadow: [
                               BoxShadow(
-                                color: theme.shadowColor.withOpacity(0.05),
+                                color: theme.shadowColor.withValues(alpha:0.05),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -218,7 +222,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
   void _showEditAccountDialog(Account account) {
     final theme = Theme.of(context);
     final controller = TextEditingController(text: account.name);
-    final _editFormKey = GlobalKey<FormState>();
+    final editFormKey = GlobalKey<FormState>();
 
     showDialog(
       context: context,
@@ -227,7 +231,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         title: const Text('Edit Account Name'),
         content: Form(
-          key: _editFormKey,
+          key: editFormKey,
           child: TextFormField(
             controller: controller,
             autofocus: true,
@@ -242,11 +246,11 @@ class _AccountListScreenState extends State<AccountListScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
           ),
           ElevatedButton(
             onPressed: () async {
-              if (_editFormKey.currentState!.validate()) {
+              if (editFormKey.currentState!.validate()) {
                 account.name = controller.text.trim();
                 await DatabaseService.updateAccount(account);
                 if (mounted) {

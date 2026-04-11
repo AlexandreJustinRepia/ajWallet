@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'models/transaction_model.dart';
 import 'services/database_service.dart';
-import 'services/quick_add_service.dart';
 import 'add_transaction_screen.dart';
 
 class TransactionDetailsScreen extends StatelessWidget {
@@ -42,8 +41,7 @@ class TransactionDetailsScreen extends StatelessWidget {
     final isIncome = transaction.type == TransactionType.income;
     final isTransfer = transaction.type == TransactionType.transfer;
     final displayColor = transaction.typeColor;
-    final isDark = theme.brightness == Brightness.dark;
-
+  
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -90,7 +88,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: displayColor.withOpacity(0.1),
+                      color: displayColor.withValues(alpha:0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -118,7 +116,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                       letterSpacing: 2,
                       fontWeight: FontWeight.w900,
                       fontSize: 12,
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                     ),
                   ),
                 ],
@@ -220,7 +218,7 @@ class _InfoRow extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.dividerColor.withOpacity(0.05),
+              color: theme.dividerColor.withValues(alpha:0.05),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, size: 20, color: theme.primaryColor),
@@ -251,7 +249,7 @@ class _InfoLabel extends StatelessWidget {
       style: TextStyle(
         fontSize: 13,
         fontWeight: FontWeight.w600,
-        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
       ),
     );
   }

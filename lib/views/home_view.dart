@@ -190,7 +190,7 @@ class _HomeViewState extends State<HomeView> {
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
           ),
         ),
         Icon(
@@ -209,7 +209,7 @@ class _HomeViewState extends State<HomeView> {
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
         itemCount: insights.length > 3 ? 3 : insights.length, // Show top 3
-        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        separatorBuilder: (_, _) => const SizedBox(width: 16),
         itemBuilder: (context, index) {
           return SizedBox(
             width: 280,
@@ -232,7 +232,7 @@ class _HomeViewState extends State<HomeView> {
             Text(
               'Good Day,',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                 letterSpacing: 0.5,
               ),
             ),
@@ -251,9 +251,9 @@ class _HomeViewState extends State<HomeView> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.primaryColor.withOpacity(0.3)),
+              border: Border.all(color: theme.primaryColor.withValues(alpha:0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -316,7 +316,7 @@ class _HomeViewState extends State<HomeView> {
           borderRadius: BorderRadius.circular(32),
           boxShadow: [
             BoxShadow(
-              color: cardColor.withOpacity(_showGlow ? 0.3 : 0.1),
+              color: cardColor.withValues(alpha:_showGlow ? 0.3 : 0.1),
               blurRadius: _showGlow ? 40 : 20,
               offset: const Offset(0, 10),
             ),
@@ -334,7 +334,7 @@ class _HomeViewState extends State<HomeView> {
                     Text(
                       isNetWorth ? 'TOTAL NET WORTH' : 'TOTAL BALANCE',
                       style: TextStyle(
-                        color: contentColor.withOpacity(0.5),
+                        color: contentColor.withValues(alpha:0.5),
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 2.0,
@@ -346,7 +346,7 @@ class _HomeViewState extends State<HomeView> {
                           ? 'INCLUDES EXCLUDED WALLETS'
                           : 'SPENDABLE BALANCE ONLY',
                       style: TextStyle(
-                        color: contentColor.withOpacity(0.3),
+                        color: contentColor.withValues(alpha:0.3),
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
@@ -360,10 +360,10 @@ class _HomeViewState extends State<HomeView> {
                     duration: const Duration(milliseconds: 300),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: contentColor.withOpacity(0.1),
+                      color: contentColor.withValues(alpha:0.1),
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: contentColor.withOpacity(0.1),
+                        color: contentColor.withValues(alpha:0.1),
                         width: 1,
                       ),
                     ),
@@ -371,7 +371,7 @@ class _HomeViewState extends State<HomeView> {
                       isNetWorth
                           ? Icons.account_balance_rounded
                           : Icons.payments_rounded,
-                      color: contentColor.withOpacity(0.5),
+                      color: contentColor.withValues(alpha:0.5),
                       size: 18,
                     ),
                   ),
@@ -393,13 +393,13 @@ class _HomeViewState extends State<HomeView> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: contentColor.withOpacity(0.1),
+                color: contentColor.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 'LIVE UPDATES',
                 style: TextStyle(
-                  color: contentColor.withOpacity(0.4),
+                  color: contentColor.withValues(alpha:0.4),
                   fontSize: 8,
                   fontWeight: FontWeight.bold,
                 ),
@@ -423,7 +423,7 @@ class _HomeViewState extends State<HomeView> {
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
           ),
         ),
         Container(
@@ -436,7 +436,7 @@ class _HomeViewState extends State<HomeView> {
           child: Icon(
             Icons.horizontal_rule_rounded,
             size: 14,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
           ),
         ),
       ],
@@ -455,7 +455,7 @@ class _HomeViewState extends State<HomeView> {
             Text(
               'No activities recorded yet.',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
               ),
             ),
           ],
@@ -578,7 +578,7 @@ class _GamificationSheetState extends State<_GamificationSheet> {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.3),
+              color: Colors.grey.withValues(alpha:0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -588,19 +588,19 @@ class _GamificationSheetState extends State<_GamificationSheet> {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: Colors.amber.withOpacity(0.2),
+                  backgroundColor: Colors.amber.withValues(alpha:0.2),
                   child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
                 ),
                 const SizedBox(height: 16),
                 Text('Level ${profile.level} Saver', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                 const SizedBox(height: 24),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: LinearProgressIndicator(
                     value: profile.progressToNextLevel,
                     minHeight: 12,
-                    backgroundColor: theme.primaryColor.withOpacity(0.1),
+                    backgroundColor: theme.primaryColor.withValues(alpha:0.1),
                     valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
                   ),
                 ),
@@ -626,9 +626,9 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
+                    color: Colors.orange.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
                   ),
                   child: Row(
                     children: [
@@ -639,7 +639,7 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text('${profile.streakDays} Days Fire Streak!', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.orange, fontSize: 16)),
-                            Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: Colors.orange.withOpacity(0.8))),
+                            Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: Colors.orange.withValues(alpha:0.8))),
                           ],
                         ),
                       ),
@@ -657,21 +657,21 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: theme.primaryColor.withOpacity(0.08),
+                        color: theme.primaryColor.withValues(alpha:0.08),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: theme.primaryColor.withOpacity(0.2)),
+                        border: Border.all(color: theme.primaryColor.withValues(alpha:0.2)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.refresh_rounded, size: 12, color: theme.primaryColor.withOpacity(0.7)),
+                          Icon(Icons.refresh_rounded, size: 12, color: theme.primaryColor.withValues(alpha:0.7)),
                           const SizedBox(width: 4),
                           Text(
                             'Resets in ${_formatDuration(_timeUntilReset)}',
                             style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
-                              color: theme.primaryColor.withOpacity(0.8),
+                              color: theme.primaryColor.withValues(alpha:0.8),
                               fontFeatures: const [FontFeature.tabularFigures()],
                             ),
                           ),
@@ -688,14 +688,14 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                       color: theme.cardColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: quest.isCompleted ? Colors.green.withOpacity(0.5) : theme.dividerColor,
+                        color: quest.isCompleted ? Colors.green.withValues(alpha:0.5) : theme.dividerColor,
                         width: 1,
                       ),
                     ),
                     child: ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       leading: CircleAvatar(
-                        backgroundColor: quest.isCompleted ? Colors.green.withOpacity(0.2) : theme.primaryColor.withOpacity(0.1),
+                        backgroundColor: quest.isCompleted ? Colors.green.withValues(alpha:0.2) : theme.primaryColor.withValues(alpha:0.1),
                         child: Icon(
                           quest.isCompleted ? Icons.check_circle_rounded : Icons.star_rounded,
                           color: quest.isCompleted ? Colors.green : theme.primaryColor,
@@ -707,14 +707,14 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.amber.withOpacity(0.2),
+                              color: Colors.amber.withValues(alpha:0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text('+${quest.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12)),
                           ),
                         ],
                       ),
-                      subtitle: Text(quest.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                      subtitle: Text(quest.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.6))),
                     ),
                   );
                 }),
@@ -732,18 +732,18 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                       color: theme.cardColor,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: achievement.isUnlocked ? Colors.amber.withOpacity(0.5) : theme.dividerColor,
+                        color: achievement.isUnlocked ? Colors.amber.withValues(alpha:0.5) : theme.dividerColor,
                         width: 0.5,
                       ),
                       boxShadow: [
                         if (achievement.isUnlocked)
-                          BoxShadow(color: Colors.amber.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          BoxShadow(color: Colors.amber.withValues(alpha:0.05), blurRadius: 10, offset: const Offset(0, 4)),
                       ],
                     ),
                     child: Row(
                       children: [
                         CircleAvatar(
-                          backgroundColor: achievement.isUnlocked ? Colors.amber.withOpacity(0.2) : Colors.grey.withOpacity(0.1),
+                          backgroundColor: achievement.isUnlocked ? Colors.amber.withValues(alpha:0.2) : Colors.grey.withValues(alpha:0.1),
                           radius: 24,
                           child: Text(achievement.icon, style: const TextStyle(fontSize: 24)),
                         ),
@@ -766,14 +766,14 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                                 ],
                               ),
                               const SizedBox(height: 4),
-                              Text(achievement.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.6))),
+                              Text(achievement.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.6))),
                               const SizedBox(height: 8),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
                                 child: LinearProgressIndicator(
                                   value: achievement.progressPercentage,
                                   minHeight: 6,
-                                  backgroundColor: theme.dividerColor.withOpacity(0.1),
+                                  backgroundColor: theme.dividerColor.withValues(alpha:0.1),
                                   valueColor: AlwaysStoppedAnimation<Color>(achievement.isUnlocked ? Colors.amber : theme.primaryColor),
                                 ),
                               ),

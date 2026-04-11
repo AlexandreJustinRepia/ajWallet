@@ -236,7 +236,7 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
+                  color: Colors.black.withValues(alpha:0.2),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -260,7 +260,7 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
                   Text(
                     step.description,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(0.7),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.7),
                       height: 1.5,
                     ),
                   ),
@@ -270,7 +270,7 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
                     children: [
                       TextButton(
                         onPressed: _finish,
-                        child: Text('Skip', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withOpacity(0.5))),
+                        child: Text('Skip', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha:0.5))),
                       ),
                       ElevatedButton(
                         onPressed: _nextStep,
@@ -301,7 +301,7 @@ class _SpotlightPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withOpacity(0.7);
+    final paint = Paint()..color = Colors.black.withValues(alpha:0.7);
     
     if (targetRect == null) {
       canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);

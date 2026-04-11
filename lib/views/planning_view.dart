@@ -107,7 +107,7 @@ class PlanningView extends StatelessWidget {
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
                 fontSize: 10,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
               ),
             ),
           ),
@@ -182,7 +182,7 @@ class PlanningView extends StatelessWidget {
                       key: index == 0 ? budgetIndicatorKey : null,
                       child: _PlanningItem(
                         title: b.category,
-                        subtitle: '${DateFormat('MMM yyyy').format(DateTime(b.year, b.month))}',
+                        subtitle: DateFormat('MMM yyyy').format(DateTime(b.year, b.month)),
                         trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
                         progress: progress,
                         progressColor: isOver ? Colors.red : Colors.blue,
@@ -193,7 +193,7 @@ class PlanningView extends StatelessWidget {
                         },
                       ),
                     );
-                  }).toList(),
+                  }),
                   ],
                 ),
           ),
@@ -266,7 +266,7 @@ class PlanningView extends StatelessWidget {
                         onRefresh();
                       },
                     );
-                  }).toList(),
+                  }),
                   ],
                 ),
           ),
@@ -296,7 +296,7 @@ class PlanningView extends StatelessWidget {
                         child: Row(
                           children: [
                             const Icon(Icons.arrow_drop_down, color: Colors.red, size: 20),
-                            Text('YOU OWE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            Text('YOU OWE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                           ],
                         ),
                       ),
@@ -309,7 +309,7 @@ class PlanningView extends StatelessWidget {
                         child: Row(
                           children: [
                             const Icon(Icons.arrow_drop_up, color: Colors.green, size: 20),
-                            Text('OWED TO YOU', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            Text('OWED TO YOU', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                           ],
                         ),
                       ),
@@ -380,7 +380,7 @@ class PlanningView extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.withOpacity(0.3), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(2)),
               ),
               Padding(
                 padding: const EdgeInsets.all(24).copyWith(top: 0),
@@ -389,7 +389,7 @@ class PlanningView extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: (debt.isOwedToMe ? Colors.green : Colors.red).withOpacity(0.1),
+                        color: (debt.isOwedToMe ? Colors.green : Colors.red).withValues(alpha:0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(Icons.history_rounded, color: debt.isOwedToMe ? Colors.green : Colors.red),
@@ -400,7 +400,7 @@ class PlanningView extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text('${debt.personName}\'s History', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                         ],
                       ),
                     ),
@@ -421,7 +421,7 @@ class PlanningView extends StatelessWidget {
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(
-                              backgroundColor: isPayment ? Colors.blue.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                              backgroundColor: isPayment ? Colors.blue.withValues(alpha:0.1) : Colors.orange.withValues(alpha:0.1),
                               child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? Colors.blue : Colors.orange, size: 20),
                             ),
                             title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -502,7 +502,7 @@ class _PlanningItem extends StatelessWidget {
                         ]
                       ],
                     ),
-                    Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                    Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                   ],
                 ),
               ),
@@ -523,7 +523,7 @@ class _PlanningItem extends StatelessWidget {
               builder: (context, val, _) {
                 return LinearProgressIndicator(
                   value: val,
-                  backgroundColor: progressColor.withOpacity(0.1),
+                  backgroundColor: progressColor.withValues(alpha:0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   minHeight: 8,
                 );
@@ -545,14 +545,14 @@ class _PlanningItem extends StatelessWidget {
                     TextButton.icon(
                       key: secondaryActionKey,
                       onPressed: onSecondaryAction,
-                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withOpacity(0.7)),
+                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withValues(alpha:0.7)),
                       label: Text(
                         secondaryActionLabel ?? 'Remove',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withOpacity(0.7)),
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withValues(alpha:0.7)),
                       ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        backgroundColor: progressColor.withOpacity(0.05),
+                        backgroundColor: progressColor.withValues(alpha:0.05),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
@@ -569,7 +569,7 @@ class _PlanningItem extends StatelessWidget {
                       ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        backgroundColor: progressColor.withOpacity(0.1),
+                        backgroundColor: progressColor.withValues(alpha:0.1),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
@@ -661,9 +661,9 @@ class _BudgetTotalSummary extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: barColor.withOpacity(0.05),
+        color: barColor.withValues(alpha:0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: barColor.withOpacity(0.2)),
+        border: Border.all(color: barColor.withValues(alpha:0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -677,13 +677,13 @@ class _BudgetTotalSummary extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: barColor.withOpacity(0.1),
+                  color: barColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -718,7 +718,7 @@ class _BudgetTotalSummary extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                   ),
                 ),
               ),
@@ -729,7 +729,7 @@ class _BudgetTotalSummary extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.withOpacity(0.7),
+                    color: Colors.blue.withValues(alpha:0.7),
                   ),
                 )
               else
@@ -750,10 +750,10 @@ class _BudgetTotalSummary extends StatelessWidget {
               tween: Tween<double>(begin: 0, end: (pct / 100).clamp(0.0, 1.0)),
               duration: const Duration(milliseconds: 800),
               curve: Curves.easeOutCubic,
-              builder: (_, val, __) => LinearProgressIndicator(
+              builder: (_, val, _) => LinearProgressIndicator(
                 value: val,
                 minHeight: 8,
-                backgroundColor: barColor.withOpacity(0.1),
+                backgroundColor: barColor.withValues(alpha:0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
             ),
@@ -800,7 +800,7 @@ class _SectionCard extends StatelessWidget {
         border: Border.all(color: theme.dividerColor, width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha:0.02),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -814,7 +814,7 @@ class _SectionCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -826,7 +826,7 @@ class _SectionCard extends StatelessWidget {
                   children: [
                     Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     if (count > 0)
-                      Text('$count active', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                      Text('$count active', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                   ],
                 ),
               ),
@@ -839,7 +839,7 @@ class _SectionCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          if (summary != null) summary!,
+          summary ?? const SizedBox.shrink(),
           child,
         ],
       ),
@@ -893,7 +893,7 @@ class _IntelligencePanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
+                  color: theme.primaryColor.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -909,7 +909,7 @@ class _IntelligencePanel extends StatelessWidget {
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,
                   fontSize: 10,
-                  color: theme.primaryColor.withOpacity(0.8),
+                  color: theme.primaryColor.withValues(alpha:0.8),
                 ),
               ),
             ],
@@ -950,12 +950,12 @@ class _InsightCard extends StatelessWidget {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: color.withOpacity(0.25),
+          color: color.withValues(alpha:0.25),
           width: 1.0,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.07),
+            color: color.withValues(alpha:0.07),
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -969,7 +969,7 @@ class _InsightCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
+                  color: color.withValues(alpha:0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(insight.icon, size: 16, color: color),
@@ -978,7 +978,7 @@ class _InsightCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
@@ -1011,7 +1011,7 @@ class _InsightCard extends StatelessWidget {
                 width: 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(
+                  color: color.withValues(alpha:
                     insight.urgency == InsightUrgency.high
                         ? 1.0
                         : insight.urgency == InsightUrgency.medium
@@ -1030,7 +1030,7 @@ class _InsightCard extends StatelessWidget {
                         : 'Good to know',
                 style: TextStyle(
                   fontSize: 9,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   fontWeight: FontWeight.w600,
                 ),
               ),

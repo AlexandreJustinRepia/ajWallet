@@ -109,7 +109,7 @@ class _SplashScreenState extends State<SplashScreen>
               Text(
                 'Your personal finance tracker',
                 style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   letterSpacing: 0.5,
                 ),
               ),

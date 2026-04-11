@@ -5,7 +5,6 @@ import 'services/session_service.dart';
 import 'services/update_service.dart';
 import 'services/achievement_service.dart';
 import 'splash_screen.dart';
-import 'models/app_theme.dart';
 import 'widgets/security_wrapper.dart';
 
 void main() async {

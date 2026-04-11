@@ -193,12 +193,12 @@ class QuickAddInputState extends State<QuickAddInput> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _isExpanded ? theme.primaryColor.withOpacity(0.5) : theme.dividerColor,
+          color: _isExpanded ? theme.primaryColor.withValues(alpha:0.5) : theme.dividerColor,
           width: _isExpanded ? 1.5 : 0.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(_isExpanded ? 0.08 : 0.02),
+            color: Colors.black.withValues(alpha:_isExpanded ? 0.08 : 0.02),
             blurRadius: _isExpanded ? 20 : 10,
             offset: const Offset(0, 4),
           ),
@@ -225,7 +225,7 @@ class QuickAddInputState extends State<QuickAddInput> {
                     decoration: InputDecoration(
                       hintText: 'Quick add: "250 food"',
                       hintStyle: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        color: theme.colorScheme.onSurface.withValues(alpha:0.4),
                       ),
                       border: InputBorder.none,
                       contentPadding: const EdgeInsets.symmetric(vertical: 20),
@@ -300,7 +300,7 @@ class QuickAddInputState extends State<QuickAddInput> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(

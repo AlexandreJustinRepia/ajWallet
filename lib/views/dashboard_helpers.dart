@@ -26,7 +26,7 @@ Widget buildDateHeader(BuildContext context, DateTime date) {
         letterSpacing: 1.5,
         fontWeight: FontWeight.w900,
         fontSize: 11,
-        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
       ),
     ),
   );
@@ -98,7 +98,7 @@ class DaySummaryStat extends StatelessWidget {
           style: TextStyle(
             fontSize: 10,
             fontWeight: FontWeight.w900,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
             letterSpacing: 1,
           ),
         ),

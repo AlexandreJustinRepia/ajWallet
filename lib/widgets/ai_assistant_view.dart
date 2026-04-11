@@ -4,7 +4,6 @@ import '../services/session_service.dart';
 import '../services/ai_assistant_service.dart';
 import '../services/achievement_service.dart';
 import '../models/transaction_model.dart';
-import '../models/wallet.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'onboarding_overlay.dart';
 
@@ -452,7 +451,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: _suggestions.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) => _buildSuggestionChip(_suggestions[index]),
       ),
     );

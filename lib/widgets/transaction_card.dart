@@ -84,7 +84,7 @@ class _TypeIcon extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(
@@ -133,7 +133,7 @@ class _AmountColumn extends StatelessWidget {
           Text(
             'Fee: ₱${tx.charge!.toStringAsFixed(2)}',
             style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.error.withOpacity(0.5),
+              color: theme.colorScheme.error.withValues(alpha:0.5),
               fontSize: 10,
             ),
           ),

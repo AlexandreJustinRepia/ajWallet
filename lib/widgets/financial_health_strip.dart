@@ -118,7 +118,7 @@ class _HealthCard extends StatelessWidget {
         border: Border.all(color: theme.dividerColor, width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha:0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -134,7 +134,7 @@ class _HealthCard extends StatelessWidget {
                  height: 50,
                  child: CircularProgressIndicator(
                    value: progress,
-                   backgroundColor: color.withOpacity(0.1),
+                   backgroundColor: color.withValues(alpha:0.1),
                    valueColor: AlwaysStoppedAnimation<Color>(color),
                    strokeWidth: 4,
                  ),
@@ -153,7 +153,7 @@ class _HealthCard extends StatelessWidget {
                   style: theme.textTheme.labelSmall?.copyWith(
                     letterSpacing: 1.5,
                     fontWeight: FontWeight.w900,
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -171,7 +171,7 @@ class _HealthCard extends StatelessWidget {
                       subtext,
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                         fontWeight: FontWeight.w500,
                       ),
                     ),

@@ -21,7 +21,7 @@ class GetStartedScreen extends StatelessWidget {
               Icon(
                 Icons.account_balance_wallet_outlined,
                 size: 120,
-                color: theme.primaryColor.withOpacity(0.8),
+                color: theme.primaryColor.withValues(alpha:0.8),
               ),
               const SizedBox(height: 48),
               Text(

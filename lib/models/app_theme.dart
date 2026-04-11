@@ -61,15 +61,12 @@ class AppTheme extends HiveObject {
     // Validate and enforce contrast for core elements
     final baseTextColor = ColorUtils.ensureContrast(Color(textColor), bgColor);
     final onPrimaryColor = ColorUtils.getContrastColor(pdColor);
-    final onCardColor = ColorUtils.ensureContrast(baseTextColor, cardCol);
 
     // Semantic Colors
-    final accentSuccess = Color(incomeColor ?? (isDark ? 0xFF3DA35D : 0xFF2D5A27)); 
+    final accentSuccess = Color(incomeColor ?? (isDark ? 0xFF3DA35D : 0xFF2D5A27));
     final accentError = Color(expenseColor ?? (isDark ? 0xFFE63946 : 0xFF922B21));
-    final accentWarning = Color(warningColor ?? 0xFFF5A623);
     final accentInfo = Color(infoColor ?? 0xFF4A90E2);
 
-    final surfaceVariant = ColorUtils.getSurfaceVariant(bgColor, pdColor);
     final outlineColor = ColorUtils.getOutlineColor(bgColor, baseTextColor);
 
     return ThemeData(
@@ -87,12 +84,10 @@ class AppTheme extends HiveObject {
         onPrimary: onPrimaryColor,
         secondary: accentInfo,
         onSecondary: ColorUtils.getContrastColor(accentInfo),
-        surface: cardCol,
-        onSurface: onCardColor,
-        surfaceVariant: surfaceVariant,
-        onSurfaceVariant: ColorUtils.ensureContrast(baseTextColor, surfaceVariant),
-        background: bgColor,
-        onBackground: baseTextColor,
+        surface: bgColor,
+        onSurface: baseTextColor,
+        surfaceContainerHighest: cardCol,
+        surfaceTint: pdColor.withAlpha(25),
         error: accentError,
         onError: ColorUtils.getContrastColor(accentError),
         tertiary: accentSuccess, // Using tertiary for success logically
@@ -106,10 +101,10 @@ class AppTheme extends HiveObject {
         displaySmall: TextStyle(color: baseTextColor, fontWeight: FontWeight.bold, letterSpacing: -0.5),
         headlineMedium: TextStyle(color: baseTextColor, fontWeight: FontWeight.w600, letterSpacing: -0.2),
         titleLarge: TextStyle(color: baseTextColor, fontWeight: FontWeight.w600),
-        titleMedium: TextStyle(color: baseTextColor.withOpacity(0.8), fontWeight: FontWeight.w500),
+        titleMedium: TextStyle(color: baseTextColor.withValues(alpha: 0.8), fontWeight: FontWeight.w500),
         bodyLarge: TextStyle(color: baseTextColor, fontSize: 16),
-        bodyMedium: TextStyle(color: baseTextColor.withOpacity(0.7), fontSize: 14),
-        labelLarge: TextStyle(color: baseTextColor.withOpacity(0.5), fontWeight: FontWeight.w500, fontSize: 12),
+        bodyMedium: TextStyle(color: baseTextColor.withValues(alpha: 0.7), fontSize: 14),
+        labelLarge: TextStyle(color: baseTextColor.withValues(alpha: 0.5), fontWeight: FontWeight.w500, fontSize: 12),
       ),
 
       appBarTheme: AppBarTheme(
@@ -129,18 +124,18 @@ class AppTheme extends HiveObject {
 
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: bgColor,
-        indicatorColor: pdColor.withOpacity(0.1),
-        labelTextStyle: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        indicatorColor: pdColor.withValues(alpha: 0.1),
+        labelTextStyle: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return TextStyle(color: pdColor, fontSize: 12, fontWeight: FontWeight.bold);
           }
-          return TextStyle(color: baseTextColor.withOpacity(0.5), fontSize: 12);
+          return TextStyle(color: baseTextColor.withValues(alpha: 0.5), fontSize: 12);
         }),
-        iconTheme: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: pdColor);
           }
-          return IconThemeData(color: baseTextColor.withOpacity(0.5));
+          return IconThemeData(color: baseTextColor.withValues(alpha: 0.5));
         }),
       ),
     );

@@ -157,7 +157,7 @@ class InstitutionSelector extends StatelessWidget {
           Text(
             'Choose your bank or e-wallet',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+              color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
             ),
           ),
           const SizedBox(height: 24),
@@ -174,7 +174,7 @@ class InstitutionSelector extends StatelessWidget {
                     indicatorColor: theme.primaryColor,
                     labelColor: theme.primaryColor,
                     unselectedLabelColor: theme.textTheme.bodyMedium?.color
-                        ?.withOpacity(0.5),
+                        ?.withValues(alpha:0.5),
                     labelStyle: const TextStyle(fontWeight: FontWeight.bold),
                     indicatorSize: TabBarIndicatorSize.label,
                   ),
@@ -223,7 +223,7 @@ class InstitutionSelector extends StatelessWidget {
                   border: Border.all(color: theme.dividerColor, width: 0.5),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha:0.05),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

@@ -96,7 +96,7 @@ class _ActivityViewState extends State<ActivityView>
               indicatorSize: TabBarIndicatorSize.tab,
               labelColor: theme.scaffoldBackgroundColor,
               unselectedLabelColor:
-                  theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
               labelStyle: const TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 13,
@@ -126,7 +126,7 @@ class _ActivityViewState extends State<ActivityView>
               onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search transactions...',
-                hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4), fontSize: 13),
+                hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4), fontSize: 13),
                 prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
                 border: InputBorder.none,
                 contentPadding: const EdgeInsets.symmetric(vertical: 12),
@@ -265,7 +265,7 @@ class _ListViewTab extends StatelessWidget {
             Text(
               'No transactions yet',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
               ),
             ),
           ],
@@ -424,7 +424,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
                 fontSize: 10,
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
               ),
             ),
           ),
@@ -454,19 +454,19 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
               headerVisible: false,
               daysOfWeekStyle: DaysOfWeekStyle(
                 weekdayStyle: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
                 weekendStyle: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               calendarStyle: CalendarStyle(
                 todayDecoration: BoxDecoration(
-                  color: theme.primaryColor.withOpacity(0.1),
+                  color: theme.primaryColor.withValues(alpha:0.1),
                   shape: BoxShape.circle,
                 ),
                 todayTextStyle: TextStyle(
@@ -474,11 +474,11 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                   fontWeight: FontWeight.bold,
                 ),
                 selectedDecoration: BoxDecoration(
-                  color: theme.colorScheme.onBackground,
+                  color: theme.colorScheme.onSurface,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.onBackground.withOpacity(0.2),
+                      color: theme.colorScheme.onSurface.withValues(alpha:0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -591,7 +591,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                                     width: 2,
                                     height: 60,
                                     color:
-                                        theme.dividerColor.withOpacity(0.5),
+                                        theme.dividerColor.withValues(alpha:0.5),
                                   ),
                               ],
                             ),
@@ -620,9 +620,9 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
     final colors = [
       theme.primaryColor,
       theme.dividerColor,
-      theme.textTheme.bodyMedium?.color?.withOpacity(0.5) ?? Colors.grey,
-      theme.primaryColor.withOpacity(0.3),
-      theme.primaryColor.withOpacity(0.6),
+      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5) ?? Colors.grey,
+      theme.primaryColor.withValues(alpha:0.3),
+      theme.primaryColor.withValues(alpha:0.6),
     ];
 
     return SliverToBoxAdapter(
@@ -644,7 +644,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,
                   fontSize: 10,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                 ),
               ),
               const SizedBox(height: 16),

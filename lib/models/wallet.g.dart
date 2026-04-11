@@ -18,10 +18,10 @@ class WalletAdapter extends TypeAdapter<Wallet> {
     };
     return Wallet(
       name: fields[0] as String,
-      balance: fields[1] as double,
+      balance: fields[1] as double? ?? 0.0,
       type: fields[2] as String,
       accountKey: fields[3] as int,
-      isExcluded: fields[4] as bool,
+      isExcluded: fields[4] as bool? ?? false,
       iconPath: fields[5] as String?,
     );
   }

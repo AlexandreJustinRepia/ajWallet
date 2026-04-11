@@ -64,10 +64,11 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           ),
           TextButton(
             onPressed: () async {
-              Navigator.pop(context); // Close dialog
+              final currentContext = context;
+              Navigator.pop(currentContext); // Close dialog
               await DatabaseService.deleteWallet(widget.wallet);
               if (mounted) {
-                Navigator.pop(context, true); // Go back to wallets list
+                Navigator.pop(currentContext, true); // Go back to wallets list
               }
             },
             child: const Text(
@@ -139,7 +140,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
               Icon(
                 Icons.visibility_off_rounded,
                 size: 16,
-                color: theme.colorScheme.error.withOpacity(0.7),
+                color: theme.colorScheme.error.withValues(alpha:0.7),
               ),
             ],
           ],
@@ -177,7 +178,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                 color: theme.scaffoldBackgroundColor,
                 border: Border(
                   bottom: BorderSide(
-                    color: theme.dividerColor.withOpacity(0.1),
+                    color: theme.dividerColor.withValues(alpha:0.1),
                   ),
                 ),
               ),
@@ -193,7 +194,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(color: theme.dividerColor, width: 0.5),
                         boxShadow: [
-                           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                           BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10, offset: const Offset(0, 4)),
                         ]
                       ),
                       child: ClipRRect(
@@ -206,7 +207,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                   Text(
                     'CURRENT BALANCE',
                     style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:
                         0.5,
                       ),
                       fontSize: 10,
@@ -232,7 +233,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
+                          color: Colors.red.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
@@ -290,7 +291,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:
                           0.5,
                         ),
                       ),
@@ -324,7 +325,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                               dotData: const FlDotData(show: false),
                               belowBarData: BarAreaData(
                                 show: true,
-                                color: theme.primaryColor.withOpacity(0.06),
+                                color: theme.primaryColor.withValues(alpha:0.06),
                               ),
                             ),
                           ],
@@ -342,7 +343,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:
                           0.5,
                         ),
                       ),
@@ -377,7 +378,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                                         theme.colorScheme.tertiary,
                                         theme.colorScheme.error,
                                         theme.colorScheme.secondary,
-                                        theme.primaryColor.withOpacity(0.5),
+                                        theme.primaryColor.withValues(alpha:0.5),
                                       ];
                                       return PieChartSectionData(
                                         value: e.value.value,
@@ -447,7 +448,7 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
-                  color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                 ),
               ),
             ),
@@ -503,7 +504,7 @@ class _StatBox extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha:0.08),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -514,7 +515,7 @@ class _StatBox extends StatelessWidget {
               style: TextStyle(
                 fontSize: 9,
                 fontWeight: FontWeight.w900,
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha:0.7),
                 letterSpacing: 1,
               ),
             ),

@@ -98,16 +98,19 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() {
         _pinController.clear();
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Incorrect PIN. ${widget.account.maxFailedAttempts - SecurityService.failedAttempts} attempts remaining.'),
-          backgroundColor: Colors.red[900],
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Incorrect PIN. ${widget.account.maxFailedAttempts - SecurityService.failedAttempts} attempts remaining.'),
+            backgroundColor: Colors.red[900],
+          ),
+        );
+      }
     }
   }
 
   void _showLockoutMessage() {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Too many failed attempts. Locked out for ${SecurityService.remainingLockoutTime?.inMinutes ?? 5} minutes.'),
@@ -143,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
             const SizedBox(height: 8),
             Text(
               'For your protection, all data is stored locally and encrypted. If you cannot remember your PIN, you must prove your identity or reset the account.',
-              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 13),
+              style: TextStyle(color: textColor.withValues(alpha:0.8), fontSize: 13),
             ),
           ],
         ),
@@ -218,7 +221,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
+                child: Text('Cancel', style: TextStyle(color: textColor.withValues(alpha:0.5))),
               ),
             ],
           ),
@@ -242,7 +245,7 @@ class _LoginScreenState extends State<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(confContext),
-            child: Text('Cancel', style: TextStyle(color: textColor.withOpacity(0.5))),
+            child: Text('Cancel', style: TextStyle(color: textColor.withValues(alpha:0.5))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -271,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withOpacity(0.5);
+    final hintColor = textColor.withValues(alpha:0.5);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -307,9 +310,9 @@ class _LoginScreenState extends State<LoginScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: _isLocked ? theme.colorScheme.error.withOpacity(0.1) : theme.cardColor,
+                  color: _isLocked ? theme.colorScheme.error.withValues(alpha:0.1) : theme.cardColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _isLocked ? theme.colorScheme.error.withOpacity(0.5) : theme.dividerColor),
+                  border: Border.all(color: _isLocked ? theme.colorScheme.error.withValues(alpha:0.5) : theme.dividerColor),
                 ),
                 child: TextField(
                   controller: _pinController,

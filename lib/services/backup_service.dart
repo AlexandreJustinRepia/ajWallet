@@ -17,7 +17,7 @@ class BackupService {
   static const String _magicHeader = "AJ_BACKUP_V1";
   static const String defaultPin = "0000";
 
-  static Future<bool> exportBackup(String pin, int accountKey) async {
+  static Future<bool> exportBackup(String pin, int accountKey, {String? name}) async {
     try {
       // 1. Collect Data (Filtered by accountKey)
       final account = DatabaseService.getAccounts().firstWhere((a) => a.key == accountKey);
@@ -58,7 +58,9 @@ class BackupService {
 
       // 4. Save File
       String? outputPath;
-      final fileName = 'aj_wallet_backup_${DateTime.now().millisecondsSinceEpoch}.ajb';
+      final fileName = name != null && name.trim().isNotEmpty
+          ? '${name.trim().replaceAll(RegExp(r'[^\w\s-]'), '').replaceAll(' ', '_')}.ajb'
+          : 'aj_wallet_backup_${DateTime.now().millisecondsSinceEpoch}.ajb';
 
       if (Platform.isAndroid || Platform.isIOS) {
         final selectedDirectory = await FilePicker.platform.getDirectoryPath(

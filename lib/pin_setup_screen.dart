@@ -97,7 +97,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final hintColor = textColor.withOpacity(0.5);
+    final hintColor = textColor.withValues(alpha:0.5);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -207,7 +207,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                           setState(() => _useBiometrics = false);
                         }
                       },
-                      activeColor: theme.primaryColor,
+                      activeThumbColor: theme.primaryColor,
                     ),
                   ],
                 ),
@@ -228,7 +228,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: theme.primaryColor.withOpacity(0.1),
+                          color: theme.primaryColor.withValues(alpha:0.1),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -258,7 +258,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   Widget _buildPinField(String hint, TextEditingController controller) {
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withOpacity(0.5);
+    final hintColor = textColor.withValues(alpha:0.5);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

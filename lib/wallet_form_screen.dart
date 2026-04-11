@@ -192,7 +192,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
-                          color: theme.dividerColor.withOpacity(0.1),
+                          color: theme.dividerColor.withValues(alpha:0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         clipBehavior: Clip.antiAlias,
@@ -214,7 +214,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
                               ? 'Change Institution'
                               : 'Select Bank or E-Wallet',
                           style: TextStyle(
-                            color: _selectedIconPath != null ? null : theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                            color: _selectedIconPath != null ? null : theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                             fontWeight: FontWeight.w600,
                           ),
                         ),

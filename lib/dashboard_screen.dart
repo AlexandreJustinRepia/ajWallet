@@ -601,7 +601,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: theme.scaffoldBackgroundColor,
                       borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, -5)),
+                        BoxShadow(color: Colors.black.withValues(alpha:0.3), blurRadius: 20, offset: const Offset(0, -5)),
                       ]
                     ),
                     child: Column(
@@ -641,7 +641,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.error.withOpacity(0.1),
+                                  color: theme.colorScheme.error.withValues(alpha:0.1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(Icons.south_west_rounded, color: theme.colorScheme.error, size: 32),
@@ -649,7 +649,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(height: 16),
                               Text('- ₱250.00', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: -1)),
                               const SizedBox(height: 8),
-                              Text('EXPENSE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4))),
+                              Text('EXPENSE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4))),
                             ],
                           ),
                         ),
@@ -658,11 +658,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: theme.dividerColor.withOpacity(0.05), borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: theme.dividerColor.withValues(alpha:0.05), borderRadius: BorderRadius.circular(10)),
                               child: Icon(Icons.category_rounded, size: 20, color: theme.primaryColor),
                             ),
                             const SizedBox(width: 16),
-                            Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                             const Spacer(),
                             const Text('Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                           ],
@@ -672,11 +672,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: theme.dividerColor.withOpacity(0.05), borderRadius: BorderRadius.circular(10)),
+                              decoration: BoxDecoration(color: theme.dividerColor.withValues(alpha:0.05), borderRadius: BorderRadius.circular(10)),
                               child: Icon(Icons.calendar_today_rounded, size: 20, color: theme.primaryColor),
                             ),
                             const SizedBox(width: 16),
-                            Text('Note', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+                            Text('Note', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
                             const Spacer(),
                             const Text('Grocery Run', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                           ],
@@ -689,7 +689,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             
             if (_showFakeDeleteConfirm)
               Container(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha:0.5),
                 child: Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 40),
@@ -905,17 +905,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5))),
+            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
           ),
           ElevatedButton(
             onPressed: () async {
+              final currentContext = context;
               if (editFormKey.currentState!.validate()) {
                 account.name = controller.text.trim();
                 await DatabaseService.updateAccount(account);
-                if (mounted) {
-                  Navigator.pop(context);
-                  _refresh();
-                }
+                if (!mounted) return;
+                Navigator.pop(currentContext);
+                _refresh();
               }
             },
             style: ElevatedButton.styleFrom(
@@ -965,7 +965,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withOpacity(0.1),
+              color: theme.primaryColor.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -990,7 +990,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   'Account',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1022,7 +1022,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withOpacity(0.5),
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
               ),
             ),
           ),
@@ -1070,7 +1070,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: backgroundColor,
             boxShadow: [
               BoxShadow(
-                color: backgroundColor.withOpacity(0.2),
+                color: backgroundColor.withValues(alpha:0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1095,7 +1095,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       info.releaseNotes,
                       style: TextStyle(
-                        color: foregroundColor.withOpacity(0.8),
+                        color: foregroundColor.withValues(alpha:0.8),
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -1108,7 +1108,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               TextButton(
                 onPressed: () => UpdateService.launchDownload(),
                 style: TextButton.styleFrom(
-                  backgroundColor: foregroundColor.withOpacity(0.15),
+                  backgroundColor: foregroundColor.withValues(alpha:0.15),
                   foregroundColor: foregroundColor,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(
@@ -1123,7 +1123,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               IconButton(
                 icon: Icon(
                   Icons.close_rounded,
-                  color: foregroundColor.withOpacity(0.7),
+                  color: foregroundColor.withValues(alpha:0.7),
                   size: 18,
                 ),
                 onPressed: () => UpdateService.updateNotifier.value = null,

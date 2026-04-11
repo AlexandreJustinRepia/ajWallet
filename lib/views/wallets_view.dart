@@ -65,7 +65,7 @@ class WalletsView extends StatelessWidget {
             letterSpacing: 2,
             fontWeight: FontWeight.w900,
             fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
           ),
         ),
         const SizedBox(height: 12),
@@ -80,7 +80,7 @@ class WalletsView extends StatelessWidget {
                     child: Text(
                       'No wallets yet',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.textTheme.bodyMedium?.color?.withOpacity(0.4),
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
                       ),
                     ),
                   ),
@@ -182,7 +182,7 @@ class _GlobalStatsBanner extends StatelessWidget {
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
                           color: theme.textTheme.bodyMedium?.color
-                              ?.withOpacity(0.4),
+                              ?.withValues(alpha:0.4),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -200,7 +200,7 @@ class _GlobalStatsBanner extends StatelessWidget {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
+                    color: statusColor.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -242,7 +242,7 @@ class _GlobalStatsBanner extends StatelessWidget {
                         dotData: const FlDotData(show: false),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: theme.primaryColor.withOpacity(0.06),
+                          color: theme.primaryColor.withValues(alpha:0.06),
                         ),
                       ),
                     ],
@@ -297,7 +297,7 @@ class _MiniStat extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.07),
+          color: color.withValues(alpha:0.07),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -308,7 +308,7 @@ class _MiniStat extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8,
                 fontWeight: FontWeight.w900,
-                color: color.withOpacity(0.7),
+                color: color.withValues(alpha:0.7),
                 letterSpacing: 1,
               ),
             ),
@@ -365,7 +365,7 @@ class _WalletCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isExcluded
-                  ? theme.colorScheme.error.withOpacity(0.5)
+                  ? theme.colorScheme.error.withValues(alpha:0.5)
                   : theme.dividerColor,
               width: isExcluded ? 1.5 : 0.5,
             ),
@@ -376,7 +376,7 @@ class _WalletCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: accentColor.withOpacity(0.07),
+                  color: accentColor.withValues(alpha:0.07),
                   shape: BoxShape.circle,
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -412,7 +412,7 @@ class _WalletCard extends StatelessWidget {
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: isExcluded
-                                ? theme.colorScheme.error.withOpacity(0.7)
+                                ? theme.colorScheme.error.withValues(alpha:0.7)
                                 : null,
                           ),
                         ),
@@ -421,7 +421,7 @@ class _WalletCard extends StatelessWidget {
                           Icon(
                             Icons.visibility_off_rounded,
                             size: 14,
-                            color: theme.colorScheme.error.withOpacity(0.7),
+                            color: theme.colorScheme.error.withValues(alpha:0.7),
                           ),
                         ],
                       ],
@@ -430,9 +430,9 @@ class _WalletCard extends StatelessWidget {
                       isExcluded ? 'Excluded from Liquidity' : wallet.type,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isExcluded
-                            ? theme.colorScheme.error.withOpacity(0.5)
+                            ? theme.colorScheme.error.withValues(alpha:0.5)
                             : theme.textTheme.bodyMedium?.color
-                                ?.withOpacity(0.5),
+                                ?.withValues(alpha:0.5),
                       ),
                     ),
                   ],
@@ -446,7 +446,7 @@ class _WalletCard extends StatelessWidget {
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: isExcluded
-                            ? theme.colorScheme.error.withOpacity(0.5)
+                            ? theme.colorScheme.error.withValues(alpha:0.5)
                             : null,
                       ),
                     ),
@@ -454,7 +454,7 @@ class _WalletCard extends StatelessWidget {
                     Icons.chevron_right_rounded,
                     size: 16,
                     color:
-                        theme.textTheme.bodyMedium?.color?.withOpacity(0.3),
+                        theme.textTheme.bodyMedium?.color?.withValues(alpha:0.3),
                   ),
                 ],
               ),

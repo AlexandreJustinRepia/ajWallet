@@ -721,6 +721,55 @@ class _GamificationSheetState extends State<_GamificationSheet> {
 
                 const SizedBox(height: 32),
 
+                const Text('Weekly & Monthly Challenges', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 12),
+                ...profile.challenges.map((challenge) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: challenge.isCompleted ? Colors.green.withValues(alpha:0.5) : theme.dividerColor,
+                        width: 1,
+                      ),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      leading: CircleAvatar(
+                        backgroundColor: challenge.isCompleted ? Colors.green.withValues(alpha:0.2) : theme.primaryColor.withValues(alpha:0.1),
+                        child: Icon(
+                          challenge.isCompleted ? Icons.check_circle_rounded : Icons.flag_rounded,
+                          color: challenge.isCompleted ? Colors.green : theme.primaryColor,
+                        ),
+                      ),
+                      title: Row(
+                        children: [
+                          Expanded(child: Text(challenge.title, style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color))),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha:0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text('+${challenge.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12)),
+                          ),
+                        ],
+                      ),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(challenge.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.6))),
+                          const SizedBox(height: 4),
+                          Text(challenge.progress, style: TextStyle(fontSize: 11, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+
+                const SizedBox(height: 32),
+
                 // ── Achievements ──────────────────────────────────────────
                 const Text('Achievements', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),

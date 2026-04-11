@@ -39,20 +39,44 @@ class Achievement {
   double get progressPercentage => (currentProgress / targetProgress).clamp(0.0, 1.0);
 }
 
+class MidTermChallenge {
+  final String title;
+  final String description;
+  final int xpReward;
+  final bool isCompleted;
+  final String progress;
+
+  MidTermChallenge({
+    required this.title,
+    required this.description,
+    required this.xpReward,
+    required this.isCompleted,
+    required this.progress,
+  });
+}
+
 class GamificationProfile {
   final int xp;
   final int level;
   final int streakDays;
-  final List<DailyQuest> dailyQuests;
-  final List<Achievement> achievements;
+  final List<DailyQuest>? _dailyQuests;
+  final List<MidTermChallenge>? _challenges;
+  final List<Achievement>? _achievements;
 
   GamificationProfile({
     required this.xp,
     required this.level,
     required this.streakDays,
-    required this.dailyQuests,
-    required this.achievements,
-  });
+    List<DailyQuest>? dailyQuests,
+    List<MidTermChallenge>? challenges,
+    List<Achievement>? achievements,
+  })  : _dailyQuests = dailyQuests,
+        _challenges = challenges,
+        _achievements = achievements;
+
+  List<DailyQuest> get dailyQuests => _dailyQuests ?? [];
+  List<MidTermChallenge> get challenges => _challenges ?? [];
+  List<Achievement> get achievements => _achievements ?? [];
 
   double get progressToNextLevel => (xp % 500) / 500;
 }
@@ -133,7 +157,95 @@ class GamificationService {
 
     level = (totalXp ~/ 500) + 1; // Recalculate level just in case
 
-    // 4. Calculate Achievements
+    // 4. Calculate Mid-Term Challenges
+    final weekStart = DateTime(today.year, today.month, today.day).subtract(Duration(days: today.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+
+    final double goalContributionThisWeek = transactions
+        .where((t) => t.goalKey != null && t.type == TransactionType.expense)
+        .where((t) => !t.date.isBefore(weekStart) && t.date.isBefore(weekEnd))
+        .fold(0.0, (sum, t) => sum + t.amount);
+
+    final bool weeklySaverComplete = goalContributionThisWeek >= 1000.0;
+    final String weeklySaverProgress = weeklySaverComplete
+        ? 'Goal reached for the week!'
+        : '₱${goalContributionThisWeek.toStringAsFixed(0)} / ₱1000 saved this week.';
+
+    bool isNoSpendDay(List<Transaction> txs) {
+      return txs.where((t) => t.type == TransactionType.expense && t.amount > 0).isEmpty;
+    }
+
+    List<Transaction> transactionsForDay(DateTime day) {
+      return transactions.where((t) =>
+        t.date.year == day.year &&
+        t.date.month == day.month &&
+        t.date.day == day.day
+      ).toList();
+    }
+
+    final saturdayDate = weekStart.add(const Duration(days: 5));
+    final sundayDate = weekStart.add(const Duration(days: 6));
+    final saturdayPassed = !saturdayDate.isAfter(today);
+    final sundayPassed = !sundayDate.isAfter(today);
+
+    final saturdayNoSpend = saturdayPassed && isNoSpendDay(transactionsForDay(saturdayDate));
+    final sundayNoSpend = sundayPassed && isNoSpendDay(transactionsForDay(sundayDate));
+    final int weekendDaysValidated = (saturdayPassed ? 1 : 0) + (sundayPassed ? 1 : 0);
+    final int noSpendDaysCount = [saturdayNoSpend, sundayNoSpend].where((passed) => passed).length;
+
+    final bool noSpendWeekendComplete = weekendDaysValidated == 2 && noSpendDaysCount == 2;
+    final String noSpendWeekendProgress = weekendDaysValidated == 0
+        ? 'Weekend not started yet.'
+        : '$noSpendDaysCount / 2 spend-free days this weekend.';
+
+    final currentMonthBudgets = budgets.where((b) => b.month == today.month && b.year == today.year).toList();
+    int budgetsOnTrack = 0;
+
+    for (final budget in currentMonthBudgets) {
+      final budgetKey = budget.key as int?;
+      final totalSpent = transactions
+          .where((t) => t.type == TransactionType.expense)
+          .where((t) => t.date.month == today.month && t.date.year == today.year)
+          .where((t) => budgetKey != null ? t.budgetKey == budgetKey : t.category == budget.category)
+          .fold(0.0, (sum, t) => sum + t.amount);
+      if (totalSpent <= budget.amountLimit) budgetsOnTrack += 1;
+    }
+
+    final bool budgetMasterComplete = currentMonthBudgets.isNotEmpty && budgetsOnTrack == currentMonthBudgets.length;
+    final String budgetMasterProgress = currentMonthBudgets.isEmpty
+        ? 'No active budgets this month.'
+        : '$budgetsOnTrack / ${currentMonthBudgets.length} budgets on track.';
+
+    final List<MidTermChallenge> challenges = [
+      MidTermChallenge(
+        title: 'Weekly Saver',
+        description: 'Save ₱1,000 this week.',
+        xpReward: 60,
+        isCompleted: weeklySaverComplete,
+        progress: weeklySaverProgress,
+      ),
+      MidTermChallenge(
+        title: 'No-Spend Weekend',
+        description: 'Avoid any expense transactions for 2 days. Logging is still encouraged.',
+        xpReward: 40,
+        isCompleted: noSpendWeekendComplete,
+        progress: noSpendWeekendProgress,
+      ),
+      MidTermChallenge(
+        title: 'Budget Master',
+        description: 'Stay within all budgets this month.',
+        xpReward: 70,
+        isCompleted: budgetMasterComplete,
+        progress: budgetMasterProgress,
+      ),
+    ];
+
+    if (weeklySaverComplete) totalXp += 60;
+    if (noSpendWeekendComplete) totalXp += 40;
+    if (budgetMasterComplete) totalXp += 70;
+    level = (totalXp ~/ 500) + 1;
+
+    // 5. Calculate Achievements
     final owedDebts = debts.where((d) => !d.isOwedToMe).toList();
     final double totalPaidDebt = owedDebts.fold(0.0, (sum, d) => sum + d.paidAmount);
     final double totalRemainingOwed = owedDebts.fold(0.0, (sum, d) => sum + (d.totalAmount - d.paidAmount).clamp(0.0, double.infinity));
@@ -187,6 +299,7 @@ class GamificationService {
       level: level,
       streakDays: streak,
       dailyQuests: quests,
+      challenges: challenges,
       achievements: achievementsList,
     );
   }

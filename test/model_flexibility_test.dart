@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aj_wallet/models/account.dart';
-import 'package:aj_wallet/models/transaction_model.dart';
+import 'package:root_exp/models/account.dart';
+import 'package:root_exp/models/transaction_model.dart';
 
 void main() {
   group('Model Flexibility (Backup/Restore Resilience)', () {

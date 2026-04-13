@@ -1,8 +1,8 @@
-name: aj_wallet
+name: root_exp
 description: "A offline budget application for android"
 publish_to: "none"
 
-version: 0.1.0+3
+version: 0.1.0
 
 environment:
   sdk: ^3.11.1

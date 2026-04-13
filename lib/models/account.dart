@@ -34,6 +34,12 @@ class Account extends HiveObject {
   @HiveField(9)
   bool hasSeenTutorial;
 
+  @HiveField(10)
+  int xp;
+
+  @HiveField(11)
+  int level;
+
   Account({
     required this.name,
     this.budget = 0.0,
@@ -45,6 +51,8 @@ class Account extends HiveObject {
     this.isWipeEnabled = false,
     this.autoLockDurationSeconds = 30,
     this.hasSeenTutorial = false,
+    this.xp = 0,
+    this.level = 1,
   });
 
   Map<String, dynamic> toMap() {
@@ -59,6 +67,8 @@ class Account extends HiveObject {
       'isWipeEnabled': isWipeEnabled,
       'autoLockDurationSeconds': autoLockDurationSeconds,
       'hasSeenTutorial': hasSeenTutorial,
+      'xp': xp,
+      'level': level,
     };
   }
 
@@ -74,6 +84,8 @@ class Account extends HiveObject {
       isWipeEnabled: map['isWipeEnabled'],
       autoLockDurationSeconds: map['autoLockDurationSeconds'],
       hasSeenTutorial: map['hasSeenTutorial'] ?? false,
+      xp: map['xp'] ?? 0,
+      level: map['level'] ?? 1,
     );
   }
 }

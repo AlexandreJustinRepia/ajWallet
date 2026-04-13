@@ -3,6 +3,7 @@ import '../models/transaction_model.dart';
 import '../models/budget.dart';
 import '../models/goal.dart';
 import '../models/debt.dart';
+import '../models/account.dart';
 import 'package:intl/intl.dart';
 
 class DailyQuest {
@@ -537,5 +538,21 @@ class GamificationService {
       challenges: challenges,
       achievements: achievementsList,
     );
+  }
+
+  static Future<void> syncProfileToAccount(Account account, GamificationProfile profile) async {
+    bool changed = false;
+    if (account.xp != profile.xp) {
+      account.xp = profile.xp;
+      changed = true;
+    }
+    if (account.level != profile.level) {
+      account.level = profile.level;
+      changed = true;
+    }
+    
+    if (changed) {
+      await account.save();
+    }
   }
 }

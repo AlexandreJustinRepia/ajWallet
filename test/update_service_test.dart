@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aj_wallet/services/update_service.dart';
+import 'package:root_exp/services/update_service.dart';
 
 void main() {
   group('UpdateService', () {

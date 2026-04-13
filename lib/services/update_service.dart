@@ -29,7 +29,7 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  static const String _versionUrl = 'https://raw.githubusercontent.com/AlexandreJustinRepia/ajWallet/main/version.json';
+  static const String _versionUrl = 'https://raw.githubusercontent.com/AlexandreJustinRepia/RootEXP/main/version.json';
   
   static final ValueNotifier<UpdateInfo?> updateNotifier = ValueNotifier<UpdateInfo?>(null);
   static final Connectivity _connectivity = Connectivity();

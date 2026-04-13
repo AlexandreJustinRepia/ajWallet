@@ -161,29 +161,42 @@ class _AccountListScreenState extends State<AccountListScreen> {
                               ),
                               const SizedBox(width: 16),
                               Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      account.name,
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                        color: textColor,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Text(
+                                            account.name,
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: textColor,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: theme.primaryColor.withValues(alpha:0.1),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: theme.primaryColor.withValues(alpha:0.2)),
+                                            ),
+                                            child: Text(
+                                              'Lvl ${account.level}',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w900,
+                                                color: theme.primaryColor,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Offline Budget',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: hintColor,
-                                      ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              IconButton(
+                                IconButton(
                                 icon: Icon(Icons.edit_outlined, color: hintColor),
                                 onPressed: () => _showEditAccountDialog(account),
                               ),

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:aj_wallet/main.dart';
-import 'package:aj_wallet/create_account_screen.dart';
+import 'package:root_exp/main.dart';
+import 'package:root_exp/create_account_screen.dart';
 
 void main() {
   testWidgets('Create Account screen shows initial text', (WidgetTester tester) async {

@@ -18,22 +18,24 @@ class AccountAdapter extends TypeAdapter<Account> {
     };
     return Account(
       name: fields[0] as String,
-      budget: fields[1] as double? ?? 0.0,
+      budget: fields[1] as double,
       pin: fields[2] as String?,
-      isBiometricEnabled: fields[3] as bool? ?? false,
+      isBiometricEnabled: fields[3] as bool,
       fakePin: fields[4] as String?,
-      isFake: fields[5] as bool? ?? false,
-      maxFailedAttempts: fields[6] as int? ?? 5,
-      isWipeEnabled: fields[7] as bool? ?? false,
-      autoLockDurationSeconds: fields[8] as int? ?? 30,
-      hasSeenTutorial: fields[9] as bool? ?? false,
+      isFake: fields[5] as bool,
+      maxFailedAttempts: fields[6] as int,
+      isWipeEnabled: fields[7] as bool,
+      autoLockDurationSeconds: fields[8] as int,
+      hasSeenTutorial: fields[9] as bool,
+      xp: fields[10] as int,
+      level: fields[11] as int,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -53,7 +55,11 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(8)
       ..write(obj.autoLockDurationSeconds)
       ..writeByte(9)
-      ..write(obj.hasSeenTutorial);
+      ..write(obj.hasSeenTutorial)
+      ..writeByte(10)
+      ..write(obj.xp)
+      ..writeByte(11)
+      ..write(obj.level);
   }
 
   @override

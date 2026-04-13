@@ -1,6 +1,6 @@
-# AJ Wallet - Minimalist Offline Budget App
+# RootEXP - Minimalist Offline Budget App
 
-AJ Wallet is a professional, minimalist offline budget application built with Flutter. It prioritizes privacy, security, and a clean user experience with a monochromatic aesthetic and deep customization options.
+RootEXP is a professional, minimalist offline budget application built with Flutter. It prioritizes privacy, security, and a clean user experience with a monochromatic aesthetic and deep customization options.
 
 ## 🚀 Features
 
@@ -37,7 +37,7 @@ AJ Wallet is a professional, minimalist offline budget application built with Fl
 ## 🛠️ Tech Stack
 - **Framework:** [Flutter](https://flutter.dev/)
 - **Local Storage:** [Hive](https://pub.dev/packages/hive) (High-performance NoSQL)
-- **State Management:** `ValueNotifier` for lightweight reactive UI updates.
+State Management:** `ValueNotifier` for lightweight reactive UI updates.
 - **Biometrics:** `local_auth` for secure hardware-level authentication.
 - **Color Picking:** `flutter_colorpicker` for theme customization.
 
@@ -51,11 +51,11 @@ AJ Wallet is a professional, minimalist offline budget application built with Fl
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/your-repo/aj_wallet.git
+   git clone https://github.com/AlexandreJustinRepia/RootEXP.git
    ```
 2. Navigate to the project directory:
    ```bash
-   cd aj_wallet
+   cd RootEXP
    ```
 3. Install dependencies:
    ```bash

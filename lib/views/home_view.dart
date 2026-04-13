@@ -134,6 +134,13 @@ class _HomeViewState extends State<HomeView> {
       debts: debts
     );
 
+    // Sync progress to account model persistently
+    if (account != null && !widget.isTutorialActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        GamificationService.syncProfileToAccount(account, gamification);
+      });
+    }
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),

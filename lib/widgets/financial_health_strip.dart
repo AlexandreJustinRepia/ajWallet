@@ -23,6 +23,7 @@ class _FinancialHealthStripState extends State<FinancialHealthStrip> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     
     final items = [
       _HealthCard(
@@ -30,7 +31,7 @@ class _FinancialHealthStripState extends State<FinancialHealthStrip> {
         value: '${widget.budgetUsedPct.toStringAsFixed(0)}%',
         subtext: widget.budgetUsedPct > 100 ? 'Overspent' : 'Budget Used',
         icon: Icons.pie_chart_rounded,
-        color: widget.budgetUsedPct > 100 ? Colors.red : Colors.blue,
+        color: widget.budgetUsedPct > 100 ? theme.colorScheme.error : theme.colorScheme.secondary,
         progress: (widget.budgetUsedPct / 100).clamp(0.0, 1.0),
       ),
       _HealthCard(
@@ -38,7 +39,7 @@ class _FinancialHealthStripState extends State<FinancialHealthStrip> {
         value: '${widget.savingsPct.toStringAsFixed(0)}%',
         subtext: 'Overall Progress',
         icon: Icons.savings_rounded,
-        color: Colors.green,
+        color: theme.primaryColor,
         progress: (widget.savingsPct / 100).clamp(0.0, 1.0),
       ),
       _HealthCard(
@@ -46,8 +47,8 @@ class _FinancialHealthStripState extends State<FinancialHealthStrip> {
         value: '₱${widget.activeDebtAmount.toStringAsFixed(0)}',
         subtext: 'Money You Owe',
         icon: Icons.warning_rounded,
-        color: widget.activeDebtAmount > 0 ? Colors.orange : Colors.grey,
-        progress: widget.activeDebtAmount > 0 ? 0.0 : 1.0, // Full if 0 debt
+        color: widget.activeDebtAmount > 0 ? (isDark ? Colors.amber[300]! : Colors.amber[700]!) : Colors.grey,
+        progress: widget.activeDebtAmount > 0 ? 0.0 : 1.0, 
       ),
     ];
 

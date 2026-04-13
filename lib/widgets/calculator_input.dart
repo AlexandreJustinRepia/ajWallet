@@ -430,11 +430,11 @@ class _CalculatorKeyboardState extends State<CalculatorKeyboard> {
                 backgroundColor: isNumber
                     ? theme.cardColor
                     : (isAC
-                          ? Colors.orange.withValues(alpha:0.1)
+                          ? const Color(0xFFF57C00).withValues(alpha:0.1)
                           : theme.primaryColor.withValues(alpha:0.1)),
                 foregroundColor: isNumber
                     ? theme.colorScheme.onSurface
-                    : (isAC ? Colors.orange : theme.primaryColor),
+                    : (isAC ? const Color(0xFFF57C00) : theme.primaryColor),
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

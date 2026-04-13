@@ -12,7 +12,7 @@ class Insight {
   Insight({
     required this.message,
     required this.icon,
-    this.color = Colors.blue,
+    this.color = const Color(0xFF00796B),
   });
 }
 
@@ -74,7 +74,7 @@ class FinancialInsightsService {
           ? "Reflecting on this week's pace may help find balance" 
           : "Your spending has been more intentional this week",
       icon: isIncrease ? Icons.trending_up_rounded : Icons.trending_down_rounded,
-      color: isIncrease ? Colors.grey : Colors.green,
+      color: isIncrease ? Colors.grey : const Color(0xFF2E7D32),
     );
   }
 
@@ -157,7 +157,7 @@ class FinancialInsightsService {
           ? "Pacing your outflows may extend your runway" 
           : "Your current runway is approximately $daysRemaining days",
       icon: Icons.hourglass_bottom_rounded,
-      color: daysRemaining < 7 ? Colors.orange.withValues(alpha: 0.7) : Colors.grey,
+      color: daysRemaining < 7 ? const Color(0xFFF57C00).withValues(alpha: 0.7) : Colors.grey,
     );
   }
 

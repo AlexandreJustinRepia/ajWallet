@@ -8,12 +8,14 @@ class QuickAddResult {
   final String title;
   final String? fromWallet;
   final String? toWallet;
+  final Color color;
 
   QuickAddResult({
     required this.amount,
     required this.category,
     required this.type,
     required this.title,
+    this.color = const Color(0xFF00695C),
     this.fromWallet,
     this.toWallet,
   });
@@ -126,6 +128,7 @@ class QuickAddService {
       title: title,
       fromWallet: fromWallet,
       toWallet: toWallet,
+      color: type == TransactionType.income ? const Color(0xFF2E7D32) : (type == TransactionType.expense ? const Color(0xFFB71C1C) : const Color(0xFF00695C)),
     );
   }
 
@@ -154,9 +157,9 @@ class QuickAddService {
 
   static Color getTypeColor(TransactionType type) {
     switch (type) {
-      case TransactionType.income: return Colors.green;
-      case TransactionType.expense: return Colors.red;
-      case TransactionType.transfer: return Colors.blue;
+      case TransactionType.income: return const Color(0xFF2E7D32);
+      case TransactionType.expense: return const Color(0xFFC62828);
+      case TransactionType.transfer: return const Color(0xFF00796B);
     }
   }
 }

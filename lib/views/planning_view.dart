@@ -138,7 +138,7 @@ class PlanningView extends StatelessWidget {
             addKey: budgetAddKey,
             title: 'Monthly Budgets',
             icon: Icons.pie_chart_outline_rounded,
-            color: Colors.blue,
+            color: theme.colorScheme.secondary,
             count: budgets.length,
             onAdd: () async {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBudgetScreen(accountKey: accountKey)));
@@ -163,7 +163,7 @@ class PlanningView extends StatelessWidget {
                           subtitle: DateFormat('MMM yyyy').format(DateTime.now()),
                           trailingText: '₱0 / ₱2000',
                           progress: 0.0,
-                          progressColor: Colors.blue,
+                          progressColor: theme.colorScheme.secondary,
                           onDelete: () {},
                         ),
                       ),
@@ -185,7 +185,7 @@ class PlanningView extends StatelessWidget {
                         subtitle: DateFormat('MMM yyyy').format(DateTime(b.year, b.month)),
                         trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
                         progress: progress,
-                        progressColor: isOver ? Colors.red : Colors.blue,
+                        progressColor: isOver ? theme.colorScheme.error : theme.colorScheme.secondary,
                         isOverspent: isOver,
                         onDelete: () async {
                           await DatabaseService.deleteBudget(b);
@@ -206,7 +206,7 @@ class PlanningView extends StatelessWidget {
             addKey: goalAddKey,
             title: 'Savings Goals',
             icon: Icons.flag_outlined,
-            color: Colors.green,
+            color: theme.primaryColor,
             count: goals.length,
             onAdd: () async {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddGoalScreen(accountKey: accountKey)));
@@ -222,7 +222,7 @@ class PlanningView extends StatelessWidget {
                         subtitle: 'Target: ₱10000',
                         trailingText: '₱0 saved',
                         progress: 0.0,
-                        progressColor: Colors.green,
+                        progressColor: theme.primaryColor,
                         primaryActionLabel: 'Save',
                         primaryActionKey: goalFundKey,
                         onPrimaryAction: () {},
@@ -240,7 +240,7 @@ class PlanningView extends StatelessWidget {
                       subtitle: 'Target: ₱${g.targetAmount.toStringAsFixed(0)}',
                       trailingText: '₱${g.savedAmount.toStringAsFixed(0)} saved',
                       progress: progress,
-                      progressColor: Colors.green,
+                      progressColor: theme.primaryColor,
                       primaryActionLabel: 'Save',
                       primaryActionKey: index == 0 ? goalFundKey : null,
                       onPrimaryAction: () async {
@@ -279,7 +279,7 @@ class PlanningView extends StatelessWidget {
             addKey: debtAddKey,
             title: 'Debts & Loans',
             icon: Icons.handshake_outlined,
-            color: Colors.orange,
+            color: Colors.amber[700]!,
             count: debts.length,
             onAdd: () async {
               final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDebtScreen(accountKey: accountKey)));
@@ -336,7 +336,7 @@ class PlanningView extends StatelessWidget {
       subtitle: d.dueDate != null ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}' : 'No due date',
       trailingText: '₱${remaining.toStringAsFixed(0)}',
       progress: progress,
-      progressColor: Colors.orange,
+      progressColor: Colors.amber[700]!,
       primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
       onPrimaryAction: () async {
         final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
@@ -421,8 +421,8 @@ class PlanningView extends StatelessWidget {
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(
-                              backgroundColor: isPayment ? Colors.blue.withValues(alpha:0.1) : Colors.orange.withValues(alpha:0.1),
-                              child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? Colors.blue : Colors.orange, size: 20),
+                              backgroundColor: isPayment ? const Color(0xFF00796B).withValues(alpha:0.1) : const Color(0xFFF57C00).withValues(alpha:0.1),
+                              child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? const Color(0xFF00796B) : const Color(0xFFF57C00), size: 20),
                             ),
                             title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
                             subtitle: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.date), style: const TextStyle(fontSize: 12)),
@@ -430,7 +430,7 @@ class PlanningView extends StatelessWidget {
                               '${isPayment ? '+' : ''}₱${tx.amount.toStringAsFixed(0)}',
                               style: TextStyle(
                                 fontWeight: FontWeight.w900, 
-                                color: isPayment ? Colors.green : Colors.red,
+                                color: isPayment ? theme.primaryColor : theme.colorScheme.error,
                               ),
                             ),
                           );
@@ -654,7 +654,7 @@ class _BudgetTotalSummary extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isOver = spent > limit;
-    final barColor = isOver ? Colors.red : Colors.blue;
+    final barColor = isOver ? const Color(0xFFC62828) : const Color(0xFF2E7D32);
     final remaining = (limit - spent).clamp(0.0, double.infinity);
 
     return Container(
@@ -729,7 +729,7 @@ class _BudgetTotalSummary extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Colors.blue.withValues(alpha:0.7),
+                    color: const Color(0xFF2E7D32).withValues(alpha:0.7),
                   ),
                 )
               else

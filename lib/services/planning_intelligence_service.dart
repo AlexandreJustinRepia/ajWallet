@@ -104,7 +104,7 @@ class PlanningIntelligenceService {
           message:
               'Your ${b.category} budget is over by ₱${(-remaining).toStringAsFixed(0)}.',
           icon: Icons.warning_amber_rounded,
-          color: Colors.red,
+          color: const Color(0xFFC62828), // Deep Red
           badgeLabel: 'OVER BUDGET',
           urgency: InsightUrgency.high,
         ));
@@ -131,7 +131,7 @@ class PlanningIntelligenceService {
               ? 'At this pace your ${b.category} budget will be exceeded today.'
               : 'You\'re likely to exceed your ${b.category} budget in $daysUntilExceeded day${daysUntilExceeded == 1 ? '' : 's'}.',
           icon: Icons.trending_up_rounded,
-          color: daysUntilExceeded <= 3 ? Colors.red : Colors.orange,
+          color: daysUntilExceeded <= 3 ? const Color(0xFFC62828) : const Color(0xFFF57C00),
           badgeLabel: 'BUDGET RISK',
           urgency: urgency,
         ));
@@ -174,7 +174,7 @@ class PlanningIntelligenceService {
         message:
             'You have ₱${unallocated.toStringAsFixed(0)} unallocated this month. Consider setting a budget or adding to a goal.',
         icon: Icons.savings_outlined,
-        color: Colors.blue,
+        color: const Color(0xFF00796B), // Botanical Teal
         badgeLabel: 'UNALLOCATED',
         urgency: InsightUrgency.medium,
       );
@@ -225,7 +225,7 @@ class PlanningIntelligenceService {
           message:
               'Save ₱$weeklyBoost more/week to reach your "${g.name}" goal $monthsSaved month${monthsSaved == 1 ? '' : 's'} earlier.',
           icon: Icons.rocket_launch_rounded,
-          color: Colors.green,
+          color: const Color(0xFF2E7D32), // Forest Green
           badgeLabel: 'GOAL BOOST',
           urgency: InsightUrgency.low,
         ));
@@ -251,7 +251,7 @@ class PlanningIntelligenceService {
         message:
             'You\'re $pct% toward your "${g.name}" goal — almost there! ₱${(g.targetAmount - g.savedAmount).toStringAsFixed(0)} left.',
         icon: Icons.flag_rounded,
-        color: Colors.green,
+        color: const Color(0xFF2E7D32), // Forest Green
         badgeLabel: 'NEARLY DONE',
         urgency: InsightUrgency.low,
       );
@@ -276,7 +276,7 @@ class PlanningIntelligenceService {
         message:
             'Your ₱${(d.totalAmount - d.paidAmount).toStringAsFixed(0)} $label ${d.personName} is $daysOverdue day${daysOverdue == 1 ? '' : 's'} past due.',
         icon: Icons.schedule_rounded,
-        color: Colors.red,
+        color: const Color(0xFFC62828), // Deep Red
         badgeLabel: 'OVERDUE',
         urgency: InsightUrgency.high,
       );
@@ -319,7 +319,7 @@ class PlanningIntelligenceService {
           message:
               'Great pace! Your ${b.category} budget is well under control this month.',
           icon: Icons.check_circle_outline_rounded,
-          color: Colors.green,
+          color: const Color(0xFF2E7D32), // Forest Green
           badgeLabel: 'ON TRACK',
           urgency: InsightUrgency.low,
         ));

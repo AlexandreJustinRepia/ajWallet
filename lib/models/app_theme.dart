@@ -144,28 +144,28 @@ class AppTheme extends HiveObject {
   static AppTheme light() => AppTheme(
         id: 'default_light',
         isDark: false,
-        primaryColor: 0xFF000000,
+        primaryColor: 0xFF1B5E20, // Deep Forest Green
         backgroundColor: 0xFFFFFFFF,
         textColor: 0xFF000000,
-        cardColor: 0xFFF5F5F5,
+        cardColor: 0xFFF8F9FA,
         incomeColor: 0xFF2D5A27,
         expenseColor: 0xFF922B21,
         warningColor: 0xFFF5A623,
-        infoColor: 0xFF4A90E2,
-        name: 'Classic Light',
+        infoColor: 0xFF00796B, // Teal-Green Info
+        name: 'Botanical Light',
       );
 
   static AppTheme dark() => AppTheme(
         id: 'default_dark',
         isDark: true,
-        primaryColor: 0xFFFFFFFF,
-        backgroundColor: 0xFF0A0A0A,
-        textColor: 0xFFFFFFFF,
-        cardColor: 0xFF161616,
+        primaryColor: 0xFF81C784, // Soft Botanical Green
+        backgroundColor: 0xFF0A0F0A, // Deep Moss Background
+        textColor: 0xFFE0E0E0,
+        cardColor: 0xFF121A12,
         incomeColor: 0xFF3DA35D,
         expenseColor: 0xFFE63946,
         warningColor: 0xFFFFC107,
-        infoColor: 0xFF64B5F6,
-        name: 'Classic Dark',
+        infoColor: 0xFF4DB6AC, // Soft Teal Info
+        name: 'Botanical Dark',
       );
 }

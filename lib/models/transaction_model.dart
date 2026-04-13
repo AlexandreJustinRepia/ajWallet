@@ -109,11 +109,11 @@ class Transaction extends HiveObject {
   Color get typeColor {
     switch (type) {
       case TransactionType.income:
-        return Colors.green;
+        return const Color(0xFF2E7D32); // Forest Green
       case TransactionType.expense:
-        return Colors.red;
+        return const Color(0xFFC62828); // Deep Red
       case TransactionType.transfer:
-        return Colors.blue;
+        return const Color(0xFF00796B); // Botanical Teal
     }
   }
 }

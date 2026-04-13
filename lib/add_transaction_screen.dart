@@ -423,8 +423,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       padding: const EdgeInsets.all(16),
                       margin: const EdgeInsets.only(bottom: 24),
                       decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha:0.1),
-                        border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
+                        color: const Color(0xFFF57C00).withValues(alpha:0.1), // Botanical Gold
+                        border: Border.all(color: const Color(0xFFF57C00).withValues(alpha:0.3)),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
@@ -433,7 +433,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           padding: const EdgeInsets.only(bottom: 4),
                           child: Text(
                             alert,
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFF57C00)),
                           ),
                         )).toList(),
                       ),
@@ -443,14 +443,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   Row(
                     key: _typeKey,
                     children: [
-                      _typeButton('Income', TransactionType.income, Colors.green),
+                      _typeButton('Income', TransactionType.income, const Color(0xFF2E7D32)), // Forest Green
                       const SizedBox(width: 8),
-                      _typeButton('Expense', TransactionType.expense, Colors.red),
+                      _typeButton('Expense', TransactionType.expense, const Color(0xFFC62828)), // Deep Red
                       const SizedBox(width: 8),
                       _typeButton(
                         'Transfer',
                         TransactionType.transfer,
-                        Colors.blue,
+                        const Color(0xFF00796B), // Botanical Teal
                       ),
                     ],
                   ),
@@ -569,7 +569,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                                             child: Text(
                                               budgetStat,
                                               style: TextStyle(
-                                                color: budgetStat.contains('-') ? Colors.red : Colors.grey,
+                                                color: budgetStat.contains('-') ? const Color(0xFFC62828) : Colors.grey,
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.bold,
                                               ),

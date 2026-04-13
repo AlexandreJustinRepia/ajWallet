@@ -174,7 +174,7 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
               child: ElevatedButton(
                 onPressed: _isPlayingConfetti ? null : _save,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.isWithdrawing ? Colors.orange : Colors.green,
+                  backgroundColor: widget.isWithdrawing ? const Color(0xFFF57C00) : const Color(0xFF2E7D32),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
                 child: _isPlayingConfetti
@@ -203,7 +203,7 @@ class _FundGoalScreenState extends State<FundGoalScreen> {
             confettiController: _confettiController,
             blastDirectionality: BlastDirectionality.explosive,
             shouldLoop: false,
-            colors: const [Colors.green, Colors.blue, Colors.pink, Colors.orange, Colors.purple],
+            colors: const [Color(0xFF2E7D32), Color(0xFF00796B), Color(0xFFF57C00), Color(0xFFC62828)],
           ),
         ),
       ],

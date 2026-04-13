@@ -318,7 +318,7 @@ class _ListViewTab extends StatelessWidget {
                   height: 14,
                   margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
-                    color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : (tx.type == TransactionType.expense ? theme.colorScheme.error : Colors.blue),
+                    color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : (tx.type == TransactionType.expense ? theme.colorScheme.error : const Color(0xFF00796B)),
                     shape: BoxShape.circle,
                   ),
                 ),

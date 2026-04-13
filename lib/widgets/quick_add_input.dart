@@ -259,7 +259,7 @@ class QuickAddInputState extends State<QuickAddInput> {
                           _buildPreviewPill(
                             icon: QuickAddService.getCategoryIcon(_preview!.category),
                             label: _preview!.category,
-                            color: Colors.blue,
+                            color: const Color(0xFF00796B),
                           ),
                           const SizedBox(width: 8),
                           _buildPreviewPill(

@@ -33,7 +33,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   // Onboarding Keys
   final GlobalKey _balanceKey = GlobalKey();
-  final GlobalKey<QuickAddInputState> _quickAddKey = GlobalKey<QuickAddInputState>();
+  final GlobalKey<QuickAddInputState> _quickAddKey =
+      GlobalKey<QuickAddInputState>();
   final GlobalKey _activityHeaderKey = GlobalKey();
   final GlobalKey _sampleTransactionKey = GlobalKey();
 
@@ -221,19 +222,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
       OnboardingStep(
         targetKey: _balanceKey,
         title: 'Total Balance',
-        description: 'This is your Total Balance — it shows how much money you currently have across your wallets.',
+        description:
+            'This is your Total Balance — it shows how much money you currently have across your wallets.',
         onStepEnter: () => _scrollTo(_balanceKey, 0.1),
       ),
       OnboardingStep(
         targetKey: _quickAddKey,
         title: 'Quick Add',
-        description: 'Use Quick Add to instantly record a transaction without leaving the home screen.',
+        description:
+            'Use Quick Add to instantly record a transaction without leaving the home screen.',
         onStepEnter: () => _scrollTo(_quickAddKey, 0.3),
       ),
       OnboardingStep(
         targetKey: _quickAddKey,
         title: 'Smart Parsing',
-        description: 'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
+        description:
+            'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
         onStepEnter: () {
           _quickAddKey.currentState?.simulateTyping('250 Food');
           _scrollTo(_quickAddKey, 0.3);
@@ -242,7 +246,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       OnboardingStep(
         targetKey: _balanceKey,
         title: 'Automatic Updates',
-        description: 'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
+        description:
+            'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
         onStepEnter: () async {
           _scrollTo(_balanceKey, 0.1);
           await Future.delayed(const Duration(milliseconds: 300));
@@ -252,13 +257,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
       OnboardingStep(
         targetKey: _activityHeaderKey,
         title: 'Recent Activity',
-        description: 'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
+        description:
+            'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
         onStepEnter: () => _scrollTo(_activityHeaderKey, 0.5),
       ),
       OnboardingStep(
         targetKey: _sampleTransactionKey,
         title: 'Transaction Details',
-        description: 'Each entry shows the amount, category, and type of transaction. Tap any item to see more details.',
+        description:
+            'Each entry shows the amount, category, and type of transaction. Tap any item to see more details.',
         onStepEnter: () => _scrollTo(_sampleTransactionKey, 0.6),
       ),
       OnboardingStep(
@@ -267,7 +274,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         description: 'Tap here to view all your transactions in detail.',
         onStepEnter: () async {
           setState(() {
-             _showFakeDetailsModal = false;
+            _showFakeDetailsModal = false;
           });
         },
       ),
@@ -285,55 +292,59 @@ class _DashboardScreenState extends State<DashboardScreen> {
       OnboardingStep(
         targetKey: _activitySingleItemKey,
         title: 'Transaction Details',
-        description: 'Each transaction shows the amount, category, and type (income, expense, or transfer).',
+        description:
+            'Each transaction shows the amount, category, and type (income, expense, or transfer).',
       ),
       OnboardingStep(
         targetKey: _activityColorIndicatorKey,
         title: 'Color Indicators',
-        description: 'Quickly identify transactions — income, expenses, and transfers have different colors!',
+        description:
+            'Quickly identify transactions — income, expenses, and transfers have different colors!',
       ),
       OnboardingStep(
         targetKey: _activityDateHeaderKey,
         title: 'Timeline',
-        description: 'Transactions are organized by date so you can easily track your activity.',
+        description:
+            'Transactions are organized by date so you can easily track your activity.',
       ),
       OnboardingStep(
         targetKey: _activityFilterChipsKey,
         title: 'Filters',
         description: 'Use filters to quickly find specific transactions.',
         onStepEnter: () {
-            _scrollTo(_activityFilterChipsKey, 0.1);
-        }
+          _scrollTo(_activityFilterChipsKey, 0.1);
+        },
       ),
       OnboardingStep(
         targetKey: _activitySearchBarKey,
         title: 'Search Bar',
         description: 'Search for transactions by keyword, category, or amount.',
         onStepEnter: () {
-            _scrollTo(_activitySearchBarKey, 0.1);
-        }
+          _scrollTo(_activitySearchBarKey, 0.1);
+        },
       ),
       OnboardingStep(
         targetKey: _activitySingleItemKey,
         title: 'View Details',
         description: 'Tap a transaction to view more details.',
         onStepEnter: () {
-           _scrollTo(_activitySingleItemKey, 0.5);
-           setState(() {
-             _showFakeDetailsModal = false;
-           });
-        }
+          _scrollTo(_activitySingleItemKey, 0.5);
+          setState(() {
+            _showFakeDetailsModal = false;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _fakeDetailsModalKey,
         title: 'Transaction Details',
-        description: 'Here you can see complete information about the transaction.',
+        description:
+            'Here you can see complete information about the transaction.',
         onStepEnter: () {
-           setState(() {
-             _showFakeDetailsModal = true;
-             _showFakeDeleteConfirm = false;
-           });
-        }
+          setState(() {
+            _showFakeDetailsModal = true;
+            _showFakeDeleteConfirm = false;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _fakeDetailsEditIconKey,
@@ -345,24 +356,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Delete Transaction',
         description: 'Tap here to delete this transaction if needed.',
         onStepEnter: () async {
-           if (!_hasShownEditTutorial) {
-             _hasShownEditTutorial = true;
-             // Push to the AddTransactionScreen in tutorial mode!
-             await Navigator.push(context, MaterialPageRoute(
-                builder: (_) => AddTransactionScreen(accountKey: accountKey ?? 0, isTutorialMode: true)
-             ));
-           }
-        }
+          if (!_hasShownEditTutorial) {
+            _hasShownEditTutorial = true;
+            // Push to the AddTransactionScreen in tutorial mode!
+            await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AddTransactionScreen(
+                  accountKey: accountKey ?? 0,
+                  isTutorialMode: true,
+                ),
+              ),
+            );
+          }
+        },
       ),
       OnboardingStep(
         targetKey: _fakeDetailsDeleteIconKey,
         title: 'Permanent Deletion',
-        description: 'Deleting will permanently remove this transaction from your records.',
+        description:
+            'Deleting will permanently remove this transaction from your records.',
         onStepEnter: () {
-           setState(() {
-             _showFakeDeleteConfirm = true;
-           });
-        }
+          setState(() {
+            _showFakeDeleteConfirm = true;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _fakeDeleteConfirmKey,
@@ -371,55 +389,58 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       OnboardingStep(
         title: 'Easily Manageable',
-        description: 'Your transactions are always editable and easy to manage!',
+        description:
+            'Your transactions are always editable and easy to manage!',
         onStepEnter: () {
-           setState(() {
-             _showFakeDetailsModal = false;
-             _showFakeDeleteConfirm = false;
-           });
-        }
+          setState(() {
+            _showFakeDetailsModal = false;
+            _showFakeDeleteConfirm = false;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _activityCalendarTabKey,
         title: 'Calendar View',
-        description: 'Switch to the Calendar View to see your activity across the month.',
+        description:
+            'Switch to the Calendar View to see your activity across the month.',
         onStepEnter: () {
-           setState(() {
-             _showFakeDetailsModal = false;
-             _activityTutorialTabIndex = 0;
-           });
-        }
+          setState(() {
+            _showFakeDetailsModal = false;
+            _activityTutorialTabIndex = 0;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _activityCalendarAreaKey,
         title: 'Monthly Calendar',
-        description: 'Days with transactions will have a bright marker dot. Tap on any day to see its summary!',
+        description:
+            'Days with transactions will have a bright marker dot. Tap on any day to see its summary!',
         onStepEnter: () {
-           setState(() {
-             _activityTutorialTabIndex = 1;
-           });
-        }
+          setState(() {
+            _activityTutorialTabIndex = 1;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _walletsTabKey,
         title: 'Wallets Tab',
         description: 'Tap here to manage your wallets.',
         onStepEnter: () {
-           setState(() {
-             _showFakeDetailsModal = false;
-             _activityTutorialTabIndex = 0;
-           });
-        }
+          setState(() {
+            _showFakeDetailsModal = false;
+            _activityTutorialTabIndex = 0;
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _walletListKey,
         title: 'Your Wallets',
         description: 'Here you can see all your wallets in one place.',
         onStepEnter: () {
-           setState(() {
-             _selectedIndex = 2; // Wallets Tab
-           });
-        }
+          setState(() {
+            _selectedIndex = 2; // Wallets Tab
+          });
+        },
       ),
       OnboardingStep(
         targetKey: _singleWalletKey,
@@ -431,13 +452,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Add Wallet',
         description: 'Tap here to add a new wallet.',
         onStepEnter: () async {
-           await Navigator.push(context, MaterialPageRoute(
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
               builder: (_) => WalletFormScreen(
-                 accountKey: accountKey ?? 0, 
-                 isTutorialMode: true
-              )
-           ));
-        }
+                accountKey: accountKey ?? 0,
+                isTutorialMode: true,
+              ),
+            ),
+          );
+        },
       ),
       OnboardingStep(
         targetKey: _lifeOfMoneyKey,
@@ -460,14 +484,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Plan Tab',
         description: 'Tap here to manage your financial plans.',
         onStepEnter: () {
-           setState(() {
-             _selectedIndex = 3; // Plan Tab
-           });
-        }
+          setState(() {
+            _selectedIndex = 3; // Plan Tab
+          });
+        },
       ),
       OnboardingStep(
         title: 'Financial Planning',
-        description: 'Plan your money with budgets, savings, and debt tracking.',
+        description:
+            'Plan your money with budgets, savings, and debt tracking.',
       ),
       OnboardingStep(
         targetKey: _planBudgetSectionKey,
@@ -480,18 +505,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Add Budget',
         description: 'Tap here to create a new budget.',
         onStepEnter: () async {
-           await Navigator.push(context, MaterialPageRoute(
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
               builder: (_) => AddBudgetScreen(
-                 accountKey: accountKey ?? 0, 
-                 isTutorialMode: true
-              )
-           ));
-        }
+                accountKey: accountKey ?? 0,
+                isTutorialMode: true,
+              ),
+            ),
+          );
+        },
       ),
       OnboardingStep(
         targetKey: _planBudgetIndicatorKey,
         title: 'Track Your Limits',
-        description: 'When you add transactions, you\'ll see how much budget is left.',
+        description:
+            'When you add transactions, you\'ll see how much budget is left.',
         onStepEnter: () => _scrollTo(_planBudgetSectionKey, 0.2),
       ),
       OnboardingStep(
@@ -505,18 +534,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Add Goal',
         description: 'Tap here to create a savings goal.',
         onStepEnter: () async {
-           await Navigator.push(context, MaterialPageRoute(
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
               builder: (_) => AddGoalScreen(
-                 accountKey: accountKey ?? 0, 
-                 isTutorialMode: true
-              )
-           ));
-        }
+                accountKey: accountKey ?? 0,
+                isTutorialMode: true,
+              ),
+            ),
+          );
+        },
       ),
       OnboardingStep(
         targetKey: _planGoalFundKey,
         title: 'Add to Savings',
-        description: 'Add money to your goal — it will be deducted from your balance.',
+        description:
+            'Add money to your goal — it will be deducted from your balance.',
         onStepEnter: () => _scrollTo(_planGoalFundKey, 0.4),
       ),
       OnboardingStep(
@@ -535,27 +568,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: 'Record Debt',
         description: 'Tap here to record a debt or loan.',
         onStepEnter: () async {
-           await Navigator.push(context, MaterialPageRoute(
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
               builder: (_) => AddDebtScreen(
-                 accountKey: accountKey ?? 0, 
-                 isTutorialMode: true
-              )
-           ));
-        }
+                accountKey: accountKey ?? 0,
+                isTutorialMode: true,
+              ),
+            ),
+          );
+        },
       ),
       OnboardingStep(
         title: 'Balance Reflections',
-        description: 'Giving money deducts from your wallet. Borrowing adds to your wallet.',
+        description:
+            'Giving money deducts from your wallet. Borrowing adds to your wallet.',
       ),
       OnboardingStep(
         title: 'Manage Your Finances',
         description: 'Now you can budget, save, and track debts بسهولة!',
         onStepEnter: () {
-           setState(() {
-             _showFakeDetailsModal = false;
-             _activityTutorialTabIndex = 0;
-           });
-        }
+          setState(() {
+            _showFakeDetailsModal = false;
+            _activityTutorialTabIndex = 0;
+          });
+        },
       ),
     ];
 
@@ -588,10 +625,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            
+
             if (_showFakeDetailsModal)
               Positioned(
-                bottom: 0, left: 0, right: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
                 child: Material(
                   color: Colors.transparent,
                   child: Container(
@@ -599,10 +638,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
                       color: theme.scaffoldBackgroundColor,
-                      borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(32),
+                      ),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha:0.3), blurRadius: 20, offset: const Offset(0, -5)),
-                      ]
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, -5),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -610,7 +655,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Transaction Details', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            const Text(
+                              'Transaction Details',
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                             Row(
                               children: [
                                 IconButton(
@@ -620,7 +671,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                                 IconButton(
                                   key: _fakeDetailsDeleteIconKey,
-                                  icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                                  icon: const Icon(
+                                    Icons.delete_outline_rounded,
+                                    color: Colors.red,
+                                  ),
                                   onPressed: () {},
                                 ),
                               ],
@@ -629,27 +683,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                         const SizedBox(height: 24),
                         Container(
-                          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: 20,
+                            horizontal: 20,
+                          ),
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: theme.cardColor,
                             borderRadius: BorderRadius.circular(32),
-                            border: Border.all(color: theme.dividerColor, width: 0.5),
+                            border: Border.all(
+                              color: theme.dividerColor,
+                              width: 0.5,
+                            ),
                           ),
                           child: Column(
                             children: [
                               Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: theme.colorScheme.error.withValues(alpha:0.1),
+                                  color: theme.colorScheme.error.withValues(
+                                    alpha: 0.1,
+                                  ),
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(Icons.south_west_rounded, color: theme.colorScheme.error, size: 32),
+                                child: Icon(
+                                  Icons.south_west_rounded,
+                                  color: theme.colorScheme.error,
+                                  size: 32,
+                                ),
                               ),
                               const SizedBox(height: 16),
-                              Text('- ₱250.00', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: theme.colorScheme.error, letterSpacing: -1)),
+                              Text(
+                                '- ₱250.00',
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.w900,
+                                  color: theme.colorScheme.error,
+                                  letterSpacing: -1,
+                                ),
+                              ),
                               const SizedBox(height: 8),
-                              Text('EXPENSE', style: TextStyle(letterSpacing: 2, fontWeight: FontWeight.w900, fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4))),
+                              Text(
+                                'EXPENSE',
+                                style: TextStyle(
+                                  letterSpacing: 2,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.4),
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -658,13 +741,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: theme.dividerColor.withValues(alpha:0.05), borderRadius: BorderRadius.circular(10)),
-                              child: Icon(Icons.category_rounded, size: 20, color: theme.primaryColor),
+                              decoration: BoxDecoration(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.05,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.category_rounded,
+                                size: 20,
+                                color: theme.primaryColor,
+                              ),
                             ),
                             const SizedBox(width: 16),
-                            Text('Category', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                            Text(
+                              'Category',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.5),
+                              ),
+                            ),
                             const Spacer(),
-                            const Text('Food', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const Text(
+                              'Food',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                           ],
                         ),
                         const Divider(height: 24),
@@ -672,24 +778,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: theme.dividerColor.withValues(alpha:0.05), borderRadius: BorderRadius.circular(10)),
-                              child: Icon(Icons.calendar_today_rounded, size: 20, color: theme.primaryColor),
+                              decoration: BoxDecoration(
+                                color: theme.dividerColor.withValues(
+                                  alpha: 0.05,
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(
+                                Icons.calendar_today_rounded,
+                                size: 20,
+                                color: theme.primaryColor,
+                              ),
                             ),
                             const SizedBox(width: 16),
-                            Text('Note', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                            Text(
+                              'Note',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(alpha: 0.5),
+                              ),
+                            ),
                             const Spacer(),
-                            const Text('Grocery Run', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            const Text(
+                              'Grocery Run',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
                           ],
                         ),
                       ],
                     ),
-                  )
-                )
+                  ),
+                ),
               ),
-            
+
             if (_showFakeDeleteConfirm)
               Container(
-                color: Colors.black.withValues(alpha:0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 child: Center(
                   child: Container(
                     margin: const EdgeInsets.symmetric(horizontal: 40),
@@ -701,22 +830,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text('Delete Transaction?', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Delete Transaction?',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 16),
-                        const Text('This action cannot be undone. Are you sure you want to remove this record?', textAlign: TextAlign.center),
+                        const Text(
+                          'This action cannot be undone. Are you sure you want to remove this record?',
+                          textAlign: TextAlign.center,
+                        ),
                         const SizedBox(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
-                            TextButton(onPressed: () {}, child: const Text('Cancel')),
+                            TextButton(
+                              onPressed: () {},
+                              child: const Text('Cancel'),
+                            ),
                             const SizedBox(width: 8),
                             TextButton(
                               key: _fakeDeleteConfirmKey,
-                              onPressed: () {}, 
-                              child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
+                              onPressed: () {},
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                             ),
                           ],
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -725,8 +872,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-      floatingActionButton: _selectedIndex == 4 
-          ? null 
+      floatingActionButton: _selectedIndex == 4
+          ? null
           : FloatingActionButton(
               key: _walletsFabKey,
               onPressed: () => _onFabPressed(context, accountKey),
@@ -833,10 +980,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         itemBuilder: (context) => [
           _buildPopupHeader(context, account?.name ?? 'User'),
           const PopupMenuDivider(),
-          _buildPopupItem(Icons.palette_outlined, 'Theme Settings', 'theme'),
           _buildPopupItem(Icons.account_circle_outlined, 'Account', 'account'),
+          _buildPopupItem(Icons.palette_outlined, 'Theme Settings', 'theme'),
           _buildPopupItem(Icons.security_rounded, 'Security', 'security'),
-          _buildPopupItem(Icons.info_outline_rounded, 'About RootEXP', 'about'),
+          _buildPopupItem(Icons.info_outline_rounded, 'About', 'about'),
           const PopupMenuDivider(),
           _buildPopupItem(
             Icons.logout_rounded,
@@ -897,15 +1044,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             decoration: InputDecoration(
               labelText: 'Account Name',
               hintText: 'e.g. My Savings',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+            validator: (value) =>
+                (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -921,7 +1078,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.primaryColor,
               foregroundColor: theme.colorScheme.onPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Save Changes'),
           ),
@@ -965,7 +1124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withValues(alpha:0.1),
+              color: theme.primaryColor.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -990,7 +1149,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   'Account',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.5,
+                    ),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1022,7 +1183,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: Text(
               'Cancel',
               style: TextStyle(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
               ),
             ),
           ),
@@ -1070,7 +1233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: backgroundColor,
             boxShadow: [
               BoxShadow(
-                color: backgroundColor.withValues(alpha:0.2),
+                color: backgroundColor.withValues(alpha: 0.2),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -1078,7 +1241,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           child: Row(
             children: [
-              Icon(Icons.system_update_rounded, color: foregroundColor, size: 20),
+              Icon(
+                Icons.system_update_rounded,
+                color: foregroundColor,
+                size: 20,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -1095,7 +1262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     Text(
                       info.releaseNotes,
                       style: TextStyle(
-                        color: foregroundColor.withValues(alpha:0.8),
+                        color: foregroundColor.withValues(alpha: 0.8),
                         fontSize: 11,
                       ),
                       maxLines: 1,
@@ -1108,7 +1275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               TextButton(
                 onPressed: () => UpdateService.launchDownload(),
                 style: TextButton.styleFrom(
-                  backgroundColor: foregroundColor.withValues(alpha:0.15),
+                  backgroundColor: foregroundColor.withValues(alpha: 0.15),
                   foregroundColor: foregroundColor,
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(
@@ -1123,7 +1290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               IconButton(
                 icon: Icon(
                   Icons.close_rounded,
-                  color: foregroundColor.withValues(alpha:0.7),
+                  color: foregroundColor.withValues(alpha: 0.7),
                   size: 18,
                 ),
                 onPressed: () => UpdateService.updateNotifier.value = null,

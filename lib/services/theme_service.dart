@@ -44,6 +44,54 @@ class ThemeService {
   static final ValueNotifier<List<AppTheme>> savedThemesNotifier =
       ValueNotifier<List<AppTheme>>([]);
 
+  // Premium Themes Registry
+  static final List<AppTheme> premiumThemes = [
+    AppTheme(
+      id: 'premium_midnight_royal',
+      name: 'Midnight Royal',
+      isDark: true,
+      primaryColor: 0xFFFFD700, // Gold
+      backgroundColor: 0xFF001F3F, // Navy
+      textColor: 0xFFFFFFFF,
+      cardColor: 0xFF003366,
+    ),
+    AppTheme(
+      id: 'premium_nebula',
+      name: 'Vibrant Nebula',
+      isDark: true,
+      primaryColor: 0xFFE040FB, // Purple Neon
+      backgroundColor: 0xFF12005E, // Deep Space
+      textColor: 0xFFFFFFFF,
+      cardColor: 0xFF1A1A2E,
+    ),
+    AppTheme(
+      id: 'premium_golden_harvest',
+      name: 'Golden Harvest',
+      isDark: false,
+      primaryColor: 0xFFD48806, // Deep Yellow
+      backgroundColor: 0xFFFFFBE6, // Warm Paper
+      textColor: 0xFF5C3D11,
+      cardColor: 0xFFFFF1B8,
+    ),
+    AppTheme(
+      id: 'premium_cyberpunk',
+      name: 'Cyberpunk Neon',
+      isDark: true,
+      primaryColor: 0xFF00FF41, // Terminal Green
+      backgroundColor: 0xFF0D0208, // Pure Black
+      textColor: 0xFF00FF41,
+      cardColor: 0xFF121212,
+      expenseColor: 0xFFFF003C, // Neon Red
+    ),
+  ];
+
+  static Map<String, int> premiumThemePrices = {
+    'premium_midnight_royal': 300,
+    'premium_nebula': 500,
+    'premium_golden_harvest': 200,
+    'premium_cyberpunk': 1000,
+  };
+
   static Future<void> init() async {
     Box box;
     try {

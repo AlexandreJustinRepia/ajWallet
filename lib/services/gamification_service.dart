@@ -10,12 +10,14 @@ class DailyQuest {
   final String title;
   final String description;
   final int xpReward;
+  final int coinReward;
   final bool isCompleted;
 
   DailyQuest({
     required this.title,
     required this.description,
     required this.xpReward,
+    required this.coinReward,
     required this.isCompleted,
   });
 }
@@ -27,6 +29,7 @@ class Achievement {
   final double currentProgress;
   final double targetProgress;
   final String unit;
+  final int coinReward;
 
   Achievement({
     required this.title,
@@ -35,6 +38,7 @@ class Achievement {
     required this.currentProgress,
     required this.targetProgress,
     this.unit = '',
+    this.coinReward = 0,
   });
 
   bool get isUnlocked => currentProgress >= targetProgress;
@@ -46,6 +50,7 @@ class MidTermChallenge {
   final String title;
   final String description;
   final int xpReward;
+  final int coinReward;
   final bool isCompleted;
   final String progress;
 
@@ -53,6 +58,7 @@ class MidTermChallenge {
     required this.title,
     required this.description,
     required this.xpReward,
+    required this.coinReward,
     required this.isCompleted,
     required this.progress,
   });
@@ -61,6 +67,8 @@ class MidTermChallenge {
 class GamificationProfile {
   final int xp;
   final int level;
+  final int coins; // Current spendable balance
+  final int totalCoinsEarned;
   final int streakDays;
   final List<DailyQuest>? _dailyQuests;
   final List<MidTermChallenge>? _challenges;
@@ -69,6 +77,8 @@ class GamificationProfile {
   GamificationProfile({
     required this.xp,
     required this.level,
+    required this.coins,
+    required this.totalCoinsEarned,
     required this.streakDays,
     List<DailyQuest>? dailyQuests,
     List<MidTermChallenge>? challenges,
@@ -90,28 +100,39 @@ class GamificationService {
     required List<Budget> budgets,
     required List<Goal> goals,
     required List<Debt> debts,
+    int spentCoins = 0,
   }) {
-    // 1. Calculate Base XP
+    // 1. Calculate Base XP and Base Coins
     int txXp = transactions.length * 10;
+    int txCoins = transactions.length * 2; // 2 coins per transaction
     int budgetXp = budgets.length * 50;
+    // Coins for budgets will be handled in dynamic quests
 
     int completedGoals = goals
         .where((g) => g.targetAmount > 0 && g.savedAmount >= g.targetAmount)
         .length;
     int goalXp = completedGoals * 100;
+    int goalCoinsMilestone = completedGoals * 50; // 50 coins per completed goal
 
     int completedDebts = debts
         .where((d) => d.totalAmount > 0 && d.paidAmount >= d.totalAmount)
         .length;
     int debtXp = completedDebts * 50;
+    int debtCoinsMilestone = completedDebts * 25;
 
     final datesActive = transactions
         .map((t) => DateFormat('yyyy-MM-dd').format(t.date))
         .toSet();
     int activeDaysXp = datesActive.length * 20;
+    int activeDaysCoins = datesActive.length * 5; // 5 coins per unique day active
 
     int totalXp = txXp + budgetXp + goalXp + debtXp + activeDaysXp;
-    if (totalXp == 0 && transactions.isEmpty) totalXp = 0;
+    int totalCoinsEarned = txCoins + goalCoinsMilestone + debtCoinsMilestone + activeDaysCoins;
+
+    if (totalXp == 0 && transactions.isEmpty) {
+      totalXp = 0;
+      totalCoinsEarned = 0;
+    }
 
     int level = (totalXp ~/ 500) + 1;
 
@@ -128,6 +149,9 @@ class GamificationService {
         break;
       }
     }
+    
+    // Add coins for streak milestones (every 7 days)
+    totalCoinsEarned += (streak ~/ 7) * 50;
 
     // 3. Evaluate Daily Quests and add dynamic behavior
     String todayStr = DateFormat('yyyy-MM-dd').format(today);
@@ -265,12 +289,14 @@ class GamificationService {
         title: 'Daily Tracker',
         description: 'Record any transaction today.',
         xpReward: 20,
+        coinReward: 5,
         isCompleted: loggedToday,
       ),
       DailyQuest(
         title: 'Future Planner',
         description: 'Have an active budget set for this month.',
         xpReward: 10,
+        coinReward: 2,
         isCompleted: hasActiveBudget,
       ),
       selectedGoal != null
@@ -278,12 +304,14 @@ class GamificationService {
               title: 'Save ₱$goalMissionTarget toward $goalMissionName',
               description: 'Move closer to your $goalMissionName goal today.',
               xpReward: 35,
+              coinReward: 10,
               isCompleted: goalMissionCompleted,
             )
           : DailyQuest(
               title: 'Wealth Builder',
               description: 'Add money to any savings goal today.',
               xpReward: 30,
+              coinReward: 8,
               isCompleted: fundedGoalToday,
             ),
     ];
@@ -295,6 +323,7 @@ class GamificationService {
         description:
             'Keep spending within your ${overspentBudget.category} budget today.',
         xpReward: 25,
+        coinReward: 10,
         isCompleted: highestUsage <= 1.0,
       );
     } else if (isInactive) {
@@ -302,6 +331,7 @@ class GamificationService {
         title: 'Restore your Growth Chain',
         description: 'Log 1 transaction to restart your activity growth chain.',
         xpReward: 20,
+        coinReward: 5,
         isCompleted: loggedToday,
       );
     } else if (savesOften) {
@@ -309,6 +339,7 @@ class GamificationService {
         title: 'Boost your savings',
         description: 'Increase your savings progress by 10% today.',
         xpReward: 30,
+        coinReward: 15,
         isCompleted: fundedGoalToday,
       );
     } else {
@@ -316,11 +347,18 @@ class GamificationService {
         title: 'Keep momentum going',
         description: 'Stay on track with your spending or savings today.',
         xpReward: 15,
+        coinReward: 5,
         isCompleted: loggedToday || hasActiveBudget,
       );
     }
 
     quests.add(dynamicQuest);
+
+    // Sum up coins from completed daily quests today
+    int dailyQuestCoins = quests
+        .where((q) => q.isCompleted)
+        .fold(0, (sum, q) => sum + q.coinReward);
+    totalCoinsEarned += dailyQuestCoins;
 
     // Add extra XP theoretically generated by quests today (just for the UI to feel responsive if they aren't derived elsewhere)
     if (hasActiveBudget) totalXp += 10;
@@ -399,6 +437,7 @@ class GamificationService {
         title: 'Weekly Saver',
         description: 'Save ₱1,000 this week.',
         xpReward: 60,
+        coinReward: 30,
         isCompleted: weeklySaverComplete,
         progress: weeklySaverProgress,
       ),
@@ -407,6 +446,7 @@ class GamificationService {
         description:
             'Avoid any expense transactions for 2 days. Logging is still encouraged.',
         xpReward: 40,
+        coinReward: 20,
         isCompleted: noSpendWeekendComplete,
         progress: noSpendWeekendProgress,
       ),
@@ -414,14 +454,24 @@ class GamificationService {
         title: 'Budget Master',
         description: 'Stay within all budgets this month.',
         xpReward: 70,
+        coinReward: 50,
         isCompleted: budgetMasterComplete,
         progress: budgetMasterProgress,
       ),
     ];
 
-    if (weeklySaverComplete) totalXp += 60;
-    if (noSpendWeekendComplete) totalXp += 40;
-    if (budgetMasterComplete) totalXp += 70;
+    if (weeklySaverComplete) {
+      totalXp += 60;
+      totalCoinsEarned += 30;
+    }
+    if (noSpendWeekendComplete) {
+      totalXp += 40;
+      totalCoinsEarned += 20;
+    }
+    if (budgetMasterComplete) {
+      totalXp += 70;
+      totalCoinsEarned += 50;
+    }
     level = (totalXp ~/ 500) + 1;
 
     // 5. Calculate Achievements
@@ -445,6 +495,7 @@ class GamificationService {
         currentProgress: transactions.length.toDouble(),
         targetProgress: 50.0,
         unit: 'logs',
+        coinReward: 50,
       ),
       Achievement(
         title: 'Loyal Tracker II',
@@ -453,6 +504,7 @@ class GamificationService {
         currentProgress: transactions.length.toDouble(),
         targetProgress: 200.0,
         unit: 'logs',
+        coinReward: 150,
       ),
       Achievement(
         title: 'Loyal Tracker III',
@@ -461,6 +513,7 @@ class GamificationService {
         currentProgress: transactions.length.toDouble(),
         targetProgress: 500.0,
         unit: 'logs',
+        coinReward: 400,
       ),
       Achievement(
         title: 'Wealth Accumulator I',
@@ -469,6 +522,7 @@ class GamificationService {
         currentProgress: totalSaved,
         targetProgress: 5000.0,
         unit: '₱',
+        coinReward: 100,
       ),
       Achievement(
         title: 'Wealth Accumulator II',
@@ -477,6 +531,7 @@ class GamificationService {
         currentProgress: totalSaved,
         targetProgress: 15000.0,
         unit: '₱',
+        coinReward: 300,
       ),
       Achievement(
         title: 'Wealth Accumulator III',
@@ -485,6 +540,7 @@ class GamificationService {
         currentProgress: totalSaved,
         targetProgress: 30000.0,
         unit: '₱',
+        coinReward: 600,
       ),
       Achievement(
         title: 'Steady Growth',
@@ -493,6 +549,7 @@ class GamificationService {
         currentProgress: streak.toDouble(),
         targetProgress: 7.0,
         unit: 'days',
+        coinReward: 70,
       ),
       Achievement(
         title: 'Debt Destroyer I',
@@ -501,6 +558,7 @@ class GamificationService {
         currentProgress: totalPaidDebt,
         targetProgress: 5000.0,
         unit: '₱',
+        coinReward: 100,
       ),
       Achievement(
         title: 'Debt Destroyer II',
@@ -509,6 +567,7 @@ class GamificationService {
         currentProgress: totalPaidDebt,
         targetProgress: 15000.0,
         unit: '₱',
+        coinReward: 300,
       ),
       Achievement(
         title: 'Debt Destroyer III',
@@ -517,6 +576,7 @@ class GamificationService {
         currentProgress: totalPaidDebt,
         targetProgress: 30000.0,
         unit: '₱',
+        coinReward: 600,
       ),
       Achievement(
         title: 'Debt Free (Bonus)',
@@ -527,12 +587,21 @@ class GamificationService {
             : 0.0,
         targetProgress: 1.0,
         unit: 'done',
+        coinReward: 500,
       ),
     ];
+
+    // Add coins from completed achievements
+    int achievementCoins = achievementsList
+        .where((a) => a.isUnlocked)
+        .fold(0, (sum, a) => sum + a.coinReward);
+    totalCoinsEarned += achievementCoins;
 
     return GamificationProfile(
       xp: totalXp,
       level: level,
+      coins: (totalCoinsEarned - spentCoins).clamp(0, 999999),
+      totalCoinsEarned: totalCoinsEarned,
       streakDays: streak,
       dailyQuests: quests,
       challenges: challenges,

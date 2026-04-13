@@ -16,6 +16,7 @@ import '../models/budget.dart';
 import '../models/debt.dart';
 import 'insight_card.dart';
 import 'dashboard_helpers.dart';
+import 'shop_view.dart';
 
 
 class HomeView extends StatefulWidget {
@@ -131,7 +132,8 @@ class _HomeViewState extends State<HomeView> {
       transactions: transactions, 
       budgets: budgets, 
       goals: goals, 
-      debts: debts
+      debts: debts,
+      spentCoins: account?.spentCoins ?? 0,
     );
 
     // Sync progress to account model persistently
@@ -287,6 +289,15 @@ class _HomeViewState extends State<HomeView> {
                     Text('Lvl ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 16)),
                     const SizedBox(width: 4),
                     const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${profile.coins}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber)),
                   ],
                 ),
               ],
@@ -614,7 +625,18 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                 ),
                 const SizedBox(height: 16),
                 Text('Level ${profile.level} Saver', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
-                Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                    const SizedBox(width: 12),
+                    Text('•', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.3))),
+                    const SizedBox(width: 12),
+                    const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
+                    const SizedBox(width: 4),
+                    Text('${profile.coins} Coins', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+                  ],
+                ),
                 const SizedBox(height: 24),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -731,7 +753,14 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                               color: Colors.amber.withValues(alpha:0.2),
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: Text('+${quest.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12)),
+                            child: Row(
+                              children: [
+                                Text('+${quest.xpReward} XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 10)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.monetization_on_rounded, size: 10, color: Colors.amber),
+                                Text(' ${quest.coinReward}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 10)),
+                              ],
+                            ),
                           ),
                         ],
                       ),
@@ -788,6 +817,70 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                     ),
                   );
                 }),
+
+                const SizedBox(height: 24),
+                
+                // ── Shop Button ───────────────────────────────────────────
+                Container(
+                  width: double.infinity,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.amber[600]!, Colors.orange[600]!],
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.amber.withValues(alpha:0.3),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ShopView(
+                              currentCoins: profile.coins,
+                              unlockedIds: SessionService.activeAccount?.unlockedThemeIds ?? [],
+                              onPurchase: (spent, id) async {
+                                final account = SessionService.activeAccount;
+                                if (account != null) {
+                                  account.spentCoins += spent;
+                                  if (!account.unlockedThemeIds.contains(id)) {
+                                    account.unlockedThemeIds.add(id);
+                                  }
+                                  await account.save();
+                                  if (context.mounted) {
+                                    Navigator.pop(context); // Refreshing state by closing sheet
+                                  }
+                                }
+                              },
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: const Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.store_rounded, color: Colors.white),
+                            SizedBox(width: 12),
+                            Text(
+                              'OPEN REWARDS SHOP',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 32),
 

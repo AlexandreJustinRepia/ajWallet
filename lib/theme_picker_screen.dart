@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'models/app_theme.dart';
 import 'services/theme_service.dart';
+import 'services/session_service.dart';
+import 'views/shop_view.dart';
+import 'services/gamification_service.dart';
+import 'services/database_service.dart';
 
 class ThemePickerScreen extends StatefulWidget {
   const ThemePickerScreen({super.key});
@@ -127,6 +131,15 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
 
             const SizedBox(height: 40),
             _buildSectionHeader(
+              'EXCLUSIVE THEMES',
+              Icons.stars_rounded,
+              activeTheme,
+            ),
+            const SizedBox(height: 16),
+            _buildPremiumGrid(context, activeTheme),
+
+            const SizedBox(height: 40),
+            _buildSectionHeader(
               'LAB PREVIEW',
               Icons.remove_red_eye_rounded,
               activeTheme,
@@ -194,9 +207,48 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
     );
   }
 
-  Widget _buildPresetItem(AppTheme t, bool isSelected) {
+  Widget _buildPremiumGrid(BuildContext context, ThemeData theme) {
+    final account = SessionService.activeAccount;
+    final unlockedIds = account?.unlockedThemeIds ?? [];
+    final premiumThemes = ThemeService.premiumThemes;
+
+    return ValueListenableBuilder<ThemeState>(
+      valueListenable: ThemeService.themeNotifier,
+      builder: (context, themeState, _) {
+        final isPlatformDark =
+            MediaQuery.of(context).platformBrightness == Brightness.dark;
+        final isCurrentlyDark =
+            themeState.themeMode == ThemeMode.dark ||
+            (themeState.themeMode == ThemeMode.system && isPlatformDark);
+        final activeThemeId = isCurrentlyDark
+            ? themeState.darkTheme.id
+            : themeState.lightTheme.id;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: premiumThemes
+              .map((t) => _buildPresetItem(
+                  t, 
+                  t.id == activeThemeId, 
+                  isPremium: true, 
+                  isLocked: !unlockedIds.contains(t.id)
+                ))
+              .toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPresetItem(AppTheme t, bool isSelected, {bool isPremium = false, bool isLocked = false}) {
     return InkWell(
-      onTap: () => _applyTheme(t),
+      onTap: () {
+        if (isLocked) {
+          _showShopPrompt(t);
+        } else {
+          _applyTheme(t);
+        }
+      },
       onLongPress: () {
         if (t.id != 'default_light' && t.id != 'default_dark') {
           _showDeleteDialog(t);
@@ -279,8 +331,76 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                   ),
                 ),
               ),
+            if (isLocked)
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha:0.4),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Center(
+                    child: Icon(Icons.lock_rounded, color: Colors.white, size: 24),
+                  ),
+                ),
+              ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showShopPrompt(AppTheme t) {
+    final account = SessionService.activeAccount;
+    if (account == null) return;
+
+    final transactions = DatabaseService.getTransactions(account.key as int);
+    final budgets = DatabaseService.getBudgets(account.key as int);
+    final goals = DatabaseService.getGoals(account.key as int);
+    final debts = DatabaseService.getDebts(account.key as int);
+
+    final profile = GamificationService.generateProfile(
+      transactions: transactions,
+      budgets: budgets,
+      goals: goals,
+      debts: debts,
+      spentCoins: account.spentCoins,
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${t.name} is Locked'),
+        content: const Text('You need to unlock this theme in the Rewards Shop.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ShopView(
+                    currentCoins: profile.coins,
+                    unlockedIds: account.unlockedThemeIds,
+                    onPurchase: (spent, id) async {
+                      account.spentCoins += spent;
+                      if (!account.unlockedThemeIds.contains(id)) {
+                        account.unlockedThemeIds.add(id);
+                      }
+                      await account.save();
+                      setState(() {}); // Refresh current screen
+                    },
+                  ),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
+            child: const Text('Go to Shop'),
+          ),
+        ],
       ),
     );
   }

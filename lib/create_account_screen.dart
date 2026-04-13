@@ -75,46 +75,105 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
     }
   }
 
+  Widget _buildInputLabel(String label) {
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w900,
+        letterSpacing: 1.2,
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.6),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 80),
-              Text('New Account', style: theme.textTheme.headlineLarge),
-              const SizedBox(height: 8),
-              const Text('Give your budget account a name to get started.', style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 60),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: theme.primaryColor,
+                      size: 28,
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Text(
+                      'Create\nAccount',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                        letterSpacing: -1.0,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Set up a new workspace for your finances.',
+                style: TextStyle(color: Colors.grey, fontSize: 16),
+              ),
               const SizedBox(height: 48),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+              
+              // Refined Input Cards
+              _buildInputLabel('ACCOUNT NAME'),
+              const SizedBox(height: 8),
+              Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                 decoration: BoxDecoration(
                   color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
-                    color: _isFocused ? theme.primaryColor : Colors.grey[300]!,
+                    color: _isFocused ? theme.primaryColor : theme.dividerColor,
                     width: _isFocused ? 2.0 : 1.0,
                   ),
                 ),
                 child: TextField(
                   controller: _accountNameController,
                   focusNode: _focusNode,
-                  decoration: const InputDecoration(hintText: 'Account Name', border: InputBorder.none),
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'e.g. Personal Savings',
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: Colors.grey, fontSize: 16),
+                  ),
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
               const SizedBox(height: 24),
+              
+              _buildInputLabel('INITIAL BALANCE'),
+              const SizedBox(height: 8),
               CalculatorInputField(
-                label: 'Initial Balance',
+                label: 'Starting Amount',
                 initialValue: double.tryParse(_balanceController.text),
-                onChanged: (val) => setState(() => _balanceController.text = val.toStringAsFixed(2)),
+                onChanged: (val) =>
+                    setState(() => _balanceController.text = val.toStringAsFixed(2)),
               ),
-              const SizedBox(height: 32),
+              
+              const SizedBox(height: 48),
+              
+              // Premium Primary Button
               GestureDetector(
                 onTapDown: (_) => setState(() => _isButtonPressed = true),
                 onTapUp: (_) => setState(() => _isButtonPressed = false),
@@ -125,21 +184,26 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
                   duration: const Duration(milliseconds: 100),
                   child: Container(
                     width: double.infinity,
-                    height: 56,
+                    height: 60,
                     decoration: BoxDecoration(
                       color: theme.primaryColor,
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
-                        BoxShadow(color: Colors.black.withValues(alpha:0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                        BoxShadow(
+                          color: theme.primaryColor.withValues(alpha: 0.2),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                        ),
                       ],
                     ),
                     child: Center(
                       child: Text(
                         'Create Account',
                         style: TextStyle(
-                          color: theme.scaffoldBackgroundColor,
+                          color: theme.colorScheme.onPrimary,
                           fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
                         ),
                       ),
                     ),
@@ -148,8 +212,12 @@ class _CreateAccountScreenState extends State<CreateAccountScreen> {
               ),
               const SizedBox(height: 24),
               const Center(
-                child: Text('You can set a PIN later for extra security', style: TextStyle(color: Colors.grey)),
+                child: Text(
+                  'Security settings can be adjusted later',
+                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                ),
               ),
+              const SizedBox(height: 40),
             ],
           ),
         ),

@@ -227,8 +227,16 @@ class _HomeViewState extends State<HomeView> {
     );
   }
 
+  String _getGrowthEmoji(int days) {
+    if (days >= 7) return '🌳';
+    if (days >= 4) return '🌿';
+    return '🌱';
+  }
+
   Widget _buildHeader(BuildContext context, String name, GamificationProfile profile) {
     final theme = Theme.of(context);
+    final growthColor = Colors.green[600]!;
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -258,9 +266,9 @@ class _HomeViewState extends State<HomeView> {
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
-              color: theme.primaryColor.withValues(alpha:0.1),
+              color: growthColor.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.primaryColor.withValues(alpha:0.3)),
+              border: Border.all(color: growthColor.withValues(alpha:0.3)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -268,9 +276,9 @@ class _HomeViewState extends State<HomeView> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 14),
+                    Text(_getGrowthEmoji(profile.streakDays), style: const TextStyle(fontSize: 14)),
                     const SizedBox(width: 4),
-                    Text('${profile.streakDays} Days', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)),
+                    Text('${profile.streakDays} Days', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: growthColor)),
                   ],
                 ),
                 const SizedBox(height: 2),
@@ -294,7 +302,7 @@ class _HomeViewState extends State<HomeView> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _GamificationSheet(profile: profile, theme: theme),
+      builder: (context) => _GamificationSheet(profile: profile, theme: theme, growthEmoji: _getGrowthEmoji(profile.streakDays)),
     );
   }
 
@@ -526,8 +534,13 @@ class _HomeViewState extends State<HomeView> {
 class _GamificationSheet extends StatefulWidget {
   final GamificationProfile profile;
   final ThemeData theme;
+  final String growthEmoji;
 
-  const _GamificationSheet({required this.profile, required this.theme});
+  const _GamificationSheet({
+    required this.profile, 
+    required this.theme,
+    required this.growthEmoji,
+  });
 
   @override
   State<_GamificationSheet> createState() => _GamificationSheetState();
@@ -571,6 +584,7 @@ class _GamificationSheetState extends State<_GamificationSheet> {
   Widget build(BuildContext context) {
     final profile = widget.profile;
     final theme = widget.theme;
+    final growthColor = Colors.green[600]!;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -627,26 +641,26 @@ class _GamificationSheetState extends State<_GamificationSheet> {
             child: ListView(
               padding: const EdgeInsets.all(24).copyWith(top: 16),
               children: [
-                // ── Streak ────────────────────────────────────────────────
-                const Text('Active Streak', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                // ── Growth Chain ──────────────────────────────────────────
+                const Text('Active Growth Chain', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha:0.1),
+                    color: growthColor.withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
+                    border: Border.all(color: growthColor.withValues(alpha:0.3)),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 32),
+                      Text(widget.growthEmoji, style: const TextStyle(fontSize: 32)),
                       const SizedBox(width: 16),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${profile.streakDays} Days Fire Streak!', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.orange, fontSize: 16)),
-                            Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: Colors.orange.withValues(alpha:0.8))),
+                            Text('${profile.streakDays} Days Growth Chain!', style: TextStyle(fontWeight: FontWeight.w900, color: growthColor, fontSize: 16)),
+                            Text('You have logged an activity or stayed within budget for ${profile.streakDays} consecutive days.', style: TextStyle(fontSize: 12, color: growthColor.withValues(alpha:0.8))),
                           ],
                         ),
                       ),

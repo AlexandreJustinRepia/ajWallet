@@ -299,8 +299,8 @@ class GamificationService {
       );
     } else if (isInactive) {
       dynamicQuest = DailyQuest(
-        title: 'Restart your streak',
-        description: 'Log 1 transaction to restart your activity streak.',
+        title: 'Restore your Growth Chain',
+        description: 'Log 1 transaction to restart your activity growth chain.',
         xpReward: 20,
         isCompleted: loggedToday,
       );
@@ -487,9 +487,9 @@ class GamificationService {
         unit: '₱',
       ),
       Achievement(
-        title: 'On Fire',
-        icon: '🔥',
-        description: 'Reach a 7-day transaction streak.',
+        title: 'Steady Growth',
+        icon: '🌳',
+        description: 'Reach a 7-day transaction growth chain.',
         currentProgress: streak.toDouble(),
         targetProgress: 7.0,
         unit: 'days',

@@ -29,7 +29,7 @@ class AchievementService {
   static List<Achievement> getAchievements() {
     final box = Hive.box(_boxName);
     final all = [
-      Achievement(id: 'streak_3', title: 'On a Roll', description: 'Stayed under budget for 3 days', icon: '🔥'),
+      Achievement(id: 'streak_3', title: 'Rooted & Growing', description: 'Maintained a 3-day Growth Chain', icon: '🌱'),
       Achievement(id: 'debt_slayer', title: 'Debt Slayer', description: 'Paid off your first debt', icon: '⚔️'),
       Achievement(id: 'goal_getter', title: 'Goal Getter', description: 'Reached 25% of a savings goal', icon: '🏆'),
       Achievement(id: 'explorer', title: 'AI Explorer', description: 'Completed the AI onboarding tour', icon: '🧭'),

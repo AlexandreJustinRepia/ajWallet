@@ -4,6 +4,7 @@ import 'services/session_service.dart';
 import 'services/security_service.dart';
 import 'dashboard_screen.dart';
 import 'models/account.dart';
+import 'widgets/pin_input_widget.dart';
 
 class PinSetupScreen extends StatefulWidget {
   final bool isFromSettings;
@@ -261,29 +262,14 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
     final hintColor = textColor.withValues(alpha:0.5);
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(hint,
             style: TextStyle(
                 fontSize: 14, fontWeight: FontWeight.w600, color: hintColor)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: theme.dividerColor),
-          ),
-          child: TextField(
-            controller: controller,
-            obscureText: true,
-            keyboardType: TextInputType.number,
-            maxLength: 4,
-            style: TextStyle(
-                fontSize: 24, letterSpacing: 16, fontWeight: FontWeight.bold, color: textColor),
-            decoration: InputDecoration(
-                counterText: '', border: InputBorder.none, hintStyle: TextStyle(color: hintColor)),
-          ),
+        const SizedBox(height: 16),
+        PinInputWidget(
+          controller: controller,
         ),
       ],
     );

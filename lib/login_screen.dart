@@ -5,6 +5,7 @@ import 'services/security_service.dart';
 import 'dashboard_screen.dart';
 import 'pin_setup_screen.dart';
 import 'models/account.dart';
+import 'widgets/pin_input_widget.dart';
 
 class LoginScreen extends StatefulWidget {
   final Account account;
@@ -307,38 +308,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 16, color: hintColor),
               ),
               const SizedBox(height: 48),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: BoxDecoration(
-                  color: _isLocked ? theme.colorScheme.error.withValues(alpha:0.1) : theme.cardColor,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _isLocked ? theme.colorScheme.error.withValues(alpha:0.5) : theme.dividerColor),
-                ),
-                child: TextField(
-                  controller: _pinController,
-                  enabled: !_isLocked,
-                  obscureText: true,
-                  keyboardType: TextInputType.number,
-                  maxLength: 4,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 24,
-                    letterSpacing: 16,
-                    fontWeight: FontWeight.bold,
-                    color: _isLocked ? hintColor : textColor,
-                  ),
-                  onChanged: (value) {
-                    if (value.length == 4) {
-                      _verifyPin();
-                    }
-                  },
-                  decoration: InputDecoration(
-                    counterText: '',
-                    border: InputBorder.none,
-                    hintText: '••••',
-                    hintStyle: TextStyle(color: hintColor, letterSpacing: 16),
-                  ),
-                ),
+              PinInputWidget(
+                controller: _pinController,
+                enabled: !_isLocked,
+                onCompleted: (value) => _verifyPin(),
               ),
               const SizedBox(height: 32),
               if (_canCheckBiometrics && !_isLocked)

@@ -24,54 +24,37 @@ class PinSetupScreen extends StatefulWidget {
 
 class _PinSetupScreenState extends State<PinSetupScreen> {
   final TextEditingController _pinController = TextEditingController();
-  final TextEditingController _confirmPinController = TextEditingController();
-  final TextEditingController _fakePinController = TextEditingController();
+  String? _firstPin;
+  bool _isConfirming = false;
   bool _isButtonPressed = false;
-  bool _canCheckBiometrics = false;
-  bool _useBiometrics = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _checkBiometrics();
+  void _handlePinComplete(String pin) {
+    if (!_isConfirming) {
+      // First step: Store PIN and move to confirmation
+      setState(() {
+        _firstPin = pin;
+        _isConfirming = true;
+      });
+      _pinController.clear();
+    } else {
+      // Second step: Verify and save
+      if (pin == _firstPin) {
+        _savePin(pin);
+      } else {
+        _showError('PINs do not match. Try again.');
+        setState(() {
+          _isConfirming = false;
+          _firstPin = null;
+        });
+        _pinController.clear();
+      }
+    }
   }
 
-  Future<void> _checkBiometrics() async {
-    final canCheck = await SecurityService.canAuthenticateWithBiometrics();
-    if (!mounted) return;
-    setState(() {
-      _canCheckBiometrics = canCheck;
-    });
-  }
-
-  void _savePin() async {
-    final pin = _pinController.text;
-    final confirmPin = _confirmPinController.text;
-
-    if (pin.length != 4 || confirmPin.length != 4) {
-      _showError('PIN must be 4 digits');
-      return;
-    }
-
-    if (pin != confirmPin) {
-      _showError('PINs do not match');
-      return;
-    }
-
-    if (_fakePinController.text.isNotEmpty && pin == _fakePinController.text) {
-      _showError('Original and Fake PIN cannot be the same');
-      return;
-    }
-
+  void _savePin(String pin) async {
     final account = widget.account ?? SessionService.activeAccount;
     if (account != null) {
       account.pin = pin;
-      if (!widget.isResetting) {
-        account.isBiometricEnabled = _useBiometrics;
-      }
-      if (_fakePinController.text.isNotEmpty) {
-        account.fakePin = _fakePinController.text;
-      }
       await DatabaseService.updateAccount(account);
       SessionService.setActiveAccount(account);
       
@@ -90,7 +73,12 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red[900]),
+      SnackBar(
+        content: Text(message), 
+        backgroundColor: Colors.red[900],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 
@@ -98,21 +86,24 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final hintColor = textColor.withValues(alpha:0.5);
+    final hintColor = textColor.withValues(alpha: 0.5);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
-        automaticallyImplyLeading: false,
-        actions: [
-          if (widget.isFromSettings)
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: TextStyle(color: hintColor, fontWeight: FontWeight.bold)),
+        leading: _isConfirming 
+          ? IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => setState(() {
+                _isConfirming = false;
+                _pinController.clear();
+              }),
             )
-          else
+          : (widget.isFromSettings ? const BackButton() : null),
+        actions: [
+          if (!widget.isFromSettings && !_isConfirming)
             TextButton(
               onPressed: () {
                 Navigator.pushReplacement(
@@ -126,152 +117,44 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
-              Text(
-                widget.isResetting ? 'Reset your PIN' : 'Secure your account',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: textColor),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                widget.isResetting 
-                  ? 'Enter a new 4-digit PIN for ${widget.account?.name ?? 'your account'}.'
-                  : 'Enter a 4-digit PIN for extra security.',
-                style: TextStyle(fontSize: 16, color: hintColor),
-              ),
-              const SizedBox(height: 40),
-              _buildPinField('Enter PIN', _pinController),
-              const SizedBox(height: 24),
-              _buildPinField('Confirm PIN', _confirmPinController),
-              const SizedBox(height: 32),
-              Text(
-                'Fake Vault PIN (Optional)',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: textColor),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Enter a secondary PIN to open a dummy account under duress.',
-                style: TextStyle(fontSize: 14, color: hintColor),
-              ),
-              const SizedBox(height: 16),
-              _buildPinField('Fake PIN', _fakePinController),
-              const SizedBox(height: 32),
-              if (_canCheckBiometrics && !widget.isResetting)
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Enable Biometrics (Face ID / Fingerprint)',
-                        style: TextStyle(fontSize: 14, color: textColor),
-                        overflow: TextOverflow.visible,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Switch(
-                      value: _useBiometrics,
-                      onChanged: (val) async {
-                        if (val) {
-                          // 1. Validate PIN
-                          final pin = _pinController.text;
-                          final confirmPin = _confirmPinController.text;
-
-                          if (pin.length != 4 || confirmPin.length != 4) {
-                            _showError('Set your 4-digit PIN first.');
-                            return;
-                          }
-                          if (pin != confirmPin) {
-                            _showError('PINs do not match.');
-                            return;
-                          }
-
-                          // 2. Perform verification scan
-                          final canAuth = await SecurityService.canAuthenticateWithBiometrics();
-                          if (!canAuth) {
-                            _showError('Biometrics not available or not set up.');
-                            return;
-                          }
-
-                          final success = await SecurityService.authenticateWithBiometrics(
-                            reason: 'Verify your identity to enable biometric login.',
-                          );
-
-                          if (success) {
-                            setState(() => _useBiometrics = true);
-                          } else {
-                            _showError('Biometric verification failed.');
-                          }
-                        } else {
-                          setState(() => _useBiometrics = false);
-                        }
-                      },
-                      activeThumbColor: theme.primaryColor,
-                    ),
-                  ],
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: Padding(
+            key: ValueKey<bool>(_isConfirming),
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                Text(
+                  _isConfirming ? 'Verify your PIN' : (widget.isResetting ? 'Reset your PIN' : 'Create a PIN'),
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: textColor),
                 ),
-              const SizedBox(height: 48),
-              GestureDetector(
-                onTapDown: (_) => setState(() => _isButtonPressed = true),
-                onTapUp: (_) => setState(() => _isButtonPressed = false),
-                onTapCancel: () => setState(() => _isButtonPressed = false),
-                onTap: _savePin,
-                child: AnimatedScale(
-                  scale: _isButtonPressed ? 0.98 : 1.0,
-                  duration: const Duration(milliseconds: 100),
-                  child: Container(
-                    width: double.infinity,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: theme.primaryColor,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.primaryColor.withValues(alpha:0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Finish Setup',
-                        style: TextStyle(
-                          color: theme.colorScheme.onPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                const SizedBox(height: 12),
+                Text(
+                  _isConfirming 
+                    ? 'Please repeat the 4-digit sequence to confirm.'
+                    : 'Enter 4 digits to secure your vault.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: hintColor),
                 ),
-              ),
-              const SizedBox(height: 40),
-            ],
+                const SizedBox(height: 60),
+                PinInputWidget(
+                  controller: _pinController,
+                  onCompleted: _handlePinComplete,
+                ),
+                const Spacer(),
+                const Text(
+                  'Your PIN is stored locally and encrypted.\nNever share it with anyone.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildPinField(String hint, TextEditingController controller) {
-    final theme = Theme.of(context);
-    final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withValues(alpha:0.5);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(hint,
-            style: TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: hintColor)),
-        const SizedBox(height: 16),
-        PinInputWidget(
-          controller: controller,
-        ),
-      ],
     );
   }
 }

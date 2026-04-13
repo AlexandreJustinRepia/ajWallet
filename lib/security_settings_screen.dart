@@ -61,6 +61,17 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               });
             },
           ),
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(Icons.security_rounded, color: theme.primaryColor),
+            title: const Text('Fake Vault PIN'),
+            subtitle: Text(
+              _account.fakePin == null || _account.fakePin!.isEmpty
+                  ? 'Set a secondary PIN to hide real data.'
+                  : 'Manage your secondary duress sequence.',
+            ),
+            onTap: () => _showFakePinDialog(),
+          ),
           _buildSwitchTile(
             'Biometric Login',
             'Use fingerprint or face ID to unlock.',
@@ -427,6 +438,89 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  void _showFakePinDialog() {
+    final theme = Theme.of(context);
+    final controller = TextEditingController(text: _account.fakePin);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Fake Vault PIN'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'This PIN will open a secondary, dummy vault when entered at login. Great for duress situations.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                labelText: 'Enter 4-Digit Fake PIN',
+                hintText: '0000',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              maxLength: 4,
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () {
+                setState(() => _account.fakePin = null);
+                DatabaseService.updateAccount(_account);
+                Navigator.pop(context);
+              },
+              child: const Text('Remove Fake PIN', style: TextStyle(color: Colors.red)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final newFakePin = controller.text.trim();
+              if (newFakePin.length != 4) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('PIN must be 4 digits')),
+                );
+                return;
+              }
+              if (newFakePin == _account.pin) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Cannot use your main PIN as fake PIN')),
+                );
+                return;
+              }
+              
+              setState(() => _account.fakePin = newFakePin);
+              await DatabaseService.updateAccount(_account);
+              if (mounted) Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              foregroundColor: theme.colorScheme.onPrimary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Save Setup'),
+          ),
+        ],
+      ),
     );
   }
 

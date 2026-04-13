@@ -632,6 +632,118 @@ class _GamificationSheetState extends State<_GamificationSheet> {
     return '$h:$m:$s';
   }
 
+  void _showRewardsGuide() {
+    final theme = widget.theme;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha:0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Earnings Guide', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(24),
+                children: [
+                   _buildGuideSection('Base Rewards', [
+                     _GuideItem('Log Transaction', '+10 XP', '+2 Coins'),
+                     _GuideItem('Set a Budget', '+50 XP', '-'),
+                     _GuideItem('Goal Completed', '+100 XP', '+50 Coins'),
+                     _GuideItem('Debt Paid Off', '+50 XP', '+25 Coins'),
+                     _GuideItem('Active Day', '+20 XP', '+5 Coins'),
+                     _GuideItem('7-Day Streak', '-', '+50 Coins'),
+                   ]),
+                   const SizedBox(height: 24),
+                   _buildGuideSection('Daily Quests', [
+                     _GuideItem('Daily Tracker', '+20 XP', '+5 Coins'),
+                     _GuideItem('Future Planner', '+10 XP', '+2 Coins'),
+                     _GuideItem('Wealth Builder', '+35 XP', '+10 Coins'),
+                   ]),
+                   const SizedBox(height: 24),
+                   _buildGuideSection('Challenges', [
+                     _GuideItem('Weekly Saver', '+60 XP', '+30 Coins'),
+                     _GuideItem('No-Spend Weekend', '+40 XP', '+20 Coins'),
+                     _GuideItem('Budget Master', '+70 XP', '+50 Coins'),
+                   ]),
+                   const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGuideSection(String title, List<_GuideItem> items) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
+        const SizedBox(height: 12),
+        ...items.map((item) => Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(
+            children: [
+              Expanded(child: Text(item.label, style: const TextStyle(fontSize: 14))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha:0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(item.xp, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha:0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.monetization_on_rounded, size: 10, color: Colors.amber),
+                    const SizedBox(width: 4),
+                    Text(item.coins, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final profile = widget.profile;
@@ -659,10 +771,26 @@ class _GamificationSheetState extends State<_GamificationSheet> {
             padding: const EdgeInsets.all(24).copyWith(top: 0),
             child: Column(
               children: [
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: Colors.amber.withValues(alpha:0.2),
-                  child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
+                Stack(
+                  alignment: Alignment.topRight,
+                  children: [
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: Colors.amber.withValues(alpha:0.2),
+                      child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
+                    ),
+                    IconButton(
+                      onPressed: _showRewardsGuide,
+                      icon: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withValues(alpha:0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.help_outline_rounded, size: 16, color: theme.primaryColor),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 16),
                 GamificationCounter(
@@ -992,4 +1120,11 @@ class _GamificationSheetState extends State<_GamificationSheet> {
       ),
     );
   }
+}
+
+class _GuideItem {
+  final String label;
+  final String xp;
+  final String coins;
+  _GuideItem(this.label, this.xp, this.coins);
 }

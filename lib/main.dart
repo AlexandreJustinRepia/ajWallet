@@ -4,6 +4,7 @@ import 'services/theme_service.dart';
 import 'services/session_service.dart';
 import 'services/update_service.dart';
 import 'services/achievement_service.dart';
+import 'services/user_profile_service.dart';
 import 'splash_screen.dart';
 import 'widgets/security_wrapper.dart';
 
@@ -21,6 +22,9 @@ void main() async {
 
   // Initialize Achievement Service
   await AchievementService.init();
+
+  // Initialize User Profile Service
+  await UserProfileService.init();
 
   // Initialize Update Service
   await UpdateService.init();

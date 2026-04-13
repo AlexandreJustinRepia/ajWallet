@@ -5,18 +5,11 @@ import '../services/card_skin_service.dart';
 import '../models/app_theme.dart';
 import '../widgets/animated_count_text.dart';
 import '../widgets/card_decorator.dart';
+import '../services/user_profile_service.dart';
+import '../services/gamification_service.dart';
 
 class ShopView extends StatefulWidget {
-  final int currentCoins;
-  final List<String> unlockedIds;
-  final Function(int spent, String unlockedId) onPurchase;
-
-  const ShopView({
-    super.key,
-    required this.currentCoins,
-    required this.unlockedIds,
-    required this.onPurchase,
-  });
+  const ShopView({super.key});
 
   @override
   State<ShopView> createState() => _ShopViewState();
@@ -29,6 +22,9 @@ class _ShopViewState extends State<ShopView> {
     final premiumThemes = ThemeService.premiumThemes;
     final themePrices = ThemeService.premiumThemePrices;
     final premiumSkins = CardSkinService.premiumSkins;
+    
+    final profile = UserProfileService.profile;
+    final currentCoins = GamificationService.generateGlobalProfile().coins;
 
     return DefaultTabController(
       length: 2,
@@ -51,7 +47,7 @@ class _ShopViewState extends State<ShopView> {
                   const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    '${widget.currentCoins}',
+                    '$currentCoins',
                     style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
                   ),
                 ],
@@ -77,9 +73,9 @@ class _ShopViewState extends State<ShopView> {
               itemCount: premiumThemes.length,
               itemBuilder: (context, index) {
                 final t = premiumThemes[index];
-                final price = themePrices[t.id] ?? 0;
-                final isUnlocked = widget.unlockedIds.contains(t.id);
-                final canAfford = widget.currentCoins >= price;
+                final isUnlocked = profile.unlockedThemeIds.contains(t.id);
+                final price = ThemeService.premiumThemePrices[t.id] ?? 999;
+                final canAfford = currentCoins >= price;
 
                 return _buildThemeCard(context, t, price, isUnlocked, canAfford);
               },
@@ -93,12 +89,9 @@ class _ShopViewState extends State<ShopView> {
                 final s = premiumSkins[index];
                 final price = s.price;
                 
-                // Card skins are stored in a different array in account, but passed via same callback
-                // Let's grab the account to check if it's unlocked and equipped
-                final account = SessionService.activeAccount;
-                final isUnlocked = account?.unlockedCardSkinIds.contains(s.id) ?? false;
-                final isEquipped = account?.activeCardSkinId == s.id;
-                final canAfford = widget.currentCoins >= price;
+                final isUnlocked = profile.unlockedCardSkinIds.contains(s.id);
+                final isEquipped = profile.activeCardSkinId == s.id;
+                final canAfford = currentCoins >= price;
 
                 return _buildSkinCard(context, s, price, isUnlocked, isEquipped, canAfford);
               },
@@ -365,12 +358,10 @@ class _ShopViewState extends State<ShopView> {
                 if (isUnlocked)
                   ElevatedButton(
                     onPressed: () {
-                      final account = SessionService.activeAccount;
-                      if (account != null) {
-                        account.activeCardSkinId = isEquipped ? null : s.id;
-                        account.save();
-                        setState(() {});
-                      }
+                      final profile = UserProfileService.profile;
+                      profile.activeCardSkinId = isEquipped ? null : s.id;
+                      UserProfileService.saveProfile();
+                      setState(() {});
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isEquipped ? theme.cardColor : theme.primaryColor,
@@ -404,9 +395,9 @@ class _ShopViewState extends State<ShopView> {
           ],
         ),
       ),
-        ],
-      ),
-    );
+    ],
+  ),
+);
   }
 
   void _confirmPurchase(BuildContext context, String name, String id, int price, bool isSkin) {
@@ -424,19 +415,20 @@ class _ShopViewState extends State<ShopView> {
             onPressed: () async {
               Navigator.pop(context);
               
+              final profile = UserProfileService.profile;
+              profile.spentCoins += price;
+
               if (isSkin) {
-                final account = SessionService.activeAccount;
-                if (account != null) {
-                  account.spentCoins += price;
-                  if (!account.unlockedCardSkinIds.contains(id)) {
-                    account.unlockedCardSkinIds.add(id);
-                  }
-                  await account.save();
-                  setState(() {});
+                if (!profile.unlockedCardSkinIds.contains(id)) {
+                  profile.unlockedCardSkinIds.add(id);
                 }
               } else {
-                widget.onPurchase(price, id);
+                if (!profile.unlockedThemeIds.contains(id)) {
+                  profile.unlockedThemeIds.add(id);
+                }
               }
+              await UserProfileService.saveProfile();
+              setState(() {});
 
               if (context.mounted) {
                  ScaffoldMessenger.of(context).showSnackBar(

@@ -27,19 +27,13 @@ class AccountAdapter extends TypeAdapter<Account> {
       isWipeEnabled: fields[7] as bool,
       autoLockDurationSeconds: fields[8] as int,
       hasSeenTutorial: fields[9] as bool,
-      xp: fields[10] as int,
-      level: fields[11] as int,
-      spentCoins: fields[12] as int,
-      unlockedThemeIds: (fields[13] as List?)?.cast<String>(),
-      unlockedCardSkinIds: (fields[14] as List?)?.cast<String>(),
-      activeCardSkinId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -59,19 +53,7 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(8)
       ..write(obj.autoLockDurationSeconds)
       ..writeByte(9)
-      ..write(obj.hasSeenTutorial)
-      ..writeByte(10)
-      ..write(obj.xp)
-      ..writeByte(11)
-      ..write(obj.level)
-      ..writeByte(12)
-      ..write(obj.spentCoins)
-      ..writeByte(13)
-      ..write(obj.unlockedThemeIds)
-      ..writeByte(14)
-      ..write(obj.unlockedCardSkinIds)
-      ..writeByte(15)
-      ..write(obj.activeCardSkinId);
+      ..write(obj.hasSeenTutorial);
   }
 
   @override

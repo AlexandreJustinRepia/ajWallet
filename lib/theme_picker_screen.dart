@@ -4,7 +4,7 @@ import 'services/theme_service.dart';
 import 'services/session_service.dart';
 import 'views/shop_view.dart';
 import 'services/gamification_service.dart';
-import 'services/database_service.dart';
+import 'services/user_profile_service.dart';
 
 class ThemePickerScreen extends StatefulWidget {
   const ThemePickerScreen({super.key});
@@ -208,8 +208,8 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   }
 
   Widget _buildPremiumGrid(BuildContext context, ThemeData theme) {
-    final account = SessionService.activeAccount;
-    final unlockedIds = account?.unlockedThemeIds ?? [];
+    final profile = UserProfileService.profile;
+    final unlockedIds = profile.unlockedThemeIds;
     final premiumThemes = ThemeService.premiumThemes;
 
     return ValueListenableBuilder<ThemeState>(
@@ -350,22 +350,6 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   }
 
   void _showShopPrompt(AppTheme t) {
-    final account = SessionService.activeAccount;
-    if (account == null) return;
-
-    final transactions = DatabaseService.getTransactions(account.key as int);
-    final budgets = DatabaseService.getBudgets(account.key as int);
-    final goals = DatabaseService.getGoals(account.key as int);
-    final debts = DatabaseService.getDebts(account.key as int);
-
-    final profile = GamificationService.generateProfile(
-      transactions: transactions,
-      budgets: budgets,
-      goals: goals,
-      debts: debts,
-      spentCoins: account.spentCoins,
-    );
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -382,20 +366,11 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => ShopView(
-                    currentCoins: profile.coins,
-                    unlockedIds: account.unlockedThemeIds,
-                    onPurchase: (spent, id) async {
-                      account.spentCoins += spent;
-                      if (!account.unlockedThemeIds.contains(id)) {
-                        account.unlockedThemeIds.add(id);
-                      }
-                      await account.save();
-                      setState(() {}); // Refresh current screen
-                    },
-                  ),
+                  builder: (context) => const ShopView(),
                 ),
-              );
+              ).then((_) {
+                 setState(() {}); // Refresh screen in case they bought it
+              });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
             child: const Text('Go to Shop'),

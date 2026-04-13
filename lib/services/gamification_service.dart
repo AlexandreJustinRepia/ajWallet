@@ -5,6 +5,8 @@ import '../models/goal.dart';
 import '../models/debt.dart';
 import '../models/account.dart';
 import 'package:intl/intl.dart';
+import 'database_service.dart';
+import 'user_profile_service.dart';
 
 class DailyQuest {
   final String title;
@@ -95,13 +97,13 @@ class GamificationProfile {
 }
 
 class GamificationService {
-  static GamificationProfile generateProfile({
-    required List<Transaction> transactions,
-    required List<Budget> budgets,
-    required List<Goal> goals,
-    required List<Debt> debts,
-    int spentCoins = 0,
-  }) {
+  static GamificationProfile generateGlobalProfile() {
+    final transactions = DatabaseService.getAllTransactions();
+    final budgets = DatabaseService.getAllBudgets();
+    final goals = DatabaseService.getAllGoals();
+    final debts = DatabaseService.getAllDebts();
+    final spentCoins = UserProfileService.profile.spentCoins;
+
     // 1. Calculate Base XP and Base Coins
     int txXp = transactions.length * 10;
     int txCoins = transactions.length * 2; // 2 coins per transaction
@@ -612,19 +614,4 @@ class GamificationService {
     );
   }
 
-  static Future<void> syncProfileToAccount(Account account, GamificationProfile profile) async {
-    bool changed = false;
-    if (account.xp != profile.xp) {
-      account.xp = profile.xp;
-      changed = true;
-    }
-    if (account.level != profile.level) {
-      account.level = profile.level;
-      changed = true;
-    }
-    
-    if (changed) {
-      await account.save();
-    }
-  }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/session_service.dart';
-import '../models/account.dart';
+import '../services/user_profile_service.dart';
+import '../models/user_profile.dart';
 
 class CardDecorator extends StatelessWidget {
   final Widget child;
@@ -9,10 +9,10 @@ class CardDecorator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<Account?>(
-      valueListenable: SessionService.activeAccountNotifier,
-      builder: (context, account, _) {
-        final activeSkin = account?.activeCardSkinId;
+    return ValueListenableBuilder<UserProfile?>(
+      valueListenable: UserProfileService.profileNotifier,
+      builder: (context, profile, _) {
+        final activeSkin = profile?.activeCardSkinId;
 
         if (activeSkin == null) {
           return child;

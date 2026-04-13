@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
+import 'services/gamification_service.dart';
 import 'models/account.dart';
 import 'login_screen.dart';
 import 'create_account_screen.dart';
@@ -550,7 +551,7 @@ class _VaultCardState extends State<_VaultCard> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              'LEVEL ${widget.account.level}',
+                              'LEVEL ${GamificationService.generateGlobalProfile().level}',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w900,

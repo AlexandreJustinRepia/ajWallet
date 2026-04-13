@@ -89,9 +89,6 @@ class _HomeViewState extends State<HomeView> {
     
     List<Transaction> transactions;
     List<Wallet> wallets;
-    List<Budget> budgets = [];
-    List<Goal> goals = [];
-    List<Debt> debts = [];
 
     if (widget.isTutorialActive) {
       transactions = _tutorialTransactions;
@@ -103,11 +100,6 @@ class _HomeViewState extends State<HomeView> {
       wallets = account != null
           ? DatabaseService.getWallets(account.key as int)
           : <Wallet>[];
-      if (account != null) {
-        budgets = DatabaseService.getBudgets(account.key as int);
-        goals = DatabaseService.getGoals(account.key as int);
-        debts = DatabaseService.getDebts(account.key as int);
-      }
     }
 
     final double totalBalance = wallets
@@ -128,20 +120,7 @@ class _HomeViewState extends State<HomeView> {
       });
     }
 
-    final gamification = GamificationService.generateProfile(
-      transactions: transactions, 
-      budgets: budgets, 
-      goals: goals, 
-      debts: debts,
-      spentCoins: account?.spentCoins ?? 0,
-    );
-
-    // Sync progress to account model persistently
-    if (account != null && !widget.isTutorialActive) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        GamificationService.syncProfileToAccount(account, gamification);
-      });
-    }
+    final gamification = GamificationService.generateGlobalProfile();
 
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
@@ -903,23 +882,7 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => ShopView(
-                              currentCoins: profile.coins,
-                              unlockedIds: SessionService.activeAccount?.unlockedThemeIds ?? [],
-                              onPurchase: (spent, id) async {
-                                final account = SessionService.activeAccount;
-                                if (account != null) {
-                                  account.spentCoins += spent;
-                                  if (!account.unlockedThemeIds.contains(id)) {
-                                    account.unlockedThemeIds.add(id);
-                                  }
-                                  await account.save();
-                                  if (context.mounted) {
-                                    Navigator.pop(context); // Refreshing state by closing sheet
-                                  }
-                                }
-                              },
-                            ),
+                            builder: (context) => const ShopView(),
                           ),
                         );
                       },

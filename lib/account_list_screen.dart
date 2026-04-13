@@ -31,14 +31,17 @@ class _AccountListScreenState extends State<AccountListScreen> {
   void _confirmDelete(Account account) {
     final theme = Theme.of(context);
     final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final hintColor = textColor.withValues(alpha:0.5);
+    final hintColor = textColor.withValues(alpha: 0.5);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: theme.scaffoldBackgroundColor,
         title: Text('Delete Account', style: TextStyle(color: textColor)),
-        content: Text('Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.', style: TextStyle(color: textColor)),
+        content: Text(
+          'Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.',
+          style: TextStyle(color: textColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -55,14 +58,19 @@ class _AccountListScreenState extends State<AccountListScreen> {
                     if (mounted) {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const CreateAccountScreen(),
+                        ),
                       );
                     }
                   });
                 }
               }
             },
-            child: const Text('Delete', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -73,32 +81,47 @@ class _AccountListScreenState extends State<AccountListScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withValues(alpha:0.5);
+    final hintColor = textColor.withValues(alpha: 0.5);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(32, 60, 32, 24),
+                padding: const EdgeInsets.fromLTRB(32, 80, 32, 32),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Your Accounts',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: textColor,
-                        letterSpacing: -0.5,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        'RootEXP',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                          color: theme.primaryColor,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Text(
-                      'Select an account to continue.',
-                      style: TextStyle(fontSize: 16, color: hintColor),
+                      'Select Your\nAccount',
+                      style: theme.textTheme.displaySmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        height: 1.1,
+                        letterSpacing: -1.5,
+                      ),
                     ),
                   ],
                 ),
@@ -106,128 +129,240 @@ class _AccountListScreenState extends State<AccountListScreen> {
             ),
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final account = _accounts[index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 16.0),
-                      child: InkWell(
-                        onLongPress: () => _confirmDelete(account),
-                        onTap: () {
-                          if (account.pin == null || account.pin!.isEmpty) {
-                            SessionService.setActiveAccount(account);
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(builder: (context) => const DashboardScreen()),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => LoginScreen(account: account),
-                              ),
-                            );
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: theme.cardColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: theme.dividerColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.shadowColor.withValues(alpha:0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: theme.primaryColor,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.account_balance_wallet_outlined,
-                                  color: theme.colorScheme.onPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            account.name,
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: textColor,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: theme.primaryColor.withValues(alpha:0.1),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: theme.primaryColor.withValues(alpha:0.2)),
-                                            ),
-                                            child: Text(
-                                              'Lvl ${account.level}',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w900,
-                                                color: theme.primaryColor,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                IconButton(
-                                icon: Icon(Icons.edit_outlined, color: hintColor),
-                                onPressed: () => _showEditAccountDialog(account),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete_outline, color: hintColor),
-                                onPressed: () => _confirmDelete(account),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                  childCount: _accounts.length,
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.85,
                 ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  if (index < _accounts.length) {
+                    final account = _accounts[index];
+                    return _buildVaultCard(context, account);
+                  } else {
+                    return _buildAddAccountCard(context);
+                  }
+                }, childCount: _accounts.length + 1),
+              ),
+            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAddAccountCard(BuildContext context) {
+    final theme = Theme.of(context);
+    return InkWell(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
+        );
+        _loadAccounts();
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: theme.primaryColor.withValues(alpha: 0.2),
+            width: 2,
+            style: BorderStyle.solid,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.add_rounded,
+                color: theme.primaryColor.withValues(alpha: 0.6),
+                size: 24,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'NEW ACCOUNT',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1,
+                color: theme.primaryColor.withValues(alpha: 0.5),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          await Navigator.push(
+    );
+  }
+
+  Widget _buildVaultCard(BuildContext context, Account account) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+
+    return InkWell(
+      onLongPress: () => _showAccountOptions(account),
+      onTap: () {
+        if (account.pin == null || account.pin!.isEmpty) {
+          SessionService.setActiveAccount(account);
+          Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const CreateAccountScreen()),
+            MaterialPageRoute(builder: (context) => const DashboardScreen()),
           );
-          _loadAccounts();
-        },
-        backgroundColor: theme.primaryColor,
-        icon: Icon(Icons.add, color: theme.colorScheme.onPrimary),
-        label: Text('Add Account', style: TextStyle(color: theme.colorScheme.onPrimary)),
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => LoginScreen(account: account),
+            ),
+          );
+        }
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: theme.dividerColor, width: 0.5),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            // Decorative background element
+            Positioned(
+              right: -20,
+              top: -20,
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: primaryColor.withValues(alpha: 0.03),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      (account.pin != null && account.pin!.isNotEmpty)
+                          ? Icons.lock_rounded
+                          : Icons.account_balance_wallet_outlined,
+                      color: primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    account.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: primaryColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'LEVEL ${account.level}',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.4,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAccountOptions(Account account) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Rename Vault'),
+              onTap: () {
+                Navigator.pop(context);
+                _showEditAccountDialog(account);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline, color: Colors.red),
+              title: const Text(
+                'Delete Vault',
+                style: TextStyle(color: Colors.red),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _confirmDelete(account);
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -251,15 +386,25 @@ class _AccountListScreenState extends State<AccountListScreen> {
             decoration: InputDecoration(
               labelText: 'Account Name',
               hintText: 'e.g. My Savings',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            validator: (value) => (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
+            validator: (value) =>
+                (value == null || value.trim().isEmpty) ? 'Enter a name' : null,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -275,7 +420,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.primaryColor,
               foregroundColor: theme.colorScheme.onPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             child: const Text('Save Changes'),
           ),

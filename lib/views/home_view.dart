@@ -241,63 +241,122 @@ class _HomeViewState extends State<HomeView> {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Good Day,',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
-                letterSpacing: 0.5,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Good Day,',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                  letterSpacing: 0.5,
+                ),
               ),
-            ),
-            Text(
-              name,
-              style: theme.textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                letterSpacing: -1,
+              const SizedBox(height: 2),
+              Text(
+                name,
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
+                  height: 1.1,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        const SizedBox(width: 12),
         InkWell(
           onTap: () => _showGamificationSheet(context, profile, theme),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(24),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
             decoration: BoxDecoration(
-              color: growthColor.withValues(alpha:0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: growthColor.withValues(alpha:0.3)),
+              gradient: LinearGradient(
+                colors: [
+                  theme.primaryColor.withValues(alpha:0.15),
+                  theme.colorScheme.secondary.withValues(alpha:0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(
+                color: theme.primaryColor.withValues(alpha:0.2),
+                width: 1.5,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: theme.primaryColor.withValues(alpha:0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                )
+              ]
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                Stack(
+                  alignment: Alignment.center,
                   children: [
-                    Text(_getGrowthEmoji(profile.streakDays), style: const TextStyle(fontSize: 14)),
-                    const SizedBox(width: 4),
-                    Text('${profile.streakDays} Days', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: growthColor)),
+                    SizedBox(
+                      width: 36,
+                      height: 36,
+                      child: CircularProgressIndicator(
+                        value: profile.progressToNextLevel,
+                        strokeWidth: 3.5,
+                        backgroundColor: theme.primaryColor.withValues(alpha:0.2),
+                        valueColor: AlwaysStoppedAnimation<Color>(theme.primaryColor),
+                      ),
+                    ),
+                    Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: theme.primaryColor.withValues(alpha:0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Center(
+                        child: Text(
+                          '${profile.level}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                            color: theme.primaryColor,
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 2),
-                Row(
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('Lvl ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 16)),
-                    const SizedBox(width: 4),
-                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
-                    const SizedBox(width: 4),
-                    Text('${profile.coins}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.amber)),
+                    Row(
+                      children: [
+                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
+                        const SizedBox(width: 4),
+                        Text('Level ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 13)),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 12),
+                        const SizedBox(width: 4),
+                        Text('${profile.coins}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.amber)),
+                        const SizedBox(width: 8),
+                        Text(_getGrowthEmoji(profile.streakDays), style: const TextStyle(fontSize: 10)),
+                        const SizedBox(width: 2),
+                        Text('${profile.streakDays}d', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 11, color: growthColor)),
+                      ],
+                    ),
                   ],
                 ),
               ],

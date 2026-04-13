@@ -31,13 +31,15 @@ class AccountAdapter extends TypeAdapter<Account> {
       level: fields[11] as int,
       spentCoins: fields[12] as int,
       unlockedThemeIds: (fields[13] as List?)?.cast<String>(),
+      unlockedCardSkinIds: (fields[14] as List?)?.cast<String>(),
+      activeCardSkinId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Account obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -65,7 +67,11 @@ class AccountAdapter extends TypeAdapter<Account> {
       ..writeByte(12)
       ..write(obj.spentCoins)
       ..writeByte(13)
-      ..write(obj.unlockedThemeIds);
+      ..write(obj.unlockedThemeIds)
+      ..writeByte(14)
+      ..write(obj.unlockedCardSkinIds)
+      ..writeByte(15)
+      ..write(obj.activeCardSkinId);
   }
 
   @override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../transaction_details_screen.dart';
+import 'card_decorator.dart';
 
 /// A tappable card that displays a single transaction row.
 class TransactionCard extends StatelessWidget {
@@ -30,37 +31,39 @@ class TransactionCard extends StatelessWidget {
           if (result == true) onRefresh?.call();
         },
         borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: theme.dividerColor, width: 0.5),
-          ),
-          child: Row(
-            children: [
-              _TypeIcon(
-                isTransfer: isTransfer,
-                isIncome: isIncome,
-                color: displayColor,
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(tx.title, style: theme.textTheme.titleSmall),
-                    Text(tx.category, style: theme.textTheme.labelLarge),
-                  ],
+        child: CardDecorator(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.cardColor,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: theme.dividerColor, width: 0.5),
+            ),
+            child: Row(
+              children: [
+                _TypeIcon(
+                  isTransfer: isTransfer,
+                  isIncome: isIncome,
+                  color: displayColor,
                 ),
-              ),
-              _AmountColumn(
-                tx: tx,
-                isIncome: isIncome,
-                isTransfer: isTransfer,
-                displayColor: displayColor,
-              ),
-            ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(tx.title, style: theme.textTheme.titleSmall),
+                      Text(tx.category, style: theme.textTheme.labelLarge),
+                    ],
+                  ),
+                ),
+                _AmountColumn(
+                  tx: tx,
+                  isIncome: isIncome,
+                  isTransfer: isTransfer,
+                  displayColor: displayColor,
+                ),
+              ],
+            ),
           ),
         ),
       ),

@@ -46,6 +46,12 @@ class Account extends HiveObject {
   @HiveField(13)
   List<String> unlockedThemeIds;
 
+  @HiveField(14)
+  List<String> unlockedCardSkinIds;
+
+  @HiveField(15)
+  String? activeCardSkinId;
+
   Account({
     required this.name,
     this.budget = 0.0,
@@ -61,7 +67,10 @@ class Account extends HiveObject {
     this.level = 1,
     this.spentCoins = 0,
     List<String>? unlockedThemeIds,
-  }) : unlockedThemeIds = unlockedThemeIds ?? [];
+    List<String>? unlockedCardSkinIds,
+    this.activeCardSkinId,
+  }) : unlockedThemeIds = unlockedThemeIds ?? [],
+       unlockedCardSkinIds = unlockedCardSkinIds ?? [];
 
   Map<String, dynamic> toMap() {
     return {
@@ -79,6 +88,8 @@ class Account extends HiveObject {
       'level': level,
       'spentCoins': spentCoins,
       'unlockedThemeIds': unlockedThemeIds,
+      'unlockedCardSkinIds': unlockedCardSkinIds,
+      'activeCardSkinId': activeCardSkinId,
     };
   }
 
@@ -98,6 +109,8 @@ class Account extends HiveObject {
       level: map['level'] ?? 1,
       spentCoins: map['spentCoins'] ?? 0,
       unlockedThemeIds: List<String>.from(map['unlockedThemeIds'] ?? []),
+      unlockedCardSkinIds: List<String>.from(map['unlockedCardSkinIds'] ?? []),
+      activeCardSkinId: map['activeCardSkinId'],
     );
   }
 }

@@ -134,6 +134,9 @@ class GamificationService {
       totalCoinsEarned = 0;
     }
 
+    // TESTING BONUS: 100,000 Coins
+    totalCoinsEarned += 100000;
+
     int level = (totalXp ~/ 500) + 1;
 
     // 2. Calculate Streak

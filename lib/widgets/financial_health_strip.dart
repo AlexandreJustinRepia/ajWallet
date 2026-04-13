@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'card_decorator.dart';
 
 class FinancialHealthStrip extends StatefulWidget {
   final double budgetUsedPct;
@@ -110,79 +111,81 @@ class _HealthCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha:0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-               SizedBox(
-                 width: 50,
-                 height: 50,
-                 child: CircularProgressIndicator(
-                   value: progress,
-                   backgroundColor: color.withValues(alpha:0.1),
-                   valueColor: AlwaysStoppedAnimation<Color>(color),
-                   strokeWidth: 4,
-                 ),
-               ),
-               Icon(icon, color: color, size: 20),
-            ],
-          ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return CardDecorator(
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: theme.dividerColor, width: 0.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha:0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Stack(
+              alignment: Alignment.center,
               children: [
-                Text(
-                  label,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    letterSpacing: 1.5,
-                    fontWeight: FontWeight.w900,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      value,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      subtext,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
+                 SizedBox(
+                   width: 50,
+                   height: 50,
+                   child: CircularProgressIndicator(
+                     value: progress,
+                     backgroundColor: color.withValues(alpha:0.1),
+                     valueColor: AlwaysStoppedAnimation<Color>(color),
+                     strokeWidth: 4,
+                   ),
+                 ),
+                 Icon(icon, color: color, size: 20),
               ],
             ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: theme.dividerColor),
-        ],
+            const SizedBox(width: 20),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w900,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        value,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        subtext,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right_rounded, color: theme.dividerColor),
+          ],
+        ),
       ),
     );
   }

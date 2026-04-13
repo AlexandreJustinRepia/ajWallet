@@ -11,6 +11,8 @@ import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
 import '../models/debt.dart';
 import '../widgets/financial_health_strip.dart';
+import '../widgets/card_decorator.dart';
+
 class PlanningView extends StatelessWidget {
   final VoidCallback onRefresh;
   final bool isTutorialActive;
@@ -790,58 +792,60 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      key: sectionKey,
-      margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: theme.dividerColor, width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha:0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(12),
+    return CardDecorator(
+      child: Container(
+        key: sectionKey,
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: theme.dividerColor, width: 0.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha:0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha:0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
                 ),
-                child: Icon(icon, color: color, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    if (count > 0)
-                      Text('$count active', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
-                  ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      if (count > 0)
+                        Text('$count active', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                    ],
+                  ),
                 ),
-              ),
-              IconButton(
-                key: addKey,
-                icon: const Icon(Icons.add_circle_outline_rounded),
-                color: theme.primaryColor,
-                onPressed: onAdd,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          summary ?? const SizedBox.shrink(),
-          child,
-        ],
+                IconButton(
+                  key: addKey,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  color: theme.primaryColor,
+                  onPressed: onAdd,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            summary ?? const SizedBox.shrink(),
+            child,
+          ],
+        ),
       ),
     );
   }

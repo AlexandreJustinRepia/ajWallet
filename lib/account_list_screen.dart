@@ -115,13 +115,34 @@ class _AccountListScreenState extends State<AccountListScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      'Select Your\nAccount',
-                      style: theme.textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                        letterSpacing: -1.5,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Select Your\nAccount',
+                          style: theme.textTheme.displaySmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            height: 1.1,
+                            letterSpacing: -1.5,
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => _showGalleryTutorial(),
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.help_outline_rounded,
+                              color: theme.primaryColor,
+                              size: 20,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -205,117 +226,99 @@ class _AccountListScreenState extends State<AccountListScreen> {
     );
   }
 
+  void _onAccountSelected(BuildContext context, Account account) {
+    if (account.pin == null || account.pin!.isEmpty) {
+      SessionService.setActiveAccount(account);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const DashboardScreen(),
+        ),
+      );
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => LoginScreen(account: account),
+        ),
+      );
+    }
+  }
+
   Widget _buildVaultCard(BuildContext context, Account account) {
+    return _VaultCard(
+      account: account,
+      onTap: () => _onAccountSelected(context, account),
+      onLongPress: () => _showAccountOptions(account),
+    );
+  }
+
+  void _showGalleryTutorial() {
     final theme = Theme.of(context);
     final primaryColor = theme.primaryColor;
 
-    return InkWell(
-      onLongPress: () => _showAccountOptions(account),
-      onTap: () {
-        if (account.pin == null || account.pin!.isEmpty) {
-          SessionService.setActiveAccount(account);
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const DashboardScreen()),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => LoginScreen(account: account),
-            ),
-          );
-        }
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: theme.dividerColor, width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: theme.shadowColor.withValues(alpha: 0.03),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            // Decorative background element
-            Positioned(
-              right: -20,
-              top: -20,
-              child: Container(
-                width: 80,
-                height: 80,
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.scaffoldBackgroundColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: primaryColor.withValues(alpha: 0.03),
-                  shape: BoxShape.circle,
+                  color: primaryColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(Icons.touch_app_rounded, color: primaryColor),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Manage Your Vaults',
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-            ),
-
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Icon(
-                      (account.pin != null && account.pin!.isNotEmpty)
-                          ? Icons.lock_rounded
-                          : Icons.account_balance_wallet_outlined,
-                      color: primaryColor,
-                      size: 20,
-                    ),
+              const SizedBox(height: 12),
+              Text(
+                'To Rename or Delete a vault, simply hold your finger on the card for a second.',
+                style: TextStyle(
+                  color: theme.textTheme.bodyMedium?.color?.withValues(
+                    alpha: 0.6,
                   ),
-                  const Spacer(),
-                  Text(
-                    account.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: primaryColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'LEVEL ${account.level}',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 0.5,
-                          color: theme.textTheme.bodyMedium?.color?.withValues(
-                            alpha: 0.4,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                  fontSize: 16,
+                  height: 1.5,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Got it!',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -427,6 +430,147 @@ class _AccountListScreenState extends State<AccountListScreen> {
             child: const Text('Save Changes'),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VaultCard extends StatefulWidget {
+  final Account account;
+  final VoidCallback onTap;
+  final VoidCallback onLongPress;
+
+  const _VaultCard({
+    required this.account,
+    required this.onTap,
+    required this.onLongPress,
+  });
+
+  @override
+  State<_VaultCard> createState() => _VaultCardState();
+}
+
+class _VaultCardState extends State<_VaultCard> {
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final primaryColor = theme.primaryColor;
+
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) => setState(() => _isPressed = false),
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.97 : 1.0,
+        duration: const Duration(milliseconds: 100),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onLongPress: widget.onLongPress,
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(24),
+            splashColor: primaryColor.withValues(alpha: 0.1),
+            highlightColor: primaryColor.withValues(alpha: 0.05),
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: _isPressed ? primaryColor : theme.dividerColor,
+                  width: _isPressed ? 2.0 : 0.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _isPressed
+                        ? primaryColor.withValues(alpha: 0.15)
+                        : theme.shadowColor.withValues(alpha: 0.03),
+                    blurRadius: _isPressed ? 20 : 10,
+                    offset: _isPressed ? const Offset(0, 8) : const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // Decorative background element
+                  Positioned(
+                    right: -20,
+                    top: -20,
+                    child: Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: primaryColor.withValues(alpha: 0.03),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: primaryColor.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Icon(
+                            (widget.account.pin != null &&
+                                    widget.account.pin!.isNotEmpty)
+                                ? Icons.lock_rounded
+                                : Icons.account_balance_wallet_outlined,
+                            color: primaryColor,
+                            size: 20,
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          widget.account.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Container(
+                              width: 6,
+                              height: 6,
+                              decoration: BoxDecoration(
+                                color: primaryColor,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'LEVEL ${widget.account.level}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                color: theme.textTheme.bodyMedium?.color
+                                    ?.withValues(
+                                  alpha: 0.4,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

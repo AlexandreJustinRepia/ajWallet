@@ -4,6 +4,7 @@ import '../services/theme_service.dart';
 import '../services/card_skin_service.dart';
 import '../models/app_theme.dart';
 import '../widgets/animated_count_text.dart';
+import '../widgets/card_decorator.dart';
 
 class ShopView extends StatefulWidget {
   final int currentCoins;
@@ -273,16 +274,82 @@ class _ShopViewState extends State<ShopView> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Skin Preview Area
+          Container(
+            height: 120,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: theme.brightness == Brightness.dark 
+                ? theme.scaffoldBackgroundColor 
+                : Colors.grey[100],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Stack(
               children: [
-                Expanded(
-                  child: Column(
+                Center(
+                  child: Container(
+                    width: 160,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: theme.cardColor,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha:0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Stack(
+                      children: [
+                        const Center(
+                          child: Icon(Icons.credit_card_rounded, color: Colors.grey, size: 24),
+                        ),
+                        Positioned.fill(
+                          child: CustomPaint(
+                            painter: SkinPainter(skinId: s.id),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isUnlocked)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha:0.8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text('OWNED', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(s.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
@@ -336,6 +403,8 @@ class _ShopViewState extends State<ShopView> {
             ),
           ],
         ),
+      ),
+        ],
       ),
     );
   }

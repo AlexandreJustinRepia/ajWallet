@@ -24,7 +24,7 @@ class CardDecorator extends StatelessWidget {
             Positioned.fill(
               child: IgnorePointer(
                 child: CustomPaint(
-                  painter: _SkinPainter(skinId: activeSkin),
+                  painter: SkinPainter(skinId: activeSkin),
                 ),
               ),
             ),
@@ -35,10 +35,10 @@ class CardDecorator extends StatelessWidget {
   }
 }
 
-class _SkinPainter extends CustomPainter {
+class SkinPainter extends CustomPainter {
   final String skinId;
 
-  _SkinPainter({required this.skinId});
+  SkinPainter({required this.skinId});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -135,6 +135,6 @@ class _SkinPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return (oldDelegate as _SkinPainter).skinId != skinId;
+    return (oldDelegate as SkinPainter).skinId != skinId;
   }
 }

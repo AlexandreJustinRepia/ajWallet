@@ -1329,9 +1329,16 @@ class _GamingBadgeState extends State<_GamingBadge> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final colorScheme = theme.colorScheme;
     final profile = widget.profile;
-    final primaryColor = theme.primaryColor;
-    final growthColor = Colors.green[600]!;
+    
+    // Theme-derived colors
+    final primaryColor = colorScheme.primary;
+    final onPrimaryColor = colorScheme.onPrimary;
+    final secondaryColor = colorScheme.secondary;
+    final growthColor = colorScheme.tertiary; // Success color in this theme system
+    final surfaceColor = colorScheme.surface;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),
@@ -1346,20 +1353,20 @@ class _GamingBadgeState extends State<_GamingBadge> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                primaryColor.withValues(alpha: 0.12),
-                primaryColor.withValues(alpha: 0.04),
+                primaryColor.withValues(alpha: isDark ? 0.15 : 0.08),
+                primaryColor.withValues(alpha: isDark ? 0.05 : 0.02),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: primaryColor.withValues(alpha: 0.25),
+              color: primaryColor.withValues(alpha: isDark ? 0.3 : 0.15),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: primaryColor.withValues(alpha: 0.1),
+                color: isDark ? Colors.black.withValues(alpha: 0.2) : primaryColor.withValues(alpha: 0.05),
                 blurRadius: 8,
                 spreadRadius: -2,
               ),
@@ -1374,14 +1381,12 @@ class _GamingBadgeState extends State<_GamingBadge> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // HEXAGON / SHIELD STYLE LEVEL
               SizedBox(
                 width: 42,
                 height: 42,
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Outer Glow / Ring
                     TweenAnimationBuilder<double>(
                       tween: Tween<double>(begin: 0, end: profile.progressToNextLevel),
                       duration: const Duration(milliseconds: 1500),
@@ -1393,7 +1398,6 @@ class _GamingBadgeState extends State<_GamingBadge> {
                         valueColor: AlwaysStoppedAnimation<Color>(primaryColor),
                       ),
                     ),
-                    // Inner Level Shield
                     Container(
                       width: 28,
                       height: 28,
@@ -1402,8 +1406,8 @@ class _GamingBadgeState extends State<_GamingBadge> {
                         shape: BoxShape.circle,
                         boxShadow: [
                           BoxShadow(
-                            color: primaryColor.withValues(alpha: 0.4),
-                            blurRadius: 8,
+                            color: primaryColor.withValues(alpha: 0.3),
+                            blurRadius: 6,
                             offset: const Offset(0, 2),
                           ),
                         ],
@@ -1411,8 +1415,8 @@ class _GamingBadgeState extends State<_GamingBadge> {
                       child: Center(
                         child: Text(
                           '${profile.level}',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: onPrimaryColor,
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
                           ),
@@ -1435,7 +1439,7 @@ class _GamingBadgeState extends State<_GamingBadge> {
                           fontSize: 8,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1,
-                          color: primaryColor.withValues(alpha: 0.6),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
                         ),
                       ),
                       Text(
@@ -1447,7 +1451,7 @@ class _GamingBadgeState extends State<_GamingBadge> {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.shield_rounded, size: 10, color: primaryColor.withValues(alpha: 0.5)),
+                      Icon(Icons.shield_rounded, size: 10, color: secondaryColor.withValues(alpha: 0.6)),
                     ],
                   ),
                   const SizedBox(height: 2),

@@ -5,6 +5,7 @@ import '../services/card_skin_service.dart';
 import '../models/app_theme.dart';
 import '../widgets/animated_count_text.dart';
 import '../widgets/card_decorator.dart';
+import '../widgets/gamification_counter.dart';
 import '../services/user_profile_service.dart';
 import '../services/gamification_service.dart';
 
@@ -42,15 +43,11 @@ class _ShopViewState extends State<ShopView> {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.amber.withValues(alpha:0.3)),
               ),
-              child: Row(
-                children: [
-                  const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    '$currentCoins',
-                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
-                  ),
-                ],
+              child: GamificationCounter(
+                value: currentCoins,
+                color: Colors.amber,
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
+                icon: Icons.monetization_on_rounded,
               ),
             ),
           ],

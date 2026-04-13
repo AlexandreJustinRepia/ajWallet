@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
-import 'services/gamification_service.dart';
 import 'models/account.dart';
 import 'login_screen.dart';
 import 'create_account_screen.dart';
@@ -538,32 +537,7 @@ class _VaultCardState extends State<_VaultCard> {
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 6,
-                              height: 6,
-                              decoration: BoxDecoration(
-                                color: primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'LEVEL ${GamificationService.generateGlobalProfile().level}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 0.5,
-                                color: theme.textTheme.bodyMedium?.color
-                                    ?.withValues(
-                                  alpha: 0.4,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                        const SizedBox(height: 12),
                       ],
                     ),
                   ),

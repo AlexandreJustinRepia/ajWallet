@@ -8,6 +8,7 @@ import '../widgets/animated_count_text.dart';
 import '../widgets/slide_in_list_item.dart';
 import '../widgets/quick_add_input.dart';
 import '../widgets/transaction_card.dart';
+import '../widgets/gamification_counter.dart';
 import '../services/financial_insights_service.dart';
 import '../services/gamification_service.dart';
 import '../models/transaction_model.dart';
@@ -317,19 +318,21 @@ class _HomeViewState extends State<HomeView> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.star_rounded, color: Colors.amber, size: 14),
-                        const SizedBox(width: 4),
-                        Text('Level ${profile.level}', style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 13)),
-                      ],
+                    GamificationCounter(
+                      value: profile.level,
+                      prefix: 'Level ',
+                      style: TextStyle(fontWeight: FontWeight.w900, color: theme.primaryColor, fontSize: 13),
+                      icon: Icons.star_rounded,
                     ),
                     const SizedBox(height: 2),
                     Row(
                       children: [
-                        const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 12),
-                        const SizedBox(width: 4),
-                        Text('${profile.coins}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.amber)),
+                        GamificationCounter(
+                          value: profile.coins,
+                          color: Colors.amber,
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Colors.amber),
+                          icon: Icons.monetization_on_rounded,
+                        ),
                         const SizedBox(width: 8),
                         Text(_getGrowthEmoji(profile.streakDays), style: const TextStyle(fontSize: 10)),
                         const SizedBox(width: 2),
@@ -662,17 +665,30 @@ class _GamificationSheetState extends State<_GamificationSheet> {
                   child: const Icon(Icons.emoji_events_rounded, size: 40, color: Colors.amber),
                 ),
                 const SizedBox(height: 16),
-                Text('Level ${profile.level} Saver', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                GamificationCounter(
+                  value: profile.level,
+                  prefix: 'Level ',
+                  unit: ' Saver',
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text('${profile.xp} Total XP', style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                    GamificationCounter(
+                      value: profile.xp,
+                      unit: ' Total XP',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5)),
+                    ),
                     const SizedBox(width: 12),
                     Text('•', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.3))),
                     const SizedBox(width: 12),
-                    const Icon(Icons.monetization_on_rounded, color: Colors.amber, size: 14),
-                    const SizedBox(width: 4),
-                    Text('${profile.coins} Coins', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber)),
+                    GamificationCounter(
+                      value: profile.coins,
+                      unit: ' Coins',
+                      icon: Icons.monetization_on_rounded,
+                      color: Colors.amber,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 24),

@@ -596,7 +596,26 @@ class GamificationService {
       ),
     ];
 
-    // Add coins from completed achievements
+    // Filter achievements to show only the current active tier per category
+    final Map<String, List<Achievement>> groups = {};
+    for (final a in achievementsList) {
+      // Extract base name by removing Roman numeral suffixes (I, II, III, IV, V)
+      final baseName = a.title.replaceAll(RegExp(r' (I|II|III|IV|V)$'), '');
+      groups.putIfAbsent(baseName, () => []).add(a);
+    }
+
+    final List<Achievement> filteredAchievements = [];
+    for (final baseName in groups.keys) {
+      final group = groups[baseName]!;
+      // Show the first uncompleted achievement, or the last one if all are done
+      final active = group.firstWhere(
+        (a) => !a.isUnlocked,
+        orElse: () => group.last,
+      );
+      filteredAchievements.add(active);
+    }
+
+    // Sum up coins from completed achievements (all of them, hidden or not)
     int achievementCoins = achievementsList
         .where((a) => a.isUnlocked)
         .fold(0, (sum, a) => sum + a.coinReward);
@@ -610,8 +629,7 @@ class GamificationService {
       streakDays: streak,
       dailyQuests: quests,
       challenges: challenges,
-      achievements: achievementsList,
+      achievements: filteredAchievements,
     );
   }
-
 }

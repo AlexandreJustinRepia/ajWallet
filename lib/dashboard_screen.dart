@@ -35,6 +35,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final GlobalKey _balanceKey = GlobalKey();
   final GlobalKey<QuickAddInputState> _quickAddKey =
       GlobalKey<QuickAddInputState>();
+  final GlobalKey _treeKey = GlobalKey();
   final GlobalKey _activityHeaderKey = GlobalKey();
   final GlobalKey _sampleTransactionKey = GlobalKey();
 
@@ -179,6 +180,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onRefresh: _refresh,
         balanceKey: _balanceKey,
         quickAddKey: _quickAddKey,
+        treeKey: _treeKey,
         activityHeaderKey: _activityHeaderKey,
         sampleTransactionKey: _sampleTransactionKey,
         isTutorialActive: _showTutorial && _selectedIndex == 0,
@@ -253,6 +255,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
           await Future.delayed(const Duration(milliseconds: 300));
           await _quickAddKey.currentState?.simulateSubmit();
         },
+      ),
+      OnboardingStep(
+        targetKey: _treeKey,
+        title: 'Your Financial Tree',
+        description:
+            'Meet your interactive financial tree! It grows as your balance increases and reacts in real-time to every transaction you record.',
+        onStepEnter: () => _scrollTo(_treeKey, 0.2),
+      ),
+      OnboardingStep(
+        targetKey: _treeKey,
+        title: 'Visualize Progress',
+        description:
+            'Watch the leaves flutter when you spend, and see it grow majestic green as your wealth builds up. It\'s a living map of your journey!',
       ),
       OnboardingStep(
         targetKey: _activityHeaderKey,

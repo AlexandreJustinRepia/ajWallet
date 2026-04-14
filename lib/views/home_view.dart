@@ -15,11 +15,13 @@ import '../models/transaction_model.dart';
 import 'insight_card.dart';
 import 'dashboard_helpers.dart';
 import 'shop_view.dart';
+import '../widgets/animated_tree.dart';
 
 class HomeView extends StatefulWidget {
   final VoidCallback onRefresh;
   final GlobalKey? balanceKey;
   final GlobalKey? quickAddKey;
+  final GlobalKey? treeKey;
   final GlobalKey? activityHeaderKey;
   final GlobalKey? sampleTransactionKey;
   final bool isTutorialActive;
@@ -29,6 +31,7 @@ class HomeView extends StatefulWidget {
     required this.onRefresh,
     this.balanceKey,
     this.quickAddKey,
+    this.treeKey,
     this.activityHeaderKey,
     this.sampleTransactionKey,
     this.isTutorialActive = false,
@@ -139,6 +142,8 @@ class _HomeViewState extends State<HomeView> {
           _buildBalanceCard(context, totalBalance, _isNetWorthMode, (val) {
             setState(() => _isNetWorthMode = val);
           }, key: widget.balanceKey),
+          const SizedBox(height: 32),
+          AnimatedTree(key: widget.treeKey, balance: totalBalance),
           if (account != null) ...[
             const SizedBox(height: 16),
             QuickAddInput(

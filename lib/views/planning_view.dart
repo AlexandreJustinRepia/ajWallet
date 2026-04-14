@@ -10,10 +10,12 @@ import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
 import '../models/debt.dart';
+import '../models/budget.dart'; // Added missing import
 import '../widgets/financial_health_strip.dart';
 import '../widgets/card_decorator.dart';
+import 'planning_view_model.dart'; // Import newly created ViewModel
 
-class PlanningView extends StatelessWidget {
+class PlanningView extends StatefulWidget {
   final VoidCallback onRefresh;
   final bool isTutorialActive;
   final GlobalKey? budgetSectionKey;
@@ -27,7 +29,7 @@ class PlanningView extends StatelessWidget {
   final GlobalKey? debtAddKey;
 
   const PlanningView({
-    super.key, 
+    super.key,
     required this.onRefresh,
     this.isTutorialActive = false,
     this.budgetSectionKey,
@@ -42,288 +44,342 @@ class PlanningView extends StatelessWidget {
   });
 
   @override
+  State<PlanningView> createState() => _PlanningViewState();
+}
+
+class _PlanningViewState extends State<PlanningView> {
+  late final PlanningViewModel _viewModel = PlanningViewModel();
+
+  @override
+  void initState() {
+    super.initState();
+    final accountKey = SessionService.activeAccount?.key as int?;
+    if (accountKey != null) {
+      _viewModel.init(accountKey);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final account = SessionService.activeAccount;
-    final accountKey = account?.key as int?;
-    
-    if (accountKey == null) {
-      return const Center(child: Text('No active account'));
-    }
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        if (_viewModel.isLoading && _viewModel.budgets.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    final goals = DatabaseService.getGoals(accountKey);
-    final budgets = DatabaseService.getBudgets(accountKey);
-    final debts = DatabaseService.getDebts(accountKey);
+        final theme = Theme.of(context);
+        final accountKey = SessionService.activeAccount?.key as int?;
 
-    final theme = Theme.of(context);
+        if (accountKey == null) {
+          return const Center(child: Text('No active account'));
+        }
 
-    final transactions = DatabaseService.getTransactions(accountKey);
-    final wallets = DatabaseService.getWallets(accountKey);
-    final totalBalance = wallets
-        .where((w) => !w.isExcluded)
-        .fold(0.0, (sum, w) => sum + w.balance);
-
-    final now = DateTime.now();
-
-    // 1. Budget Used %
-    final thisMonthBudgets = budgets.where((b) => b.month == now.month && b.year == now.year).toList();
-    double totalBudgetLimit = 0;
-    double totalBudgetSpent = 0;
-    for (var b in thisMonthBudgets) {
-      totalBudgetLimit += b.amountLimit;
-      final spent = transactions
-          .where((e) =>
-              (e.budgetKey == b.key ||
-               (e.category == b.category && e.date.month == now.month && e.date.year == now.year)) &&
-              e.type == TransactionType.expense)
-          .fold(0.0, (s, e) => s + e.amount);
-      totalBudgetSpent += spent;
-    }
-    final budgetUsedPct = totalBudgetLimit > 0 ? (totalBudgetSpent / totalBudgetLimit * 100).clamp(0.0, 100.0) : 0.0;
-
-    // 2. Savings Progress %
-    final totalGoalTarget = goals.fold(0.0, (s, g) => s + g.targetAmount);
-    final totalGoalSaved = goals.fold(0.0, (s, g) => s + g.savedAmount);
-    final savingsPct = totalGoalTarget > 0 ? (totalGoalSaved / totalGoalTarget * 100).clamp(0.0, 100.0) : 0.0;
-
-    // 3. Active Debts
-    final activeDebtAmount = debts.where((d) => !d.isOwedToMe).fold(0.0, (s, d) => s + (d.totalAmount - d.paidAmount).clamp(0.0, double.infinity));
-
-    final insights = PlanningIntelligenceService.generate(
-      transactions: transactions,
-      budgets: budgets,
-      goals: goals,
-      debts: debts,
-      totalBalance: totalBalance,
-      wallets: wallets,
-    );
-
-    return CustomScrollView(
-      physics: const BouncingScrollPhysics(),
-      slivers: [
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-            child: Text(
-              'FINANCIAL PLANNING',
-              style: theme.textTheme.labelLarge?.copyWith(
-                letterSpacing: 2,
-                fontWeight: FontWeight.w900,
-                fontSize: 10,
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+        return CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                child: Text(
+                  'FINANCIAL PLANNING',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    letterSpacing: 2,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 10,
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
 
-        // ── Health Snapshot Strip ────────────────────────────────────
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24, top: 8),
-            child: FinancialHealthStrip(
-              budgetUsedPct: budgetUsedPct,
-              savingsPct: savingsPct,
-              activeDebtAmount: activeDebtAmount,
+            // ── Health Snapshot Strip ────────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24, top: 8),
+                child: FinancialHealthStrip(
+                  budgetUsedPct: _viewModel.budgetUsedPct,
+                  savingsPct: _viewModel.savingsPct,
+                  activeDebtAmount: _viewModel.activeDebtAmount,
+                ),
+              ),
             ),
-          ),
-        ),
 
-        // ── Financial Intelligence Panel ─────────────────────────────
-        if (insights.isNotEmpty)
-          SliverToBoxAdapter(
-            child: _IntelligencePanel(insights: insights),
-          ),
+            // ── Financial Intelligence Panel ─────────────────────────────
+            if (_viewModel.insights.isNotEmpty)
+              SliverToBoxAdapter(
+                child: _IntelligencePanel(insights: _viewModel.insights),
+              ),
 
-        // Budgets Section
-        SliverToBoxAdapter(
-          child: _SectionCard(
-            sectionKey: budgetSectionKey,
-            addKey: budgetAddKey,
-            title: 'Monthly Budgets',
-            icon: Icons.pie_chart_outline_rounded,
-            color: theme.colorScheme.secondary,
-            count: budgets.length,
-            onAdd: () async {
-              final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddBudgetScreen(accountKey: accountKey)));
-              if (result == true) onRefresh();
-            },
-            summary: thisMonthBudgets.isNotEmpty
-              ? _BudgetTotalSummary(
-                  spent: totalBudgetSpent,
-                  limit: totalBudgetLimit,
-                  pct: budgetUsedPct,
-                )
-              : null,
-            child: (budgets.isEmpty && !isTutorialActive)
-              ? const _EmptyState(icon: Icons.pie_chart_outline_rounded, message: 'No budgets set')
-              : Column(
-                  children: [
-                    if (isTutorialActive && budgets.isEmpty)
-                      Container(
-                        key: budgetIndicatorKey,
-                        child: _PlanningItem(
-                          title: 'Food & Drinks',
-                          subtitle: DateFormat('MMM yyyy').format(DateTime.now()),
-                          trailingText: '₱0 / ₱2000',
-                          progress: 0.0,
-                          progressColor: theme.colorScheme.secondary,
-                          onDelete: () {},
-                        ),
+            // Budgets Section
+            SliverToBoxAdapter(
+              child: _SectionCard(
+                sectionKey: widget.budgetSectionKey,
+                addKey: widget.budgetAddKey,
+                title: 'Monthly Budgets',
+                icon: Icons.pie_chart_outline_rounded,
+                color: theme.colorScheme.secondary,
+                count: _viewModel.budgets.length,
+                onAdd: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddBudgetScreen(accountKey: accountKey),
+                    ),
+                  );
+                  if (result == true) {
+                    _viewModel.refresh();
+                    widget.onRefresh();
+                  }
+                },
+                summary: _viewModel.budgets.any((b) => b.month == DateTime.now().month)
+                    ? _BudgetTotalSummary(
+                        viewModel: _viewModel,
+                      )
+                    : null,
+                child: (_viewModel.budgets.isEmpty && !widget.isTutorialActive)
+                    ? const _EmptyState(
+                        icon: Icons.pie_chart_outline_rounded,
+                        message: 'No budgets set',
+                      )
+                    : Column(
+                        children: [
+                          if (widget.isTutorialActive && _viewModel.budgets.isEmpty)
+                            Container(
+                              key: widget.budgetIndicatorKey,
+                              child: _PlanningItem(
+                                title: 'Food & Drinks',
+                                subtitle: DateFormat('MMM yyyy').format(DateTime.now()),
+                                trailingText: '₱0 / ₱2000',
+                                progress: 0.0,
+                                progressColor: theme.colorScheme.secondary,
+                                onDelete: () {},
+                              ),
+                            ),
+                          ..._viewModel.budgets.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final b = entry.value;
+                            
+                            // USING OPTIMIZED LOOKUP
+                            final currentSpending = _viewModel.getBudgetSpending(b);
+                            final progress = b.amountLimit > 0
+                                ? (currentSpending / b.amountLimit).clamp(0.0, 1.0)
+                                : 0.0;
+                            final isOver = currentSpending > b.amountLimit;
+
+                            return Container(
+                              key: index == 0 ? widget.budgetIndicatorKey : null,
+                              child: _PlanningItem(
+                                title: b.category,
+                                subtitle: DateFormat('MMM yyyy')
+                                    .format(DateTime(b.year, b.month)),
+                                trailingText:
+                                    '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
+                                progress: progress,
+                                progressColor: isOver
+                                    ? theme.colorScheme.error
+                                    : theme.colorScheme.secondary,
+                                isOverspent: isOver,
+                                onDelete: () async {
+                                  await DatabaseService.deleteBudget(b);
+                                  _viewModel.refresh();
+                                  widget.onRefresh();
+                                },
+                              ),
+                            );
+                          }),
+                        ],
                       ),
-                    ...budgets.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final b = entry.value;
-                    final currentSpending = DatabaseService.getTransactions(accountKey)
-                        .where((t) => (t.budgetKey == b.key) || 
-                                     (t.category == b.category && t.date.month == b.month && t.date.year == b.year))
-                        .where((t) => t.type == TransactionType.expense)
-                        .fold(0.0, (sum, t) => sum + t.amount);
-                    final progress = b.amountLimit > 0 ? (currentSpending / b.amountLimit).clamp(0.0, 1.0) : 0.0;
-                    final isOver = currentSpending > b.amountLimit;
+              ),
+            ),
 
-                    return Container(
-                      key: index == 0 ? budgetIndicatorKey : null,
-                      child: _PlanningItem(
-                        title: b.category,
-                        subtitle: DateFormat('MMM yyyy').format(DateTime(b.year, b.month)),
-                        trailingText: '₱${currentSpending.toStringAsFixed(0)} / ₱${b.amountLimit.toStringAsFixed(0)}',
-                        progress: progress,
-                        progressColor: isOver ? theme.colorScheme.error : theme.colorScheme.secondary,
-                        isOverspent: isOver,
-                        onDelete: () async {
-                          await DatabaseService.deleteBudget(b);
-                          onRefresh();
-                        },
+            // Goals Section
+            SliverToBoxAdapter(
+              child: _SectionCard(
+                sectionKey: widget.goalSectionKey,
+                addKey: widget.goalAddKey,
+                title: 'Savings Goals',
+                icon: Icons.flag_outlined,
+                color: theme.primaryColor,
+                count: _viewModel.goals.length,
+                onAdd: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddGoalScreen(accountKey: accountKey),
+                    ),
+                  );
+                  if (result == true) {
+                    _viewModel.refresh();
+                    widget.onRefresh();
+                  }
+                },
+                child: (_viewModel.goals.isEmpty && !widget.isTutorialActive)
+                    ? const _EmptyState(
+                        icon: Icons.flag_outlined,
+                        message: 'No savings goals',
+                      )
+                    : Column(
+                        children: [
+                          if (widget.isTutorialActive && _viewModel.goals.isEmpty)
+                            _PlanningItem(
+                              title: 'Vacation',
+                              subtitle: 'Target: ₱10000',
+                              trailingText: '₱0 saved',
+                              progress: 0.0,
+                              progressColor: theme.primaryColor,
+                              primaryActionLabel: 'Save',
+                              primaryActionKey: widget.goalFundKey,
+                              onPrimaryAction: () {},
+                              secondaryActionLabel: 'Withdraw',
+                              secondaryActionKey: widget.goalWithdrawKey,
+                              onSecondaryAction: () {},
+                              onDelete: () {},
+                            ),
+                          ..._viewModel.goals.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final g = entry.value;
+                            final progress = g.targetAmount > 0
+                                ? (g.savedAmount / g.targetAmount).clamp(0.0, 1.0)
+                                : 0.0;
+                            return _PlanningItem(
+                              title: g.name,
+                              subtitle: 'Target: ₱${g.targetAmount.toStringAsFixed(0)}',
+                              trailingText: '₱${g.savedAmount.toStringAsFixed(0)} saved',
+                              progress: progress,
+                              progressColor: theme.primaryColor,
+                              primaryActionLabel: 'Save',
+                              primaryActionKey: index == 0 ? widget.goalFundKey : null,
+                              onPrimaryAction: () async {
+                                final res = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FundGoalScreen(
+                                      accountKey: accountKey,
+                                      goal: g,
+                                      isWithdrawing: false,
+                                    ),
+                                  ),
+                                );
+                                if (res == true) {
+                                  _viewModel.refresh();
+                                  widget.onRefresh();
+                                }
+                              },
+                              secondaryActionLabel: 'Withdraw',
+                              secondaryActionKey:
+                                  index == 0 ? widget.goalWithdrawKey : null,
+                              onSecondaryAction: () async {
+                                final res = await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => FundGoalScreen(
+                                      accountKey: accountKey,
+                                      goal: g,
+                                      isWithdrawing: true,
+                                    ),
+                                  ),
+                                );
+                                if (res == true) {
+                                  _viewModel.refresh();
+                                  widget.onRefresh();
+                                }
+                              },
+                              onDelete: () async {
+                                await DatabaseService.deleteGoal(g);
+                                _viewModel.refresh();
+                                widget.onRefresh();
+                              },
+                            );
+                          }),
+                        ],
                       ),
-                    );
-                  }),
-                  ],
-                ),
-          ),
-        ),
+              ),
+            ),
 
-        // Goals Section
-        SliverToBoxAdapter(
-          child: _SectionCard(
-            sectionKey: goalSectionKey,
-            addKey: goalAddKey,
-            title: 'Savings Goals',
-            icon: Icons.flag_outlined,
-            color: theme.primaryColor,
-            count: goals.length,
-            onAdd: () async {
-              final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddGoalScreen(accountKey: accountKey)));
-              if (result == true) onRefresh();
-            },
-            child: (goals.isEmpty && !isTutorialActive)
-              ? const _EmptyState(icon: Icons.flag_outlined, message: 'No savings goals')
-              : Column(
-                  children: [
-                    if (isTutorialActive && goals.isEmpty)
-                      _PlanningItem(
-                        title: 'Vacation',
-                        subtitle: 'Target: ₱10000',
-                        trailingText: '₱0 saved',
-                        progress: 0.0,
-                        progressColor: theme.primaryColor,
-                        primaryActionLabel: 'Save',
-                        primaryActionKey: goalFundKey,
-                        onPrimaryAction: () {},
-                        secondaryActionLabel: 'Withdraw',
-                        secondaryActionKey: goalWithdrawKey,
-                        onSecondaryAction: () {},
-                        onDelete: () {},
-                      ),
-                    ...goals.asMap().entries.map((entry) {
-                      final index = entry.key;
-                      final g = entry.value;
-                    final progress = g.targetAmount > 0 ? (g.savedAmount / g.targetAmount).clamp(0.0, 1.0) : 0.0;
-                    return _PlanningItem(
-                      title: g.name,
-                      subtitle: 'Target: ₱${g.targetAmount.toStringAsFixed(0)}',
-                      trailingText: '₱${g.savedAmount.toStringAsFixed(0)} saved',
-                      progress: progress,
-                      progressColor: theme.primaryColor,
-                      primaryActionLabel: 'Save',
-                      primaryActionKey: index == 0 ? goalFundKey : null,
-                      onPrimaryAction: () async {
-                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
-                          accountKey: accountKey,
-                          goal: g,
-                          isWithdrawing: false,
-                        )));
-                        if (res == true) onRefresh();
-                      },
-                      secondaryActionLabel: 'Withdraw',
-                      secondaryActionKey: index == 0 ? goalWithdrawKey : null,
-                      onSecondaryAction: () async {
-                        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => FundGoalScreen(
-                          accountKey: accountKey,
-                          goal: g,
-                          isWithdrawing: true,
-                        )));
-                        if (res == true) onRefresh();
-                      },
-                      onDelete: () async {
-                        await DatabaseService.deleteGoal(g);
-                        onRefresh();
-                      },
-                    );
-                  }),
-                  ],
-                ),
-          ),
-        ),
-
-        // Debts Section
-        SliverToBoxAdapter(
-          child: _SectionCard(
-            sectionKey: debtSectionKey,
-            addKey: debtAddKey,
-            title: 'Debts & Loans',
-            icon: Icons.handshake_outlined,
-            color: Colors.amber[700]!,
-            count: debts.length,
-            onAdd: () async {
-              final result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddDebtScreen(accountKey: accountKey)));
-              if (result == true) onRefresh();
-            },
-            child: (debts.isEmpty && !isTutorialActive)
-              ? const _EmptyState(icon: Icons.handshake_outlined, message: 'No active debts')
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (debts.any((d) => !d.isOwedToMe)) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8, top: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.arrow_drop_down, color: Colors.red, size: 20),
-                            Text('YOU OWE', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+            // Debts Section
+            SliverToBoxAdapter(
+              child: _SectionCard(
+                sectionKey: widget.debtSectionKey,
+                addKey: widget.debtAddKey,
+                title: 'Debts & Loans',
+                icon: Icons.handshake_outlined,
+                color: Colors.amber[700]!,
+                count: _viewModel.debts.length,
+                onAdd: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddDebtScreen(accountKey: accountKey),
+                    ),
+                  );
+                  if (result == true) {
+                    _viewModel.refresh();
+                    widget.onRefresh();
+                  }
+                },
+                child: (_viewModel.debts.isEmpty && !widget.isTutorialActive)
+                    ? const _EmptyState(
+                        icon: Icons.handshake_outlined,
+                        message: 'No active debts',
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (_viewModel.youOweDebts.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8, top: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.arrow_drop_down,
+                                      color: Colors.red, size: 20),
+                                  Text(
+                                    'YOU OWE',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.textTheme.bodyMedium?.color
+                                          ?.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ..._viewModel.youOweDebts
+                                .map((d) => _buildDebtItem(context, d, accountKey)),
+                            const SizedBox(height: 16),
                           ],
-                        ),
-                      ),
-                      ...debts.where((d) => !d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
-                      const SizedBox(height: 16),
-                    ],
-                    if (debts.any((d) => d.isOwedToMe)) ...[
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8, top: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.arrow_drop_up, color: Colors.green, size: 20),
-                            Text('OWED TO YOU', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                          if (_viewModel.owedToYouDebts.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8, top: 4),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.arrow_drop_up,
+                                      color: Colors.green, size: 20),
+                                  Text(
+                                    'OWED TO YOU',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: theme.textTheme.bodyMedium?.color
+                                          ?.withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            ..._viewModel.owedToYouDebts
+                                .map((d) => _buildDebtItem(context, d, accountKey)),
                           ],
-                        ),
+                        ],
                       ),
-                      ...debts.where((d) => d.isOwedToMe).map((d) => _buildDebtItem(context, d, accountKey)),
-                    ],
-                  ],
-                ),
-          ),
-        ),
+              ),
+            ),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 100)),
-      ],
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
+          ],
+        );
+      },
     );
   }
 
@@ -332,37 +388,50 @@ class PlanningView extends StatelessWidget {
     final paid = d.paidAmount;
     final remaining = total - paid;
     final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
-    
+
     return _PlanningItem(
       title: d.personName,
-      subtitle: d.dueDate != null ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}' : 'No due date',
+      subtitle: d.dueDate != null
+          ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}'
+          : 'No due date',
       trailingText: '₱${remaining.toStringAsFixed(0)}',
       progress: progress,
       progressColor: Colors.amber[700]!,
       primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
       onPrimaryAction: () async {
-        final res = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTransactionScreen(
-          accountKey: accountKey,
-          initialType: d.isOwedToMe ? TransactionType.income : TransactionType.expense,
-          initialDebtKey: d.key as int,
-        )));
-        if (res == true) onRefresh();
+        final res = await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AddTransactionScreen(
+              accountKey: accountKey,
+              initialType:
+                  d.isOwedToMe ? TransactionType.income : TransactionType.expense,
+              initialDebtKey: d.key as int,
+            ),
+          ),
+        );
+        if (res == true) {
+          _viewModel.refresh();
+          widget.onRefresh();
+        }
       },
       onSecondaryAction: () => _showDebtHistory(context, d, accountKey),
       secondaryActionLabel: 'History',
       secondaryActionIcon: Icons.history_rounded,
       onDelete: () async {
         await DatabaseService.deleteDebt(d);
-        onRefresh();
+        _viewModel.refresh();
+        widget.onRefresh();
       },
     );
   }
 
   void _showDebtHistory(BuildContext context, Debt debt, int accountKey) {
-    final transactions = DatabaseService.getTransactions(accountKey)
+    // We already have all transactions in ViewModel. Filter locally for history.
+    final transactions = _viewModel.transactions
         .where((t) => t.debtKey == debt.key)
         .toList()
-        ..sort((a, b) => b.date.compareTo(a.date));
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     showModalBottomSheet(
       context: context,
@@ -382,7 +451,9 @@ class PlanningView extends StatelessWidget {
                 margin: const EdgeInsets.symmetric(vertical: 12),
                 width: 40,
                 height: 4,
-                decoration: BoxDecoration(color: Colors.grey.withValues(alpha:0.3), borderRadius: BorderRadius.circular(2)),
+                decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2)),
               ),
               Padding(
                 padding: const EdgeInsets.all(24).copyWith(top: 0),
@@ -391,18 +462,25 @@ class PlanningView extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: (debt.isOwedToMe ? Colors.green : Colors.red).withValues(alpha:0.1),
+                        color: (debt.isOwedToMe ? Colors.green : Colors.red)
+                            .withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.history_rounded, color: debt.isOwedToMe ? Colors.green : Colors.red),
+                      child: Icon(Icons.history_rounded,
+                          color: debt.isOwedToMe ? Colors.green : Colors.red),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('${debt.personName}\'s History', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe', style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                          Text('${debt.personName}\'s History',
+                              style: const TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.bold)),
+                          Text(debt.isOwedToMe ? 'Owed to you' : 'You owe',
+                              style: TextStyle(
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.5))),
                         ],
                       ),
                     ),
@@ -411,28 +489,45 @@ class PlanningView extends StatelessWidget {
               ),
               const Divider(height: 1),
               Expanded(
-                child: transactions.isEmpty 
+                child: transactions.isEmpty
                     ? const Center(child: Text('No transaction history yet'))
                     : ListView.builder(
                         padding: const EdgeInsets.all(24),
                         itemCount: transactions.length,
                         itemBuilder: (context, index) {
                           final tx = transactions[index];
-                          // Payment happens when I receive money for a loan (income) or I pay money for a debt (expense)
-                          final isPayment = tx.type == (debt.isOwedToMe ? TransactionType.income : TransactionType.expense);
+                          final isPayment = tx.type ==
+                              (debt.isOwedToMe
+                                  ? TransactionType.income
+                                  : TransactionType.expense);
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(
-                              backgroundColor: isPayment ? const Color(0xFF00796B).withValues(alpha:0.1) : const Color(0xFFF57C00).withValues(alpha:0.1),
-                              child: Icon(isPayment ? Icons.payment_rounded : Icons.handshake_rounded, color: isPayment ? const Color(0xFF00796B) : const Color(0xFFF57C00), size: 20),
+                              backgroundColor: isPayment
+                                  ? const Color(0xFF00796B).withValues(alpha: 0.1)
+                                  : const Color(0xFFF57C00).withValues(alpha: 0.1),
+                              child: Icon(
+                                  isPayment
+                                      ? Icons.payment_rounded
+                                      : Icons.handshake_rounded,
+                                  color: isPayment
+                                      ? const Color(0xFF00796B)
+                                      : const Color(0xFFF57C00),
+                                  size: 20),
                             ),
-                            title: Text(tx.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.date), style: const TextStyle(fontSize: 12)),
+                            title: Text(tx.title,
+                                style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(
+                                DateFormat('MMM dd, yyyy • hh:mm a')
+                                    .format(tx.date),
+                                style: const TextStyle(fontSize: 12)),
                             trailing: Text(
                               '${isPayment ? '+' : ''}₱${tx.amount.toStringAsFixed(0)}',
                               style: TextStyle(
-                                fontWeight: FontWeight.w900, 
-                                color: isPayment ? theme.primaryColor : theme.colorScheme.error,
+                                fontWeight: FontWeight.w900,
+                                color: isPayment
+                                    ? theme.primaryColor
+                                    : theme.colorScheme.error,
                               ),
                             ),
                           );
@@ -500,15 +595,21 @@ class _PlanningItem extends StatelessWidget {
                         Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
                         if (isOverspent) ...[
                           const SizedBox(width: 4),
-                          const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                          const Icon(Icons.warning_amber_rounded,
+                              size: 14, color: Colors.red),
                         ]
                       ],
                     ),
-                    Text(subtitle, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
+                    Text(subtitle,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.5))),
                   ],
                 ),
               ),
-              Text(trailingText, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+              Text(trailingText,
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
                 onPressed: onDelete,
@@ -525,7 +626,7 @@ class _PlanningItem extends StatelessWidget {
               builder: (context, val, _) {
                 return LinearProgressIndicator(
                   value: val,
-                  backgroundColor: progressColor.withValues(alpha:0.1),
+                  backgroundColor: progressColor.withValues(alpha: 0.1),
                   valueColor: AlwaysStoppedAnimation<Color>(progressColor),
                   minHeight: 8,
                 );
@@ -538,7 +639,8 @@ class _PlanningItem extends StatelessWidget {
             children: [
               Text(
                 '${(progress * 100).toStringAsFixed(0)}%',
-                style: TextStyle(fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                    fontSize: 10, color: progressColor, fontWeight: FontWeight.bold),
               ),
               Row(
                 mainAxisSize: MainAxisSize.min,
@@ -547,15 +649,20 @@ class _PlanningItem extends StatelessWidget {
                     TextButton.icon(
                       key: secondaryActionKey,
                       onPressed: onSecondaryAction,
-                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded, size: 14, color: progressColor.withValues(alpha:0.7)),
+                      icon: Icon(secondaryActionIcon ?? Icons.remove_circle_outline_rounded,
+                          size: 14, color: progressColor.withValues(alpha: 0.7)),
                       label: Text(
                         secondaryActionLabel ?? 'Remove',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor.withValues(alpha:0.7)),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: progressColor.withValues(alpha: 0.7)),
                       ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        backgroundColor: progressColor.withValues(alpha:0.05),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        backgroundColor: progressColor.withValues(alpha: 0.05),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -564,15 +671,20 @@ class _PlanningItem extends StatelessWidget {
                     TextButton.icon(
                       key: primaryActionKey,
                       onPressed: onPrimaryAction,
-                      icon: Icon(Icons.add_circle_outline_rounded, size: 14, color: progressColor),
+                      icon: Icon(Icons.add_circle_outline_rounded,
+                          size: 14, color: progressColor),
                       label: Text(
                         primaryActionLabel ?? 'Add',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: progressColor),
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: progressColor),
                       ),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12),
-                        backgroundColor: progressColor.withValues(alpha:0.1),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        backgroundColor: progressColor.withValues(alpha: 0.1),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
                 ],
@@ -597,20 +709,35 @@ class _ShakeWidget extends StatefulWidget {
   State<_ShakeWidget> createState() => _ShakeWidgetState();
 }
 
-class _ShakeWidgetState extends State<_ShakeWidget> with SingleTickerProviderStateMixin {
+class _ShakeWidgetState extends State<_ShakeWidget>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
     _animation = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 10.0).chain(CurveTween(curve: Curves.easeOut)), weight: 1),
-      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -10.0, end: 10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 2),
-      TweenSequenceItem(tween: Tween(begin: -10.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)), weight: 1),
+      TweenSequenceItem(
+          tween: Tween(begin: 0.0, end: 10.0).chain(CurveTween(curve: Curves.easeOut)),
+          weight: 1),
+      TweenSequenceItem(
+          tween:
+              Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 2),
+      TweenSequenceItem(
+          tween:
+              Tween(begin: -10.0, end: 10.0).chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 2),
+      TweenSequenceItem(
+          tween:
+              Tween(begin: 10.0, end: -10.0).chain(CurveTween(curve: Curves.easeInOut)),
+          weight: 2),
+      TweenSequenceItem(
+          tween: Tween(begin: -10.0, end: 0.0).chain(CurveTween(curve: Curves.easeIn)),
+          weight: 1),
     ]).animate(_controller);
 
     if (widget.animate) {
@@ -642,30 +769,39 @@ class _ShakeWidgetState extends State<_ShakeWidget> with SingleTickerProviderSta
 }
 
 class _BudgetTotalSummary extends StatelessWidget {
-  final double spent;
-  final double limit;
-  final double pct;
+  final PlanningViewModel viewModel;
 
   const _BudgetTotalSummary({
-    required this.spent,
-    required this.limit,
-    required this.pct,
+    required this.viewModel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final thisMonthBudgets = viewModel.budgets
+        .where((b) => b.month == now.month && b.year == now.year)
+        .toList();
+
+    double totalSpent = 0;
+    double totalLimit = 0;
+    for (var b in thisMonthBudgets) {
+      totalLimit += b.amountLimit;
+      totalSpent += viewModel.getBudgetSpending(b);
+    }
+
     final theme = Theme.of(context);
-    final isOver = spent > limit;
+    final pct = totalLimit > 0 ? (totalSpent / totalLimit * 100).clamp(0.0, 100.0) : 0.0;
+    final isOver = totalSpent > totalLimit;
     final barColor = isOver ? const Color(0xFFC62828) : const Color(0xFF2E7D32);
-    final remaining = (limit - spent).clamp(0.0, double.infinity);
+    final remaining = (totalLimit - totalSpent).clamp(0.0, double.infinity);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: barColor.withValues(alpha:0.05),
+        color: barColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: barColor.withValues(alpha:0.2)),
+        border: Border.all(color: barColor.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -679,13 +815,13 @@ class _BudgetTotalSummary extends StatelessWidget {
                   fontSize: 10,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: barColor.withValues(alpha:0.1),
+                  color: barColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -704,7 +840,7 @@ class _BudgetTotalSummary extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '₱${spent.toStringAsFixed(0)}',
+                '₱${totalSpent.toStringAsFixed(0)}',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
@@ -716,11 +852,11 @@ class _BudgetTotalSummary extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(bottom: 3),
                 child: Text(
-                  '/ ₱${limit.toStringAsFixed(0)}',
+                  '/ ₱${totalLimit.toStringAsFixed(0)}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                   ),
                 ),
               ),
@@ -731,12 +867,12 @@ class _BudgetTotalSummary extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: const Color(0xFF2E7D32).withValues(alpha:0.7),
+                    color: const Color(0xFF2E7D32).withValues(alpha: 0.7),
                   ),
                 )
               else
                 Text(
-                  '₱${(spent - limit).toStringAsFixed(0)} over',
+                  '₱${(totalSpent - totalLimit).toStringAsFixed(0)} over',
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -755,7 +891,7 @@ class _BudgetTotalSummary extends StatelessWidget {
               builder: (_, val, _) => LinearProgressIndicator(
                 value: val,
                 minHeight: 8,
-                backgroundColor: barColor.withValues(alpha:0.1),
+                backgroundColor: barColor.withValues(alpha: 0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(barColor),
               ),
             ),
@@ -804,53 +940,59 @@ class _SectionCard extends StatelessWidget {
             border: Border.all(color: theme.dividerColor, width: 0.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha:0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha:0.1),
-                    borderRadius: BorderRadius.circular(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(icon, color: color, size: 24),
                   ),
-                  child: Icon(icon, color: color, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      if (count > 0)
-                        Text('$count active', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5))),
-                    ],
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold)),
+                        if (count > 0)
+                          Text('$count active',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.5))),
+                      ],
+                    ),
                   ),
-                ),
-                IconButton(
-                  key: addKey,
-                  icon: const Icon(Icons.add_circle_outline_rounded),
-                  color: theme.primaryColor,
-                  onPressed: onAdd,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            summary ?? const SizedBox.shrink(),
-            child,
-          ],
+                  IconButton(
+                    key: addKey,
+                    icon: const Icon(Icons.add_circle_outline_rounded),
+                    color: theme.primaryColor,
+                    onPressed: onAdd,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              summary ?? const SizedBox.shrink(),
+              child,
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
 
 class _EmptyState extends StatelessWidget {
@@ -877,10 +1019,6 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// Financial Intelligence Panel
-// ============================================================================
-
 class _IntelligencePanel extends StatelessWidget {
   final List<PlanningInsight> insights;
 
@@ -899,7 +1037,7 @@ class _IntelligencePanel extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha:0.1),
+                  color: theme.primaryColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -915,7 +1053,7 @@ class _IntelligencePanel extends StatelessWidget {
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,
                   fontSize: 10,
-                  color: theme.primaryColor.withValues(alpha:0.8),
+                  color: theme.primaryColor.withValues(alpha: 0.8),
                 ),
               ),
             ],
@@ -958,98 +1096,95 @@ class _InsightCard extends StatelessWidget {
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: color.withValues(alpha:0.25),
+              color: color.withValues(alpha: 0.25),
               width: 1.0,
             ),
             boxShadow: [
               BoxShadow(
-                color: color.withValues(alpha:0.07),
+                color: color.withValues(alpha: 0.07),
                 blurRadius: 16,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: const EdgeInsets.all(7),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(insight.icon, size: 16, color: color),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(insight.icon, size: 16, color: color),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: color.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      insight.badgeLabel,
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w900,
+                        color: color,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha:0.1),
-                  borderRadius: BorderRadius.circular(6),
-                ),
+              const SizedBox(height: 12),
+              Expanded(
                 child: Text(
-                  insight.badgeLabel,
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
-                    color: color,
-                    letterSpacing: 0.8,
+                  insight.message,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    height: 1.45,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: Text(
-              insight.message,
-              style: theme.textTheme.bodySmall?.copyWith(
-                height: 1.45,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-          const SizedBox(height: 4),
-          // Urgency dot indicator
-          Row(
-            children: [
-              Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha:
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: color.withValues(
+                        alpha: insight.urgency == InsightUrgency.high
+                            ? 1.0
+                            : insight.urgency == InsightUrgency.medium
+                                ? 0.6
+                                : 0.3,
+                      ),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
                     insight.urgency == InsightUrgency.high
-                        ? 1.0
+                        ? 'High priority'
                         : insight.urgency == InsightUrgency.medium
-                            ? 0.6
-                            : 0.3,
+                            ? 'Worth acting on'
+                            : 'Good to know',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                  shape: BoxShape.circle,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Text(
-                insight.urgency == InsightUrgency.high
-                    ? 'High priority'
-                    : insight.urgency == InsightUrgency.medium
-                        ? 'Worth acting on'
-                        : 'Good to know',
-                style: TextStyle(
-                  fontSize: 9,
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
-                  fontWeight: FontWeight.w600,
-                ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
-    )));
+    );
   }
 }
-
-// ============================================================================
-// End of Planning View
-// ============================================================================

@@ -792,23 +792,24 @@ class _SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return CardDecorator(
-      child: Container(
-        key: sectionKey,
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: theme.cardColor,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: theme.dividerColor, width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha:0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: CardDecorator(
+        child: Container(
+          key: sectionKey,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha:0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -847,8 +848,9 @@ class _SectionCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 class _EmptyState extends StatelessWidget {
@@ -946,25 +948,27 @@ class _InsightCard extends StatelessWidget {
     final theme = Theme.of(context);
     final color = insight.color;
 
-    return Container(
-      width: 220,
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: color.withValues(alpha:0.25),
-          width: 1.0,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha:0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: const EdgeInsets.only(right: 12),
+      child: CardDecorator(
+        child: Container(
+          width: 220,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: color.withValues(alpha:0.25),
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha:0.07),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1042,7 +1046,7 @@ class _InsightCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    )));
   }
 }
 

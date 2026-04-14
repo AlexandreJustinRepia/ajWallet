@@ -19,6 +19,7 @@ class CardDecorator extends StatelessWidget {
         }
 
         return Stack(
+          fit: StackFit.passthrough,
           children: [
             child,
             Positioned.fill(

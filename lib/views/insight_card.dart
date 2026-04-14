@@ -25,6 +25,7 @@ class _InsightCardState extends State<InsightCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final color = widget.insight.color;
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 1000),
       opacity: _opacity,
@@ -35,14 +36,24 @@ class _InsightCardState extends State<InsightCard> {
           decoration: BoxDecoration(
             color: theme.cardColor,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: theme.dividerColor, width: 0.5),
+            border: Border.all(
+              color: color.withValues(alpha: 0.25),
+              width: 1.0,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withValues(alpha: 0.07),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
           child: Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: widget.insight.color.withValues(alpha:0.05),
+                  color: widget.insight.color.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -58,7 +69,7 @@ class _InsightCardState extends State<InsightCard> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                     fontSize: 13,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.8),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
                   ),
                 ),
               ),

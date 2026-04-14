@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'create_account_screen.dart';
+import 'widgets/animated_tree.dart';
 
 class GetStartedScreen extends StatefulWidget {
   const GetStartedScreen({super.key});
@@ -17,6 +18,11 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
       'title': 'Private by Design',
       'desc': '100% Offline Vault. Your data never leaves your device.',
       'icon': '🛡️',
+    },
+    {
+      'title': 'Your Living Wealth',
+      'desc': 'This tree is a reflection of your financial health. Watch it bloom as you grow your savings.',
+      'icon': '🌳',
     },
     {
       'title': 'Growth Evolution',
@@ -74,10 +80,16 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                     child: Container(
                       height: MediaQuery.of(context).size.height * 0.35,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: Image.asset(
-                        'assets/images/onboarding/hero.png',
-                        fit: BoxFit.contain,
-                      ),
+                      child: _currentPage == 1 
+                        ? const Center(
+                            child: AnimatedTree(
+                              balance: 1000, // Show a healthy growing tree for onboarding
+                            ),
+                          )
+                        : Image.asset(
+                            'assets/images/onboarding/hero.png',
+                            fit: BoxFit.contain,
+                          ),
                     ),
                   ),
                 ),

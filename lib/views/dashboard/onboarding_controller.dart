@@ -53,13 +53,13 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.treeKey,
         title: 'Your Financial Tree',
-        description: 'Meet your interactive financial tree! It grows as your balance increases and reacts in real-time to every transaction you record.',
+        description: 'This tree is the heart of RootEXP. It\'s a living visualization of your wealth. As your balance grows, the tree grows more branches and lush leaves.',
         onStepEnter: () => _scrollTo(keys.treeKey, 0.2),
       ),
       OnboardingStep(
         targetKey: keys.treeKey,
-        title: 'Visualize Progress',
-        description: 'Watch the leaves flutter when you spend, and see it grow majestic green as your wealth builds up. It\'s a living map of your journey!',
+        title: 'Real-Time Health Indicator',
+        description: 'The tree doesn\'t just look pretty—it reacts to your habits. Healthy saving makes it bloom flowers, while overspending causes it to shed leaves. It\'s your financial discipline, visualized.',
       ),
       OnboardingStep(
         targetKey: keys.activityHeaderKey,

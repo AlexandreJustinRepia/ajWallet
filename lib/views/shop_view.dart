@@ -113,9 +113,8 @@ class _ShopViewState extends State<ShopView> {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: CardDecorator(
-        child: Container(
-          decoration: BoxDecoration(
+      child: Container(
+        decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -255,16 +254,16 @@ class _ShopViewState extends State<ShopView> {
           ),
         ],
       ),
-    )));
-  }
+    ),
+  );
+}
 
   Widget _buildSkinCard(BuildContext context, CardSkin s, int price, bool isUnlocked, bool isEquipped, bool canAfford) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 20),
-      child: CardDecorator(
-        child: Container(
-          decoration: BoxDecoration(
+      child: Container(
+        decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -405,14 +404,15 @@ class _ShopViewState extends State<ShopView> {
                     ),
                   ),
               ],
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
-    ],
-  ),
-)));
-  }
+    ),
+  );
+}
 
   void _confirmPurchase(BuildContext context, String name, String id, int price, bool isSkin) {
     showDialog(

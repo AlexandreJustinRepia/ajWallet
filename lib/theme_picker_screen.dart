@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'models/app_theme.dart';
 import 'services/theme_service.dart';
-import 'services/session_service.dart';
 import 'views/shop_view.dart';
-import 'services/gamification_service.dart';
 import 'services/user_profile_service.dart';
 import 'widgets/card_decorator.dart';
+import 'services/card_skin_service.dart';
 
 class ThemePickerScreen extends StatefulWidget {
   const ThemePickerScreen({super.key});
@@ -141,6 +140,15 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
 
             const SizedBox(height: 40),
             _buildSectionHeader(
+              'CARD BORDERS',
+              Icons.auto_awesome_mosaic_rounded,
+              activeTheme,
+            ),
+            const SizedBox(height: 16),
+            _buildSkinsGrid(context, activeTheme),
+
+            const SizedBox(height: 40),
+            _buildSectionHeader(
               'LAB PREVIEW',
               Icons.remove_red_eye_rounded,
               activeTheme,
@@ -229,19 +237,26 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           spacing: 12,
           runSpacing: 12,
           children: premiumThemes
-              .map((t) => _buildPresetItem(
-                  t, 
-                  t.id == activeThemeId, 
-                  isPremium: true, 
-                  isLocked: !unlockedIds.contains(t.id)
-                ))
+              .map(
+                (t) => _buildPresetItem(
+                  t,
+                  t.id == activeThemeId,
+                  isPremium: true,
+                  isLocked: !unlockedIds.contains(t.id),
+                ),
+              )
               .toList(),
         );
       },
     );
   }
 
-  Widget _buildPresetItem(AppTheme t, bool isSelected, {bool isPremium = false, bool isLocked = false}) {
+  Widget _buildPresetItem(
+    AppTheme t,
+    bool isSelected, {
+    bool isPremium = false,
+    bool isLocked = false,
+  }) {
     return InkWell(
       onTap: () {
         if (isLocked) {
@@ -336,11 +351,15 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha:0.4),
+                    color: Colors.black.withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Center(
-                    child: Icon(Icons.lock_rounded, color: Colors.white, size: 24),
+                    child: Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: 24,
+                    ),
                   ),
                 ),
               ),
@@ -355,7 +374,181 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('${t.name} is Locked'),
-        content: const Text('You need to unlock this theme in the Rewards Shop.'),
+        content: const Text(
+          'You need to unlock this theme in the Rewards Shop.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ShopView()),
+              ).then((_) {
+                setState(() {}); // Refresh screen in case they bought it
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber,
+              foregroundColor: Colors.black,
+            ),
+            child: const Text('Go to Shop'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkinsGrid(BuildContext context, ThemeData theme) {
+    final profile = UserProfileService.profile;
+    final unlockedIds = profile.unlockedCardSkinIds;
+    final activeSkinId = profile.activeCardSkinId;
+    final skins = CardSkinService.premiumSkins;
+
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      children: skins
+          .map((s) => _buildSkinItem(
+              s, 
+              s.id == activeSkinId, 
+              isLocked: !unlockedIds.contains(s.id)
+            ))
+          .toList(),
+    );
+  }
+
+  Widget _buildSkinItem(CardSkin s, bool isEquipped, {bool isLocked = false}) {
+    final theme = Theme.of(context);
+    
+    return InkWell(
+      onTap: () {
+        if (isLocked) {
+          _showSkinShopPrompt(s);
+        } else {
+          final profile = UserProfileService.profile;
+          profile.activeCardSkinId = isEquipped ? null : s.id;
+          UserProfileService.saveProfile();
+          setState(() {});
+        }
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+          width: (MediaQuery.of(context).size.width - 60) / 2,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isEquipped
+                  ? theme.primaryColor
+                  : theme.dividerColor.withValues(alpha: 0.1),
+              width: isEquipped ? 2.0 : 1.0,
+            ),
+            boxShadow: [
+              if (isEquipped)
+                BoxShadow(
+                  color: theme.primaryColor.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  Container(
+                    height: 40,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: theme.scaffoldBackgroundColor.withValues(alpha:0.5),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Stack(
+                      children: [
+                        const Center(child: Icon(Icons.credit_card_rounded, size: 16, color: Colors.grey)),
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            child: CustomPaint(
+                              painter: SkinPainter(skinId: s.id),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.name,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    isEquipped ? 'Equipped' : (isLocked ? 'Locked' : 'Available'),
+                    style: TextStyle(
+                      color: (isEquipped ? theme.primaryColor : theme.textTheme.bodyMedium?.color)?.withValues(alpha: 0.5),
+                      fontSize: 9,
+                      fontWeight: isEquipped ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ],
+              ),
+              if (isEquipped)
+                Positioned(
+                  top: -8,
+                  right: -8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: theme.primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.check,
+                      size: 10,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              if (isLocked)
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Center(
+                      child: Icon(Icons.lock_rounded, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+    );
+  }
+
+  void _showSkinShopPrompt(CardSkin s) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('${s.name} is Locked'),
+        content: const Text('You need to unlock this border in the Rewards Shop.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -370,7 +563,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
                   builder: (context) => const ShopView(),
                 ),
               ).then((_) {
-                 setState(() {}); // Refresh screen in case they bought it
+                 setState(() {}); 
               });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.amber, foregroundColor: Colors.black),
@@ -435,55 +628,60 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
             ),
           ],
         ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Available Balance',
-                style: t.textTheme.labelLarge?.copyWith(letterSpacing: 1),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Available Balance',
+                  style: t.textTheme.labelLarge?.copyWith(letterSpacing: 1),
+                ),
+                Icon(
+                  Icons.shield_moon_outlined,
+                  color: t.primaryColor,
+                  size: 20,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '\$12,450.00',
+              style: t.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              Icon(Icons.shield_moon_outlined, color: t.primaryColor, size: 20),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '\$12,450.00',
-            style: t.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
             ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              _previewChip('Income', t.colorScheme.tertiary, Icons.add, t),
-              const SizedBox(width: 12),
-              _previewChip('Spent', t.colorScheme.error, Icons.remove, t),
-            ],
-          ),
-          const SizedBox(height: 32),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: t.primaryColor,
-              borderRadius: BorderRadius.circular(14),
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                _previewChip('Income', t.colorScheme.tertiary, Icons.add, t),
+                const SizedBox(width: 12),
+                _previewChip('Spent', t.colorScheme.error, Icons.remove, t),
+              ],
             ),
-            child: Center(
-              child: Text(
-                'Simulated Action',
-                style: TextStyle(
-                  color: t.colorScheme.onPrimary,
-                  fontWeight: FontWeight.bold,
+            const SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                color: t.primaryColor,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Center(
+                child: Text(
+                  'Simulated Action',
+                  style: TextStyle(
+                    color: t.colorScheme.onPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ));
+    );
   }
 
   Widget _previewChip(String label, Color color, IconData icon, ThemeData t) {

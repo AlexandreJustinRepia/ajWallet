@@ -660,13 +660,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           lastDate: DateTime.now(),
                         );
                         if (pickedDate != null) {
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           final pickedTime = await showTimePicker(
-                            context: currentContext,
+                            context: context,
                             initialTime: TimeOfDay.fromDateTime(_selectedDate),
                           );
                           if (pickedTime != null) {
-                            if (!mounted) return;
+                            if (!context.mounted) return;
                             setState(() {
                               _selectedDate = DateTime(
                                 pickedDate.year,

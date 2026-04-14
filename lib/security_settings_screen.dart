@@ -87,15 +87,15 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                 final canAuth =
                     await SecurityService.canAuthenticateWithBiometrics();
                 if (!canAuth) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Biometrics not available or not set up.',
-                        ),
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Biometrics not available or not set up.',
                       ),
-                    );
-                  }
+                    ),
+                  );
+                }
                   return;
                 }
 
@@ -108,7 +108,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   setState(() => _account.isBiometricEnabled = true);
                   await DatabaseService.updateAccount(_account);
                 } else {
-                  if (mounted) {
+                  if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text('Biometric verification failed.'),
@@ -183,13 +183,13 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           const SizedBox(height: 32),
           ElevatedButton(
             onPressed: () async {
-              final currentContext = context;
+
               await DatabaseService.updateAccount(_account);
-              if (mounted) {
-                ScaffoldMessenger.of(currentContext).showSnackBar(
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Security settings saved')),
                 );
-                Navigator.pop(currentContext);
+                Navigator.pop(context);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -258,7 +258,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () async {
-                      final currentContext2 = context;
+
                       final success =
                           await SecurityService.authenticateWithBiometrics(
                         reason:
@@ -267,8 +267,8 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
                       if (success) {
                         setState(() => useBiometric = true);
                       } else {
-                        if (mounted) {
-                          ScaffoldMessenger.of(currentContext2).showSnackBar(
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Biometric authentication failed.'),
                             ),
@@ -307,7 +307,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
       } else {
         final enteredPin = pinController.text;
         if (enteredPin.length != 4) {
-          if (mounted) {
+          if (context.mounted) {
             ScaffoldMessenger.of(currentContext).showSnackBar(
               const SnackBar(content: Text('Please enter a 4-digit PIN.')),
             );
@@ -315,7 +315,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
           return;
         }
         if (isExport && hasPin && enteredPin != _account.pin) {
-          if (mounted) {
+          if (context.mounted) {
             ScaffoldMessenger.of(currentContext).showSnackBar(
               const SnackBar(content: Text('Incorrect PIN. Export aborted.')),
             );
@@ -327,6 +327,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     }
 
     if (isExport) {
+      if (!context.mounted) return;
       final nameController = TextEditingController();
       final backupName = await showDialog<String?>(
         context: currentContext,
@@ -358,7 +359,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         _account.key as int,
         name: backupName,
       );
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(currentContext).showSnackBar(
           SnackBar(
             content: Text(
@@ -373,7 +374,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         pinToUse,
         _account.key as int,
       );
-      if (mounted) {
+      if (context.mounted) {
         if (success) {
           ScaffoldMessenger.of(currentContext).showSnackBar(
             const SnackBar(
@@ -384,7 +385,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
             _account = SessionService.activeAccount!;
           });
           _refreshBackupHistory();
-          if (mounted) Navigator.pop(currentContext, true);
+          Navigator.pop(currentContext, true);
         } else {
           _refreshBackupHistory();
           ScaffoldMessenger.of(currentContext).showSnackBar(
@@ -508,7 +509,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
               
               setState(() => _account.fakePin = newFakePin);
               await DatabaseService.updateAccount(_account);
-              if (mounted) Navigator.pop(context);
+              if (context.mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.primaryColor,

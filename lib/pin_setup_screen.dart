@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'services/session_service.dart';
-import 'services/security_service.dart';
 import 'dashboard_screen.dart';
 import 'models/account.dart';
 import 'widgets/pin_input_widget.dart';
@@ -26,7 +25,7 @@ class _PinSetupScreenState extends State<PinSetupScreen> {
   final TextEditingController _pinController = TextEditingController();
   String? _firstPin;
   bool _isConfirming = false;
-  bool _isButtonPressed = false;
+
 
   void _handlePinComplete(String pin) {
     if (!_isConfirming) {

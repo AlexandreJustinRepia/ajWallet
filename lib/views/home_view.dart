@@ -1338,7 +1338,6 @@ class _GamingBadgeState extends State<_GamingBadge> {
     final onPrimaryColor = colorScheme.onPrimary;
     final secondaryColor = colorScheme.secondary;
     final growthColor = colorScheme.tertiary; // Success color in this theme system
-    final surfaceColor = colorScheme.surface;
 
     return GestureDetector(
       onTapDown: (_) => setState(() => _isPressed = true),

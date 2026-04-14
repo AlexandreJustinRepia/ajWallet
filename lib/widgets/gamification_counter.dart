@@ -24,7 +24,6 @@ class GamificationCounter extends StatefulWidget {
 }
 
 class _GamificationCounterState extends State<GamificationCounter> with SingleTickerProviderStateMixin {
-  int _lastValue = 0;
   int _delta = 0;
   bool _showDelta = false;
   late AnimationController _deltaController;
@@ -34,7 +33,6 @@ class _GamificationCounterState extends State<GamificationCounter> with SingleTi
   @override
   void initState() {
     super.initState();
-    _lastValue = widget.value;
     _deltaController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -74,16 +72,18 @@ class _GamificationCounterState extends State<GamificationCounter> with SingleTi
     if (oldWidget.value != widget.value) {
       _delta = widget.value - oldWidget.value;
       if (_delta != 0) {
-        _showDelta = true;
-        _deltaController.forward(from: 0);
+        if (mounted) {
+          setState(() {
+            _showDelta = true;
+          });
+          _deltaController.forward(from: 0);
+        }
       }
-      _lastValue = widget.value;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final indicatorColor = _delta > 0 ? Colors.green : Colors.red;
     final deltaText = _delta > 0 ? '+$_delta' : '$_delta';
 

@@ -67,8 +67,8 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
               final currentContext = context;
               Navigator.pop(currentContext); // Close dialog
               await DatabaseService.deleteWallet(widget.wallet);
-              if (mounted) {
-                Navigator.pop(currentContext, true); // Go back to wallets list
+              if (context.mounted) {
+                Navigator.pop(context, true); // Go back to wallets list
               }
             },
             child: const Text(

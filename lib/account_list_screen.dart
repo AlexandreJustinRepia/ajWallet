@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'services/database_service.dart';
 import 'models/account.dart';
@@ -30,17 +31,16 @@ class _AccountListScreenState extends State<AccountListScreen> {
 
   void _confirmDelete(Account account) {
     final theme = Theme.of(context);
-    final textColor = theme.textTheme.bodyLarge?.color ?? Colors.black;
-    final hintColor = textColor.withValues(alpha: 0.5);
+    final hintColor = theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.5) ?? Colors.black.withValues(alpha: 0.5);
 
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: theme.scaffoldBackgroundColor,
-        title: Text('Delete Account', style: TextStyle(color: textColor)),
+        title: Text('Delete Account', style: TextStyle(color: theme.textTheme.bodyLarge?.color)),
         content: Text(
           'Are you sure you want to delete "${account.name}"? This action cannot be undone and all data will be lost.',
-          style: TextStyle(color: textColor),
+          style: TextStyle(color: theme.textTheme.bodyLarge?.color),
         ),
         actions: [
           TextButton(
@@ -50,21 +50,9 @@ class _AccountListScreenState extends State<AccountListScreen> {
           TextButton(
             onPressed: () async {
               await DatabaseService.deleteAccount(account);
-              if (mounted) {
+              if (context.mounted) {
                 Navigator.pop(context);
                 _loadAccounts();
-                if (_accounts.isEmpty) {
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    if (mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CreateAccountScreen(),
-                        ),
-                      );
-                    }
-                  });
-                }
               }
             },
             child: const Text(
@@ -80,8 +68,8 @@ class _AccountListScreenState extends State<AccountListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final textColor = theme.colorScheme.onSurface;
-    final hintColor = textColor.withValues(alpha: 0.5);
+
+
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -414,7 +402,7 @@ class _AccountListScreenState extends State<AccountListScreen> {
               if (editFormKey.currentState!.validate()) {
                 account.name = controller.text.trim();
                 await DatabaseService.updateAccount(account);
-                if (mounted) {
+                if (context.mounted) {
                   Navigator.pop(context);
                   _loadAccounts();
                 }

@@ -643,54 +643,7 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
     }
   }
 
-  Widget _buildInsightMiniCard(String title, String subtitle, IconData icon, Color accent, {VoidCallback? onTap}) {
-    final theme = Theme.of(context);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.dividerColor, width: 0.5),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: accent.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, size: 18, color: accent),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: theme.textTheme.bodyLarge?.color,
-                      ),
-                    ),
-                    Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded, size: 16, color: theme.dividerColor),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+
 
   Widget _buildQuickAddPreview(ThemeData theme, Color color, AIResponse response) {
     final payload = response.payload;

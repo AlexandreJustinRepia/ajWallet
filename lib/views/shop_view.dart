@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import '../services/session_service.dart';
 import '../services/theme_service.dart';
 import '../services/card_skin_service.dart';
 import '../models/app_theme.dart';
-import '../widgets/animated_count_text.dart';
+
 import '../widgets/card_decorator.dart';
 import '../widgets/gamification_counter.dart';
 import '../services/user_profile_service.dart';
@@ -21,7 +20,7 @@ class _ShopViewState extends State<ShopView> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final premiumThemes = ThemeService.premiumThemes;
-    final themePrices = ThemeService.premiumThemePrices;
+
     final premiumSkins = CardSkinService.premiumSkins;
     
     final profile = UserProfileService.profile;

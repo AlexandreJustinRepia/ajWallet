@@ -1066,13 +1066,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final currentContext = context;
+
               if (editFormKey.currentState!.validate()) {
                 account.name = controller.text.trim();
                 await DatabaseService.updateAccount(account);
-                if (!mounted) return;
-                Navigator.pop(currentContext);
-                _refresh();
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  _refresh();
+                }
               }
             },
             style: ElevatedButton.styleFrom(

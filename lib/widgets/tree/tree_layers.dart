@@ -39,10 +39,10 @@ class TreeStructurePainter extends CustomPainter {
         canvas.drawLine(branch.start, branch.end, paint);
       }
     }
-    
+
     // Draw Roots if health is low
     if (health < 0.7) {
-       _drawRoots(canvas, Offset.zero, (0.7 - health).clamp(0.0, 1.0), growth);
+      _drawRoots(canvas, Offset.zero, (0.7 - health).clamp(0.0, 1.0), growth);
     }
     canvas.restore();
   }
@@ -71,9 +71,9 @@ class TreeStructurePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant TreeStructurePainter oldDelegate) {
-    return oldDelegate.branches != branches || 
-           oldDelegate.config != config ||
-           oldDelegate.health != health;
+    return oldDelegate.branches != branches ||
+        oldDelegate.config != config ||
+        oldDelegate.health != health;
   }
 }
 
@@ -94,10 +94,14 @@ class LeafPainter extends CustomPainter {
 
     canvas.save();
     canvas.translate(size.width / 2, size.height - 20);
-    
+
     final paint = Paint()..color = config.leafColor.withValues(alpha: 0.75);
     final highlightPaint = Paint()
-      ..color = Color.lerp(config.leafColor, Colors.white, 0.15)!.withValues(alpha: 0.4);
+      ..color = Color.lerp(
+        config.leafColor,
+        Colors.white,
+        0.15,
+      )!.withValues(alpha: 0.4);
 
     final path = Path();
     final highlightPath = Path();
@@ -121,17 +125,18 @@ class LeafPainter extends CustomPainter {
           path.addRect(rect);
           break;
         case LeafShape.circle:
-        default:
           path.addOval(rect);
           break;
       }
 
       if (i % 3 == 0) {
-        highlightPath.addOval(Rect.fromCenter(
-          center: leaf.position.translate(1, -1),
-          width: leaf.size * 0.8,
-          height: leaf.size * 0.4,
-        ));
+        highlightPath.addOval(
+          Rect.fromCenter(
+            center: leaf.position.translate(1, -1),
+            width: leaf.size * 0.8,
+            height: leaf.size * 0.4,
+          ),
+        );
       }
     }
 
@@ -144,14 +149,20 @@ class LeafPainter extends CustomPainter {
     final petalPath = Path();
     petalPath.moveTo(center.dx, center.dy + size / 2);
     petalPath.cubicTo(
-      center.dx - size, center.dy - size / 2,
-      center.dx - size / 4, center.dy - size,
-      center.dx, center.dy - size / 4,
+      center.dx - size,
+      center.dy - size / 2,
+      center.dx - size / 4,
+      center.dy - size,
+      center.dx,
+      center.dy - size / 4,
     );
     petalPath.cubicTo(
-      center.dx + size / 4, center.dy - size,
-      center.dx + size, center.dy - size / 2,
-      center.dx, center.dy + size / 2,
+      center.dx + size / 4,
+      center.dy - size,
+      center.dx + size,
+      center.dy - size / 2,
+      center.dx,
+      center.dy + size / 2,
     );
     path.addPath(petalPath, Offset.zero);
   }
@@ -187,8 +198,12 @@ class ParticlePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     canvas.save();
     canvas.translate(size.width / 2, size.height - 20);
-    if (incomeProgress > 0) _drawIncomeParticles(canvas, size, incomeProgress);
-    if (expenseProgress > 0) _drawFallingElements(canvas, size, expenseProgress);
+    if (incomeProgress > 0) {
+      _drawIncomeParticles(canvas, size, incomeProgress);
+    }
+    if (expenseProgress > 0) {
+      _drawFallingElements(canvas, size, expenseProgress);
+    }
     canvas.restore();
   }
 
@@ -205,13 +220,16 @@ class ParticlePainter extends CustomPainter {
 
       final startX = (i - 2.5) * 35;
       final y = -size.height * 0.4 + (size.height * 0.5 * t);
-      
+
       if (config.leafShape == LeafShape.techSquare) {
-        canvas.drawRect(Rect.fromCenter(center: Offset(startX, y), width: 5, height: 5), particlePaint);
+        canvas.drawRect(
+          Rect.fromCenter(center: Offset(startX, y), width: 5, height: 5),
+          particlePaint,
+        );
       } else {
         canvas.drawCircle(Offset(startX, y), 2.5, particlePaint);
       }
-      
+
       if (t > 0.3 && t < 0.7) {
         canvas.drawCircle(Offset(startX, y), 5, glowPaint);
       }
@@ -229,18 +247,18 @@ class ParticlePainter extends CustomPainter {
       final startX = (random.nextDouble() - 0.5) * 120;
       final sway = sin(t * pi * 5 + i) * 25;
       final y = -size.height * 0.2 + (size.height * 0.4 * t);
-      
+
       canvas.save();
       canvas.translate(startX + sway, y);
       canvas.rotate(t * pi * 4 + i);
-      
+
       if (config.leafShape == LeafShape.techSquare) {
         canvas.drawRect(Rect.fromLTWH(-4, -4, 8, 8), leafPaint);
       } else if (config.leafShape == LeafShape.petal) {
-         // Tiny petal for falling
-         final p = Path();
-         p.addOval(Rect.fromLTWH(-4, -2, 8, 4));
-         canvas.drawPath(p, leafPaint);
+        // Tiny petal for falling
+        final p = Path();
+        p.addOval(Rect.fromLTWH(-4, -2, 8, 4));
+        canvas.drawPath(p, leafPaint);
       } else {
         canvas.drawOval(Rect.fromLTWH(-5, -2.5, 10, 5), leafPaint);
       }
@@ -251,7 +269,7 @@ class ParticlePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant ParticlePainter oldDelegate) {
     return oldDelegate.incomeProgress != incomeProgress ||
-           oldDelegate.expenseProgress != expenseProgress ||
-           oldDelegate.config != config;
+        oldDelegate.expenseProgress != expenseProgress ||
+        oldDelegate.config != config;
   }
 }

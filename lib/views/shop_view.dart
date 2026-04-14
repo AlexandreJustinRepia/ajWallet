@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../services/theme_service.dart';
 import '../services/card_skin_service.dart';
+import '../services/tree_skin_service.dart';
 import '../models/app_theme.dart';
+import '../models/tree_skin.dart';
 
 import '../widgets/card_decorator.dart';
 import '../widgets/gamification_counter.dart';
 import '../services/user_profile_service.dart';
 import '../services/gamification_service.dart';
+import '../widgets/animated_tree.dart';
 
 class ShopView extends StatefulWidget {
   const ShopView({super.key});
@@ -27,7 +30,7 @@ class _ShopViewState extends State<ShopView> {
     final currentCoins = GamificationService.generateGlobalProfile().coins;
 
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
@@ -57,7 +60,8 @@ class _ShopViewState extends State<ShopView> {
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: const [
               Tab(text: 'Themes'),
-              Tab(text: 'Card Skins'),
+              Tab(text: 'Cards'),
+              Tab(text: 'Trees'),
             ],
           ),
         ),
@@ -100,6 +104,22 @@ class _ShopViewState extends State<ShopView> {
                 final canAfford = currentCoins >= price;
 
                 return _buildSkinCard(context, s, price, isUnlocked, isEquipped, canAfford);
+              },
+            ),
+
+            // TREE SKINS TAB
+            ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: TreeSkinService.allSkins.length,
+              itemBuilder: (context, index) {
+                final s = TreeSkinService.allSkins[index];
+                final price = s.price;
+                
+                final isUnlocked = profile.unlockedTreeSkinIds.contains(s.id);
+                final isEquipped = profile.activeTreeSkinId == s.id;
+                final canAfford = currentCoins >= price;
+
+                return _buildTreeSkinCard(context, s, price, isUnlocked, isEquipped, canAfford);
               },
             ),
           ],
@@ -233,7 +253,7 @@ class _ShopViewState extends State<ShopView> {
                   )
                 else
                   ElevatedButton(
-                    onPressed: canAfford ? () => _confirmPurchase(context, t.name, t.id, price, false) : null,
+                    onPressed: canAfford ? () => _confirmPurchase(context, t.name, t.id, price, ItemType.theme) : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.amber,
                       foregroundColor: Colors.black,
@@ -256,7 +276,6 @@ class _ShopViewState extends State<ShopView> {
     ),
   );
 }
-
   Widget _buildSkinCard(BuildContext context, CardSkin s, int price, bool isUnlocked, bool isEquipped, bool canAfford) {
     final theme = Theme.of(context);
     return Padding(
@@ -387,7 +406,7 @@ class _ShopViewState extends State<ShopView> {
                   )
                 else
                   ElevatedButton(
-                    onPressed: canAfford ? () => _confirmPurchase(context, s.name, s.id, price, true) : null,
+                    onPressed: canAfford ? () => _confirmPurchase(context, s.name, s.id, price, ItemType.cardSkin) : null,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.amber,
                       foregroundColor: Colors.black,
@@ -413,7 +432,233 @@ class _ShopViewState extends State<ShopView> {
   );
 }
 
-  void _confirmPurchase(BuildContext context, String name, String id, int price, bool isSkin) {
+  Widget _buildTreeSkinCard(BuildContext context, TreeSkin s, int price, bool isUnlocked, bool isEquipped, bool canAfford) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isEquipped 
+              ? theme.primaryColor 
+              : (isUnlocked ? theme.dividerColor : theme.dividerColor.withValues(alpha:0.3)),
+          width: isEquipped ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha:0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Skin Preview Area
+          Container(
+            height: 140,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: theme.brightness == Brightness.dark 
+                ? theme.scaffoldBackgroundColor 
+                : Colors.grey[100],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              image: s.config.assetPath != null 
+                ? DecorationImage(
+                    image: AssetImage(s.config.assetPath!),
+                    fit: BoxFit.cover,
+                    opacity: 0.3, // Dim the image if we have a view button
+                  )
+                : null,
+            ),
+            child: Stack(
+              children: [
+                if (s.config.assetPath == null)
+                  Center(
+                    child: Icon(
+                      s.config.isTechMode ? Icons.memory_rounded : Icons.park_rounded, 
+                      color: s.config.leafColor.withValues(alpha: 0.5), 
+                      size: 48
+                    ),
+                  ),
+                
+                // Live Preview Button Overlay
+                Center(
+                  child: ElevatedButton.icon(
+                    onPressed: () => _showTreePreview(context, s),
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Live View'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor.withValues(alpha: 0.8),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                  ),
+                ),
+
+                if (isUnlocked)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withValues(alpha:0.8),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text('OWNED', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(s.name, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                      const SizedBox(height: 4),
+                      Text(
+                        s.description,
+                        style: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.7), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                if (isUnlocked)
+                  ElevatedButton(
+                    onPressed: isEquipped ? null : () {
+                      final profile = UserProfileService.profile;
+                      profile.activeTreeSkinId = s.id;
+                      UserProfileService.saveProfile();
+                      setState(() {});
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isEquipped ? theme.cardColor : theme.primaryColor,
+                      foregroundColor: isEquipped ? theme.primaryColor : theme.colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isEquipped ? BorderSide(color: theme.primaryColor) : BorderSide.none,
+                      ),
+                    ),
+                    child: Text(isEquipped ? 'Active' : 'Equip'),
+                  )
+                else
+                  ElevatedButton(
+                    onPressed: canAfford ? () => _confirmPurchase(context, s.name, s.id, price, ItemType.treeSkin) : null,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      disabledBackgroundColor: Colors.grey.withValues(alpha:0.2),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.monetization_on_rounded, size: 16),
+                        const SizedBox(width: 6),
+                        Text('$price'),
+                      ],
+                    ),
+                  ),
+              ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+  void _showTreePreview(BuildContext context, TreeSkin skin) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(20),
+        child: Container(
+          width: double.infinity,
+          height: 450,
+          decoration: BoxDecoration(
+            color: Theme.of(context).cardColor,
+            borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: Theme.of(context).primaryColor.withValues(alpha: 0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 20,
+                spreadRadius: 5,
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(skin.name, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+                        Text('Live Preview', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                      ],
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.only(left: 20, right: 20, bottom: 20),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: Center(
+                      child: AnimatedTree(
+                        balance: 1500, // Balance above threshold for growth
+                        overrideSkinId: skin.id,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
+  void _confirmPurchase(BuildContext context, String name, String id, int price, ItemType type) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -431,15 +676,24 @@ class _ShopViewState extends State<ShopView> {
               final profile = UserProfileService.profile;
               profile.spentCoins += price;
 
-              if (isSkin) {
-                if (!profile.unlockedCardSkinIds.contains(id)) {
-                  profile.unlockedCardSkinIds.add(id);
-                }
-              } else {
-                if (!profile.unlockedThemeIds.contains(id)) {
-                  profile.unlockedThemeIds.add(id);
-                }
+              switch (type) {
+                case ItemType.theme:
+                  if (!profile.unlockedThemeIds.contains(id)) {
+                    profile.unlockedThemeIds.add(id);
+                  }
+                  break;
+                case ItemType.cardSkin:
+                  if (!profile.unlockedCardSkinIds.contains(id)) {
+                    profile.unlockedCardSkinIds.add(id);
+                  }
+                  break;
+                case ItemType.treeSkin:
+                   if (!profile.unlockedTreeSkinIds.contains(id)) {
+                    profile.unlockedTreeSkinIds.add(id);
+                  }
+                  break;
               }
+              
               await UserProfileService.saveProfile();
               setState(() {});
 
@@ -460,3 +714,5 @@ class _ShopViewState extends State<ShopView> {
     );
   }
 }
+
+enum ItemType { theme, cardSkin, treeSkin }

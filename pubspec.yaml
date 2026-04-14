@@ -44,6 +44,7 @@ flutter:
     - assets/images/banks/
     - assets/images/e-wallets/
     - assets/images/onboarding/
+    - assets/images/trees/
     - assets/logo/logo.png
 
 flutter_launcher_icons:

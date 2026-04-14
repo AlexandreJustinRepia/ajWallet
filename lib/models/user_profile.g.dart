@@ -21,13 +21,15 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       unlockedThemeIds: (fields[1] as List?)?.cast<String>(),
       unlockedCardSkinIds: (fields[2] as List?)?.cast<String>(),
       activeCardSkinId: fields[3] as String?,
+      unlockedTreeSkinIds: (fields[4] as List?)?.cast<String>(),
+      activeTreeSkinId: fields[5] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.spentCoins)
       ..writeByte(1)
@@ -35,7 +37,11 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(2)
       ..write(obj.unlockedCardSkinIds)
       ..writeByte(3)
-      ..write(obj.activeCardSkinId);
+      ..write(obj.activeCardSkinId)
+      ..writeByte(4)
+      ..write(obj.unlockedTreeSkinIds)
+      ..writeByte(5)
+      ..write(obj.activeTreeSkinId);
   }
 
   @override

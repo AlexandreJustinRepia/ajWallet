@@ -2,11 +2,21 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'tree/tree_controller.dart';
 import 'tree/tree_layers.dart';
+import '../services/tree_skin_service.dart';
+import '../services/user_profile_service.dart';
+import '../models/user_profile.dart';
+import '../models/tree_skin.dart';
+import '../models/app_theme.dart';
 
 class AnimatedTree extends StatefulWidget {
   final double balance;
+  final String? overrideSkinId;
 
-  const AnimatedTree({super.key, required this.balance});
+  const AnimatedTree({
+    super.key, 
+    required this.balance,
+    this.overrideSkinId,
+  });
 
   @override
   State<AnimatedTree> createState() => _AnimatedTreeState();
@@ -91,49 +101,56 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    return RepaintBoundary(
-      child: Container(
-        height: 280,
-        width: double.infinity,
-        margin: const EdgeInsets.symmetric(vertical: 24),
-        child: AnimatedBuilder(
-          animation: Listenable.merge([
-            _controller,
-            _swayController,
-            _pulseController,
-            _incomeEffectController,
-            _expenseEffectController
-          ]),
-          builder: (context, child) {
-            final state = _controller.state;
-            final scaleEffect = _pulseAnimation.value;
-            final vibrancyPulse = _isIncomePulse ? (_pulseAnimation.value - 1.0) * 5 : 0.0;
-            
-            // Dynamic colors
-            final trunkColor = Color.lerp(
-              isDark ? const Color(0xFF3E2723) : const Color(0xFF5D4037),
-              isDark ? const Color(0xFF8D6E63) : const Color(0xFF795548),
-              state.health,
-            )!;
+    return ValueListenableBuilder<UserProfile?>(
+      valueListenable: UserProfileService.profileNotifier,
+      builder: (context, profile, _) {
+        final skinId = widget.overrideSkinId ?? profile?.activeTreeSkinId ?? TreeSkinService.springId;
+        final skin = TreeSkinService.getSkin(skinId);
+        final config = skin.config;
 
-            Color leafColor = Color.lerp(
-              isDark ? const Color(0xFF6D4C41) : const Color(0xFF8D6E63),
-              isDark ? const Color(0xFF43A047) : const Color(0xFF2E7D32),
-              state.health,
-            )!;
+        return RepaintBoundary(
+          child: Container(
+            height: 280,
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(vertical: 24),
+            child: AnimatedBuilder(
+              animation: Listenable.merge([
+                _controller,
+                _swayController,
+                _pulseController,
+                _incomeEffectController,
+                _expenseEffectController
+              ]),
+              builder: (context, child) {
+                final state = _controller.state;
+                final scaleEffect = _pulseAnimation.value;
+                final vibrancyPulse = _isIncomePulse ? (_pulseAnimation.value - 1.0) * 5 : 0.0;
+                
+                // Dynamic colors based on skin
+                final trunkColor = Color.lerp(
+                  isDark ? config.trunkColor.withValues(alpha: 0.8) : config.trunkColor.withValues(alpha: 0.7),
+                  config.trunkColor,
+                  state.health,
+                )!;
 
-            if (vibrancyPulse > 0) {
-              leafColor = Color.lerp(leafColor, Colors.greenAccent, vibrancyPulse.clamp(0.0, 0.4))!;
-            }
+                Color leafColor = Color.lerp(
+                  isDark ? config.leafColor.withValues(alpha: 0.6) : config.leafColor.withValues(alpha: 0.5),
+                  config.leafColor,
+                  state.health,
+                )!;
 
-            return Stack(
-              alignment: Alignment.bottomCenter,
-              children: [
-                // 1. Majestic Glow Layer (Static/Smooth)
-                if (state.growth > 3.0)
-                  RepaintBoundary(
-                    child: _buildGlow(state.growth, isDark),
-                  ),
+                if (vibrancyPulse > 0) {
+                  leafColor = Color.lerp(leafColor, config.glowColor ?? Colors.greenAccent, vibrancyPulse.clamp(0.0, 0.4))!;
+                }
+
+                return Stack(
+                  alignment: Alignment.bottomCenter,
+                  children: [
+                    // 1. Majestic Glow Layer (Static/Smooth)
+                    if (state.growth > 3.0)
+                      RepaintBoundary(
+                        child: _buildGlow(state.growth, isDark, config.glowColor ?? Colors.greenAccent),
+                      ),
 
                 // 2. Main Tree Structure (Static branches, transform sway)
                 Transform.scale(
@@ -150,7 +167,7 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
                           child: CustomPaint(
                             painter: TreeStructurePainter(
                               branches: state.branches,
-                              trunkColor: trunkColor,
+                              config: config.copyWith(trunkColor: trunkColor),
                               health: state.health,
                               growth: state.growth,
                             ),
@@ -166,7 +183,7 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
                             child: CustomPaint(
                               painter: LeafPainter(
                                 leaves: state.leaves,
-                                leafColor: leafColor,
+                                config: config.copyWith(leafColor: leafColor),
                                 growth: state.growth,
                               ),
                               size: Size.infinite,
@@ -185,7 +202,7 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
                       painter: ParticlePainter(
                         incomeProgress: _incomeEffectController.value,
                         expenseProgress: _expenseEffectController.value,
-                        leafColor: leafColor,
+                        config: config.copyWith(leafColor: leafColor),
                       ),
                     ),
                   ),
@@ -196,9 +213,11 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
         ),
       ),
     );
-  }
+  },
+);
+}
 
-  Widget _buildGlow(double growth, bool isDark) {
+  Widget _buildGlow(double growth, bool isDark, Color glowColor) {
     final glowProgress = (growth - 3.0).clamp(0.0, 1.0);
     return Container(
       width: 150 + growth * 20,
@@ -208,13 +227,34 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: (isDark ? Colors.greenAccent : Colors.lightGreenAccent)
-                .withValues(alpha: 0.1 * glowProgress),
+            color: glowColor.withValues(alpha: 0.1 * glowProgress),
             blurRadius: 40,
             spreadRadius: 10,
           ),
         ],
       ),
+    );
+  }
+}
+
+extension TreeSkinConfigExtension on TreeSkinConfig {
+  TreeSkinConfig copyWith({
+    Color? trunkColor,
+    Color? leafColor,
+    Color? particleColor,
+    LeafShape? leafShape,
+    bool? isTechMode,
+    Color? glowColor,
+    String? assetPath,
+  }) {
+    return TreeSkinConfig(
+      trunkColor: trunkColor ?? this.trunkColor,
+      leafColor: leafColor ?? this.leafColor,
+      particleColor: particleColor ?? this.particleColor,
+      leafShape: leafShape ?? this.leafShape,
+      isTechMode: isTechMode ?? this.isTechMode,
+      glowColor: glowColor ?? this.glowColor,
+      assetPath: assetPath ?? this.assetPath,
     );
   }
 }

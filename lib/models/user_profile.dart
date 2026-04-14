@@ -16,13 +16,22 @@ class UserProfile extends HiveObject {
   @HiveField(3)
   String? activeCardSkinId;
 
+  @HiveField(4)
+  List<String> unlockedTreeSkinIds;
+
+  @HiveField(5)
+  String? activeTreeSkinId;
+
   UserProfile({
     this.spentCoins = 0,
     List<String>? unlockedThemeIds,
     List<String>? unlockedCardSkinIds,
     this.activeCardSkinId,
+    List<String>? unlockedTreeSkinIds,
+    this.activeTreeSkinId,
   })  : unlockedThemeIds = unlockedThemeIds ?? [],
-        unlockedCardSkinIds = unlockedCardSkinIds ?? [];
+        unlockedCardSkinIds = unlockedCardSkinIds ?? [],
+        unlockedTreeSkinIds = unlockedTreeSkinIds ?? [];
 
   // Factory for default creation
   factory UserProfile.createDefault() {
@@ -30,6 +39,8 @@ class UserProfile extends HiveObject {
       spentCoins: 0,
       unlockedThemeIds: [],
       unlockedCardSkinIds: [],
+      unlockedTreeSkinIds: ['spring'],
+      activeTreeSkinId: 'spring',
     );
   }
 }

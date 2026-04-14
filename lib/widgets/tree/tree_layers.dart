@@ -1,16 +1,17 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'tree_models.dart';
+import '../../models/tree_skin.dart';
 
 class TreeStructurePainter extends CustomPainter {
   final List<BranchData> branches;
-  final Color trunkColor;
+  final TreeSkinConfig config;
   final double health;
   final double growth;
 
   TreeStructurePainter({
     required this.branches,
-    required this.trunkColor,
+    required this.config,
     required this.health,
     required this.growth,
   });
@@ -21,13 +22,22 @@ class TreeStructurePainter extends CustomPainter {
     canvas.translate(size.width / 2, size.height - 20);
 
     final paint = Paint()
-      ..color = trunkColor
-      ..strokeCap = StrokeCap.round
+      ..color = config.trunkColor
+      ..strokeCap = config.isTechMode ? StrokeCap.square : StrokeCap.round
       ..style = PaintingStyle.stroke;
 
     for (var branch in branches) {
       paint.strokeWidth = branch.thickness;
-      canvas.drawLine(branch.start, branch.end, paint);
+      if (config.isTechMode) {
+        // Tech Mode: Orthogonal lines
+        final path = Path();
+        path.moveTo(branch.start.dx, branch.start.dy);
+        path.lineTo(branch.end.dx, branch.start.dy);
+        path.lineTo(branch.end.dx, branch.end.dy);
+        canvas.drawPath(path, paint);
+      } else {
+        canvas.drawLine(branch.start, branch.end, paint);
+      }
     }
     
     // Draw Roots if health is low
@@ -62,19 +72,19 @@ class TreeStructurePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant TreeStructurePainter oldDelegate) {
     return oldDelegate.branches != branches || 
-           oldDelegate.trunkColor != trunkColor ||
+           oldDelegate.config != config ||
            oldDelegate.health != health;
   }
 }
 
 class LeafPainter extends CustomPainter {
   final List<LeafData> leaves;
-  final Color leafColor;
+  final TreeSkinConfig config;
   final double growth;
 
   LeafPainter({
     required this.leaves,
-    required this.leafColor,
+    required this.config,
     required this.growth,
   });
 
@@ -84,9 +94,10 @@ class LeafPainter extends CustomPainter {
 
     canvas.save();
     canvas.translate(size.width / 2, size.height - 20);
-    final paint = Paint()..color = leafColor.withValues(alpha: 0.75);
+    
+    final paint = Paint()..color = config.leafColor.withValues(alpha: 0.75);
     final highlightPaint = Paint()
-      ..color = Color.lerp(leafColor, Colors.white, 0.15)!.withValues(alpha: 0.4);
+      ..color = Color.lerp(config.leafColor, Colors.white, 0.15)!.withValues(alpha: 0.4);
 
     final path = Path();
     final highlightPath = Path();
@@ -98,7 +109,22 @@ class LeafPainter extends CustomPainter {
         width: leaf.size * 1.6,
         height: leaf.size,
       );
-      path.addOval(rect);
+
+      switch (config.leafShape) {
+        case LeafShape.petal:
+          _addPetalPath(path, leaf.position, leaf.size);
+          break;
+        case LeafShape.crystal:
+          _addCrystalPath(path, leaf.position, leaf.size);
+          break;
+        case LeafShape.techSquare:
+          path.addRect(rect);
+          break;
+        case LeafShape.circle:
+        default:
+          path.addOval(rect);
+          break;
+      }
 
       if (i % 3 == 0) {
         highlightPath.addOval(Rect.fromCenter(
@@ -114,21 +140,47 @@ class LeafPainter extends CustomPainter {
     canvas.restore();
   }
 
+  void _addPetalPath(Path path, Offset center, double size) {
+    final petalPath = Path();
+    petalPath.moveTo(center.dx, center.dy + size / 2);
+    petalPath.cubicTo(
+      center.dx - size, center.dy - size / 2,
+      center.dx - size / 4, center.dy - size,
+      center.dx, center.dy - size / 4,
+    );
+    petalPath.cubicTo(
+      center.dx + size / 4, center.dy - size,
+      center.dx + size, center.dy - size / 2,
+      center.dx, center.dy + size / 2,
+    );
+    path.addPath(petalPath, Offset.zero);
+  }
+
+  void _addCrystalPath(Path path, Offset center, double size) {
+    final crystalPath = Path();
+    crystalPath.moveTo(center.dx, center.dy - size);
+    crystalPath.lineTo(center.dx + size * 0.8, center.dy);
+    crystalPath.lineTo(center.dx, center.dy + size);
+    crystalPath.lineTo(center.dx - size * 0.8, center.dy);
+    crystalPath.close();
+    path.addPath(crystalPath, Offset.zero);
+  }
+
   @override
   bool shouldRepaint(covariant LeafPainter oldDelegate) {
-    return oldDelegate.leaves != leaves || oldDelegate.leafColor != leafColor;
+    return oldDelegate.leaves != leaves || oldDelegate.config != config;
   }
 }
 
 class ParticlePainter extends CustomPainter {
   final double incomeProgress;
   final double expenseProgress;
-  final Color leafColor;
+  final TreeSkinConfig config;
 
   ParticlePainter({
     required this.incomeProgress,
     required this.expenseProgress,
-    required this.leafColor,
+    required this.config,
   });
 
   @override
@@ -136,12 +188,13 @@ class ParticlePainter extends CustomPainter {
     canvas.save();
     canvas.translate(size.width / 2, size.height - 20);
     if (incomeProgress > 0) _drawIncomeParticles(canvas, size, incomeProgress);
-    if (expenseProgress > 0) _drawFallingLeaves(canvas, size, expenseProgress, leafColor);
+    if (expenseProgress > 0) _drawFallingElements(canvas, size, expenseProgress);
     canvas.restore();
   }
 
   void _drawIncomeParticles(Canvas canvas, Size size, double progress) {
-    final particlePaint = Paint()..color = Colors.lightBlueAccent.withValues(alpha: 0.5);
+    final color = config.particleColor ?? Colors.lightBlueAccent;
+    final particlePaint = Paint()..color = color.withValues(alpha: 0.6);
     final glowPaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.3)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
@@ -153,15 +206,20 @@ class ParticlePainter extends CustomPainter {
       final startX = (i - 2.5) * 35;
       final y = -size.height * 0.4 + (size.height * 0.5 * t);
       
-      canvas.drawCircle(Offset(startX, y), 2.5, particlePaint);
+      if (config.leafShape == LeafShape.techSquare) {
+        canvas.drawRect(Rect.fromCenter(center: Offset(startX, y), width: 5, height: 5), particlePaint);
+      } else {
+        canvas.drawCircle(Offset(startX, y), 2.5, particlePaint);
+      }
+      
       if (t > 0.3 && t < 0.7) {
         canvas.drawCircle(Offset(startX, y), 5, glowPaint);
       }
     }
   }
 
-  void _drawFallingLeaves(Canvas canvas, Size size, double progress, Color color) {
-    final leafPaint = Paint()..color = color.withValues(alpha: 0.6);
+  void _drawFallingElements(Canvas canvas, Size size, double progress) {
+    final leafPaint = Paint()..color = config.leafColor.withValues(alpha: 0.6);
     final random = Random(88);
 
     for (int i = 0; i < 5; i++) {
@@ -175,7 +233,17 @@ class ParticlePainter extends CustomPainter {
       canvas.save();
       canvas.translate(startX + sway, y);
       canvas.rotate(t * pi * 4 + i);
-      canvas.drawOval(Rect.fromLTWH(-5, -2.5, 10, 5), leafPaint);
+      
+      if (config.leafShape == LeafShape.techSquare) {
+        canvas.drawRect(Rect.fromLTWH(-4, -4, 8, 8), leafPaint);
+      } else if (config.leafShape == LeafShape.petal) {
+         // Tiny petal for falling
+         final p = Path();
+         p.addOval(Rect.fromLTWH(-4, -2, 8, 4));
+         canvas.drawPath(p, leafPaint);
+      } else {
+        canvas.drawOval(Rect.fromLTWH(-5, -2.5, 10, 5), leafPaint);
+      }
       canvas.restore();
     }
   }
@@ -184,6 +252,6 @@ class ParticlePainter extends CustomPainter {
   bool shouldRepaint(covariant ParticlePainter oldDelegate) {
     return oldDelegate.incomeProgress != incomeProgress ||
            oldDelegate.expenseProgress != expenseProgress ||
-           oldDelegate.leafColor != leafColor;
+           oldDelegate.config != config;
   }
 }

@@ -1,4 +1,4 @@
-package com.example.aj_wallet
+package com.rootexp.aj
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

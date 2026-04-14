@@ -64,6 +64,13 @@ class DatabaseService {
   static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
   static Box<Debt> get _debtBox => Hive.box<Debt>(_debtBoxName);
 
+  // Watchers for reactive UI
+  static Stream<BoxEvent> get transactionWatcher => _transactionBox.watch();
+  static Stream<BoxEvent> get walletWatcher => _walletBox.watch();
+  static Stream<BoxEvent> get goalWatcher => _goalBox.watch();
+  static Stream<BoxEvent> get budgetWatcher => _budgetBox.watch();
+  static Stream<BoxEvent> get debtWatcher => _debtBox.watch();
+
   static Future<void> _openTypedBox<T>(String boxName) async {
     try {
       await Hive.openBox<T>(boxName);

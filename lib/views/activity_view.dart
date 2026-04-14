@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import '../services/session_service.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/database_service.dart';
 import '../models/transaction_model.dart';
 import '../widgets/slide_in_list_item.dart';
 import '../widgets/transaction_card.dart';
 import 'dashboard_helpers.dart';
+import 'activity/activity_view_model.dart';
 
 /// Merged Activity tab: toggles between a full transaction list and a calendar view.
 class ActivityView extends StatefulWidget {
@@ -45,11 +44,14 @@ class ActivityView extends StatefulWidget {
 class _ActivityViewState extends State<ActivityView>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late ActivityViewModel _viewModel;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
+    _viewModel = ActivityViewModel(isTutorialActive: widget.isTutorialActive);
   }
 
   @override
@@ -60,14 +62,11 @@ class _ActivityViewState extends State<ActivityView>
     }
   }
 
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-  TransactionType? _filter;
-
   @override
   void dispose() {
     _tabController.dispose();
     _searchController.dispose();
+    _viewModel.dispose();
     super.dispose();
   }
 
@@ -75,142 +74,137 @@ class _ActivityViewState extends State<ActivityView>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Column(
-      children: [
-        // ── Toggle Header ──────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-          child: Container(
-            height: 44,
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: theme.dividerColor, width: 0.5),
-            ),
-            child: TabBar(
-              controller: _tabController,
-              indicator: BoxDecoration(
-                color: theme.primaryColor,
-                borderRadius: BorderRadius.circular(12),
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return Column(
+          children: [
+            // ── Toggle Header ──────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+              child: Container(
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: theme.dividerColor, width: 0.5),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: theme.primaryColor,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  labelColor: theme.scaffoldBackgroundColor,
+                  unselectedLabelColor:
+                      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
+                  labelStyle: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  dividerColor: Colors.transparent,
+                  tabs: [
+                    const Tab(text: 'List'),
+                    Tab(key: widget.calendarTabKey, text: 'Calendar'),
+                  ],
+                ),
               ),
-              indicatorSize: TabBarIndicatorSize.tab,
-              labelColor: theme.scaffoldBackgroundColor,
-              unselectedLabelColor:
-                  theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
-              labelStyle: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
-              ),
-              dividerColor: Colors.transparent,
-              tabs: [
-                const Tab(text: 'List'),
-                Tab(key: widget.calendarTabKey, text: 'Calendar'),
-              ],
             ),
-          ),
-        ),
 
-        // ── Search Bar ─────────────────────────────────────────────────────
-        Padding(
-          padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-          child: Container(
-            key: widget.searchBarKey,
-            height: 44,
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: theme.dividerColor, width: 0.5),
-            ),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val.toLowerCase()),
-              decoration: InputDecoration(
-                hintText: 'Search transactions...',
-                hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4), fontSize: 13),
-                prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            // ── Search Bar ─────────────────────────────────────────────────────
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+              child: Container(
+                key: widget.searchBarKey,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: theme.cardColor,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: theme.dividerColor, width: 0.5),
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => _viewModel.searchQuery = val,
+                  decoration: InputDecoration(
+                    hintText: 'Search transactions...',
+                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4), fontSize: 13),
+                    prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  style: const TextStyle(fontSize: 13),
+                ),
               ),
-              style: const TextStyle(fontSize: 13),
             ),
-          ),
-        ),
 
-        // ── Filter Chips (Shared) ──────────────────────────────────────────
-        Padding(
-          key: widget.filterChipsKey,
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                FilterTab(
-                  label: 'All',
-                  isSelected: _filter == null,
-                  onTap: () => setState(() => _filter = null),
+            // ── Filter Chips (Shared) ──────────────────────────────────────────
+            Padding(
+              key: widget.filterChipsKey,
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    FilterTab(
+                      label: 'All',
+                      isSelected: _viewModel.filter == null,
+                      onTap: () => _viewModel.filter = null,
+                    ),
+                    const SizedBox(width: 8),
+                    FilterTab(
+                      label: 'Income',
+                      isSelected: _viewModel.filter == TransactionType.income,
+                      onTap: () => _viewModel.filter = TransactionType.income,
+                    ),
+                    const SizedBox(width: 8),
+                    FilterTab(
+                      label: 'Expense',
+                      isSelected: _viewModel.filter == TransactionType.expense,
+                      onTap: () => _viewModel.filter = TransactionType.expense,
+                    ),
+                    const SizedBox(width: 8),
+                    FilterTab(
+                      label: 'Transfer',
+                      isSelected: _viewModel.filter == TransactionType.transfer,
+                      onTap: () => _viewModel.filter = TransactionType.transfer,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                FilterTab(
-                  label: 'Income',
-                  isSelected: _filter == TransactionType.income,
-                  onTap: () => setState(() => _filter = TransactionType.income),
-                ),
-                const SizedBox(width: 8),
-                FilterTab(
-                  label: 'Expense',
-                  isSelected: _filter == TransactionType.expense,
-                  onTap: () => setState(() => _filter = TransactionType.expense),
-                ),
-                const SizedBox(width: 8),
-                FilterTab(
-                  label: 'Transfer',
-                  isSelected: _filter == TransactionType.transfer,
-                  onTap: () => setState(() => _filter = TransactionType.transfer),
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
 
-        // ── Content ────────────────────────────────────────────────────────
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: [
-              _ListViewTab(
-                onRefresh: widget.onRefresh,
-                isTutorialActive: widget.isTutorialActive,
-                searchQuery: _searchQuery,
-                filter: _filter,
-                listAreaKey: widget.listAreaKey,
-                singleItemKey: widget.singleItemKey,
-                dateHeaderKey: widget.dateHeaderKey,
-                colorIndicatorKey: widget.colorIndicatorKey,
+            // ── Content ────────────────────────────────────────────────────────
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _ListViewTab(
+                    viewModel: _viewModel,
+                    onRefresh: widget.onRefresh,
+                    listAreaKey: widget.listAreaKey,
+                    singleItemKey: widget.singleItemKey,
+                    dateHeaderKey: widget.dateHeaderKey,
+                    colorIndicatorKey: widget.colorIndicatorKey,
+                  ),
+                  _CalendarViewTab(
+                    viewModel: _viewModel,
+                    onRefresh: widget.onRefresh,
+                    calendarAreaKey: widget.calendarAreaKey,
+                  ),
+                ],
               ),
-              _CalendarViewTab(
-                onRefresh: widget.onRefresh,
-                isTutorialActive: widget.isTutorialActive,
-                searchQuery: _searchQuery,
-                filter: _filter,
-                calendarAreaKey: widget.calendarAreaKey,
-              ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-// ============================================================================
-// LIST VIEW TAB
-// ============================================================================
-
 class _ListViewTab extends StatelessWidget {
+  final ActivityViewModel viewModel;
   final VoidCallback onRefresh;
-  final bool isTutorialActive;
-  final String searchQuery;
-  final TransactionType? filter;
   
   final GlobalKey? listAreaKey;
   final GlobalKey? singleItemKey;
@@ -218,10 +212,8 @@ class _ListViewTab extends StatelessWidget {
   final GlobalKey? colorIndicatorKey;
 
   const _ListViewTab({
+    required this.viewModel,
     required this.onRefresh,
-    required this.isTutorialActive,
-    required this.searchQuery,
-    required this.filter,
     this.listAreaKey,
     this.singleItemKey,
     this.dateHeaderKey,
@@ -230,31 +222,10 @@ class _ListViewTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final account = SessionService.activeAccount;
     final theme = Theme.of(context);
-    List<Transaction> baseTransactions = [];
+    final items = viewModel.getGroupedItems();
 
-    if (isTutorialActive) {
-      final now = DateTime.now();
-      baseTransactions = [
-        Transaction(accountKey: 0, title: 'Grocery Run', amount: 250.00, type: TransactionType.expense, date: now, category: 'Food', description: 'Bought some food at the store'),
-        Transaction(accountKey: 0, title: 'Salary', amount: 5000.00, type: TransactionType.income, date: now.subtract(const Duration(days: 1)), category: 'Salary', description: 'Monthly salary from work'),
-        Transaction(accountKey: 0, title: 'Transfer to Savings', amount: 500.00, type: TransactionType.transfer, date: now.subtract(const Duration(days: 2)), category: 'Transfer', description: 'Moving cash to savings'),
-      ];
-    } else if (account != null) {
-      baseTransactions = DatabaseService.getTransactions(account.key as int);
-    }
-
-    final transactions = baseTransactions.where((tx) {
-      if (filter != null && tx.type != filter) return false;
-      if (searchQuery.isNotEmpty) {
-        final q = searchQuery;
-        if (!tx.title.toLowerCase().contains(q) && !tx.category.toLowerCase().contains(q)) return false;
-      }
-      return true;
-    }).toList();
-
-    if (transactions.isEmpty) {
+    if (items.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -273,129 +244,70 @@ class _ListViewTab extends StatelessWidget {
       );
     }
 
-    final sortedTx = List<Transaction>.from(transactions)
-      ..sort((a, b) => b.date.compareTo(a.date));
-
-    final List<dynamic> items = [];
-    DateTime? lastDate;
-    for (final tx in sortedTx) {
-      if (lastDate == null || !isSameDay(lastDate, tx.date)) {
-        items.add(tx.date);
-        lastDate = tx.date;
-      }
-      items.add(tx);
-    }
-
     return Container(
       key: listAreaKey,
       child: ListView.builder(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      itemCount: items.length,
-      itemBuilder: (context, index) {
-        final item = items[index];
-        if (item is DateTime) {
-          return SizedBox(
-            key: index == 0 ? dateHeaderKey : null,
-            child: buildDateHeader(context, item),
-          );
-        }
-        final tx = item as Transaction;
-        
-        // Target the first transaction card for the tutorial
-        final isFirstTx = index == (items.first is DateTime ? 1 : 0);
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          final item = items[index];
+          if (item is DateTime) {
+            return SizedBox(
+              key: index == 0 ? dateHeaderKey : null,
+              child: buildDateHeader(context, item),
+            );
+          }
+          final tx = item as Transaction;
+          
+          final isFirstTx = index == (items.first is DateTime ? 1 : 0);
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: SlideInListItem(
-            index: index,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  key: isFirstTx ? colorIndicatorKey : null,
-                  width: 14,
-                  height: 14,
-                  margin: const EdgeInsets.only(right: 12),
-                  decoration: BoxDecoration(
-                    color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : (tx.type == TransactionType.expense ? theme.colorScheme.error : const Color(0xFF00796B)),
-                    shape: BoxShape.circle,
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: SlideInListItem(
+              index: index,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    key: isFirstTx ? colorIndicatorKey : null,
+                    width: 14,
+                    height: 14,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      color: tx.type == TransactionType.income ? theme.colorScheme.tertiary : (tx.type == TransactionType.expense ? theme.colorScheme.error : const Color(0xFF00796B)),
+                      shape: BoxShape.circle,
+                    ),
                   ),
-                ),
-                Expanded(
-                  key: isFirstTx ? singleItemKey : null,
-                  child: TransactionCard(tx: tx, onRefresh: onRefresh),
-                ),
-              ],
+                  Expanded(
+                    key: isFirstTx ? singleItemKey : null,
+                    child: TransactionCard(tx: tx, onRefresh: onRefresh),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    ));
+          );
+        },
+      ),
+    );
   }
 }
 
-// ============================================================================
-// CALENDAR VIEW TAB
-// ============================================================================
-
-class _CalendarViewTab extends StatefulWidget {
+class _CalendarViewTab extends StatelessWidget {
+  final ActivityViewModel viewModel;
   final VoidCallback onRefresh;
-  final bool isTutorialActive;
-  final String searchQuery;
-  final TransactionType? filter;
   final GlobalKey? calendarAreaKey;
 
   const _CalendarViewTab({
+    required this.viewModel,
     required this.onRefresh,
-    required this.isTutorialActive,
-    required this.searchQuery,
-    required this.filter,
     this.calendarAreaKey,
   });
 
   @override
-  State<_CalendarViewTab> createState() => _CalendarViewTabState();
-}
-
-class _CalendarViewTabState extends State<_CalendarViewTab> {
-  DateTime _focusedDay = DateTime.now();
-  DateTime? _selectedDay;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedDay = _focusedDay;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final account = SessionService.activeAccount;
     final theme = Theme.of(context);
-    List<Transaction> transactions = [];
-
-    if (widget.isTutorialActive) {
-      final now = DateTime.now();
-      transactions = [
-        Transaction(accountKey: 0, title: 'Grocery Run', amount: 250.00, type: TransactionType.expense, date: now, category: 'Food', description: 'Bought some food at the store'),
-        Transaction(accountKey: 0, title: 'Salary', amount: 5000.00, type: TransactionType.income, date: now.subtract(const Duration(days: 1)), category: 'Salary', description: 'Monthly salary from work'),
-        Transaction(accountKey: 0, title: 'Transfer to Savings', amount: 500.00, type: TransactionType.transfer, date: now.subtract(const Duration(days: 2)), category: 'Transfer', description: 'Moving cash to savings'),
-      ];
-    } else if (account != null) {
-      transactions = DatabaseService.getTransactions(account.key as int);
-    }
-
-    final globalFiltered = transactions.where((tx) {
-      final typeMatch = widget.filter == null || tx.type == widget.filter;
-      final searchMatch = widget.searchQuery.isEmpty || 
-        tx.title.toLowerCase().contains(widget.searchQuery) || 
-        tx.category.toLowerCase().contains(widget.searchQuery);
-      return typeMatch && searchMatch;
-    }).toList();
-
-    final filtered = globalFiltered.where((tx) {
-      return isSameDay(tx.date, _selectedDay ?? _focusedDay);
-    }).toList();
+    final filtered = viewModel.getTransactionsForSelectedDay();
 
     final dayIncome = filtered
         .where((tx) => tx.type == TransactionType.income)
@@ -406,7 +318,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
 
     final categoryData = <String, double>{};
     for (final tx in filtered) {
-      if (widget.filter == null && tx.type != TransactionType.expense) continue;
+      if (viewModel.filter == null && tx.type != TransactionType.expense) continue;
       if (tx.type == TransactionType.transfer) continue;
       categoryData[tx.category] = (categoryData[tx.category] ?? 0) + tx.amount;
     }
@@ -414,12 +326,11 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
     return CustomScrollView(
       physics: const BouncingScrollPhysics(),
       slivers: [
-        // Month label
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
             child: Text(
-              DateFormat('MMMM yyyy').format(_focusedDay).toUpperCase(),
+              DateFormat('MMMM yyyy').format(viewModel.focusedDay).toUpperCase(),
               style: theme.textTheme.labelLarge?.copyWith(
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
@@ -430,80 +341,74 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
           ),
         ),
 
-        // Calendar
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             child: Container(
-              key: widget.calendarAreaKey,
+              key: calendarAreaKey,
               child: TableCalendar(
-              firstDay: DateTime.utc(2020, 1, 1),
-              lastDay: DateTime.utc(2030, 12, 31),
-              focusedDay: _focusedDay,
-              calendarFormat: CalendarFormat.month,
-              selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
-              onDaySelected: (selectedDay, focusedDay) => setState(() {
-                _selectedDay = selectedDay;
-                _focusedDay = focusedDay;
-              }),
-              onPageChanged: (focusedDay) =>
-                  setState(() => _focusedDay = focusedDay),
-              eventLoader: (day) {
-                return globalFiltered.where((tx) => isSameDay(tx.date, day)).toList();
-              },
-              headerVisible: false,
-              daysOfWeekStyle: DaysOfWeekStyle(
-                weekdayStyle: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                firstDay: DateTime.utc(2020, 1, 1),
+                lastDay: DateTime.utc(2030, 12, 31),
+                focusedDay: viewModel.focusedDay,
+                calendarFormat: CalendarFormat.month,
+                selectedDayPredicate: (day) => isSameDay(viewModel.selectedDay, day),
+                onDaySelected: viewModel.onDaySelected,
+                onPageChanged: viewModel.onPageChanged,
+                eventLoader: (day) {
+                  return viewModel.filteredTransactions.where((tx) => isSameDay(tx.date, day)).toList();
+                },
+                headerVisible: false,
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  weekendStyle: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-                weekendStyle: TextStyle(
-                  color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                calendarStyle: CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: theme.primaryColor.withValues(alpha:0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  todayTextStyle: TextStyle(
+                    color: theme.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: theme.colorScheme.onSurface,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: theme.colorScheme.onSurface.withValues(alpha:0.2),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  selectedTextStyle: TextStyle(
+                    color: theme.scaffoldBackgroundColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+                  weekendTextStyle: const TextStyle(fontWeight: FontWeight.w500),
+                  outsideDaysVisible: false,
+                  markerDecoration: BoxDecoration(
+                    color: theme.primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  markersMaxCount: 1,
+                  markerMargin: const EdgeInsets.only(top: 6),
                 ),
-              ),
-              calendarStyle: CalendarStyle(
-                todayDecoration: BoxDecoration(
-                  color: theme.primaryColor.withValues(alpha:0.1),
-                  shape: BoxShape.circle,
-                ),
-                todayTextStyle: TextStyle(
-                  color: theme.primaryColor,
-                  fontWeight: FontWeight.bold,
-                ),
-                selectedDecoration: BoxDecoration(
-                  color: theme.colorScheme.onSurface,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: theme.colorScheme.onSurface.withValues(alpha:0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                selectedTextStyle: TextStyle(
-                  color: theme.scaffoldBackgroundColor,
-                  fontWeight: FontWeight.bold,
-                ),
-                defaultTextStyle: const TextStyle(fontWeight: FontWeight.w500),
-                weekendTextStyle: const TextStyle(fontWeight: FontWeight.w500),
-                outsideDaysVisible: false,
-                markerDecoration: BoxDecoration(
-                  color: theme.primaryColor,
-                  shape: BoxShape.circle,
-                ),
-                markersMaxCount: 1,
-                markerMargin: const EdgeInsets.only(top: 6),
               ),
             ),
           ),
         ),
-        ),
 
-        // Day summary
         if (filtered.isNotEmpty)
           SliverToBoxAdapter(
             child: Padding(
@@ -523,8 +428,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                       amount: dayIncome,
                       color: theme.colorScheme.tertiary,
                     ),
-                    Container(
-                        width: 1, height: 30, color: theme.dividerColor),
+                    Container(width: 1, height: 30, color: theme.dividerColor),
                     DaySummaryStat(
                       label: 'Expense',
                       amount: dayExpense,
@@ -536,11 +440,9 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
             ),
           ),
 
-        // Chart sliver
         if (categoryData.isNotEmpty)
-          _buildChartSliver(theme, categoryData),
+          _buildChartSliver(theme, categoryData, viewModel.filter),
 
-        // Transaction list or empty
         filtered.isEmpty
             ? SliverFillRemaining(
                 hasScrollBody: false,
@@ -599,7 +501,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
                             Expanded(
                               child: TransactionCard(
                                 tx: tx,
-                                onRefresh: widget.onRefresh,
+                                onRefresh: onRefresh,
                               ),
                             ),
                           ],
@@ -614,7 +516,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
     );
   }
 
-  Widget _buildChartSliver(ThemeData theme, Map<String, double> categoryData) {
+  Widget _buildChartSliver(ThemeData theme, Map<String, double> categoryData, TransactionType? filter) {
     if (categoryData.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
 
     final colors = [
@@ -639,7 +541,7 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                widget.filter == TransactionType.income ? 'INCOME BREAKDOWN' : 'SPENDING BREAKDOWN',
+                filter == TransactionType.income ? 'INCOME BREAKDOWN' : 'SPENDING BREAKDOWN',
                 style: theme.textTheme.labelLarge?.copyWith(
                   letterSpacing: 2,
                   fontWeight: FontWeight.w900,
@@ -724,3 +626,4 @@ class _CalendarViewTabState extends State<_CalendarViewTab> {
     );
   }
 }
+

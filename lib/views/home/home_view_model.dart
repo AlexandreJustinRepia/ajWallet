@@ -20,13 +20,28 @@ class HomeViewModel extends ChangeNotifier {
   bool _showGlow = false;
   double _prevBalance = 0;
 
+  // Stream Subscriptions
+  StreamSubscription? _txSubscription;
+  StreamSubscription? _walletSubscription;
+
   // Tutorial state
   final List<Transaction> _tutorialTransactions = [];
   late List<Wallet> _tutorialWallets;
 
   HomeViewModel({required this.isTutorialActive}) {
     if (isTutorialActive) _initTutorial();
+    _setupListeners();
     refresh();
+  }
+
+  void _setupListeners() {
+    if (isTutorialActive) return;
+    
+    _txSubscription?.cancel();
+    _walletSubscription?.cancel();
+
+    _txSubscription = DatabaseService.transactionWatcher.listen((_) => refresh());
+    _walletSubscription = DatabaseService.walletWatcher.listen((_) => refresh());
   }
 
   List<Transaction> get transactions => isTutorialActive ? _tutorialTransactions : _transactions;
@@ -122,5 +137,11 @@ class HomeViewModel extends ChangeNotifier {
         ),
       ];
     }
+  }
+  @override
+  void dispose() {
+    _txSubscription?.cancel();
+    _walletSubscription?.cancel();
+    super.dispose();
   }
 }

@@ -10,7 +10,6 @@ import '../models/transaction_model.dart';
 import '../add_transaction_screen.dart';
 import '../screens/fund_goal_screen.dart';
 import '../models/debt.dart';
-import '../models/budget.dart'; // Added missing import
 import '../widgets/financial_health_strip.dart';
 import '../widgets/card_decorator.dart';
 import 'planning_view_model.dart'; // Import newly created ViewModel

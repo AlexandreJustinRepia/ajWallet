@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/database_service.dart';
 import '../services/planning_intelligence_service.dart';
@@ -10,6 +11,13 @@ import '../models/wallet.dart';
 class PlanningViewModel extends ChangeNotifier {
   int? _accountKey;
   bool _isLoading = false;
+
+  // Stream Subscriptions
+  StreamSubscription? _txSubscription;
+  StreamSubscription? _walletSubscription;
+  StreamSubscription? _budgetSubscription;
+  StreamSubscription? _goalSubscription;
+  StreamSubscription? _debtSubscription;
 
   List<Budget> _budgets = [];
   List<Goal> _goals = [];
@@ -49,7 +57,22 @@ class PlanningViewModel extends ChangeNotifier {
   void init(int accountKey) {
     if (_accountKey == accountKey) return;
     _accountKey = accountKey;
+    _setupListeners();
     refresh();
+  }
+
+  void _setupListeners() {
+    _txSubscription?.cancel();
+    _walletSubscription?.cancel();
+    _budgetSubscription?.cancel();
+    _goalSubscription?.cancel();
+    _debtSubscription?.cancel();
+
+    _txSubscription = DatabaseService.transactionWatcher.listen((_) => refresh());
+    _walletSubscription = DatabaseService.walletWatcher.listen((_) => refresh());
+    _budgetSubscription = DatabaseService.budgetWatcher.listen((_) => refresh());
+    _goalSubscription = DatabaseService.goalWatcher.listen((_) => refresh());
+    _debtSubscription = DatabaseService.debtWatcher.listen((_) => refresh());
   }
 
   Future<void> refresh() async {
@@ -141,5 +164,14 @@ class PlanningViewModel extends ChangeNotifier {
     // Priority 2: Categorical match for the relevant month/year
     final dateKey = "${b.category}_${b.month}_${b.year}";
     return _categorySpendingMap[dateKey] ?? 0.0;
+  }
+  @override
+  void dispose() {
+    _txSubscription?.cancel();
+    _walletSubscription?.cancel();
+    _budgetSubscription?.cancel();
+    _goalSubscription?.cancel();
+    _debtSubscription?.cancel();
+    super.dispose();
   }
 }

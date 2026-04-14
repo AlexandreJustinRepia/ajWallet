@@ -8,7 +8,7 @@
 PRODUCT_NAME = aj_wallet
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.ajWallet
+PRODUCT_BUNDLE_IDENTIFIER = com.rootexp.aj
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.rootexp. All rights reserved.

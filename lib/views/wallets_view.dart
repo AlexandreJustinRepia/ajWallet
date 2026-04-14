@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import '../services/session_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../services/database_service.dart';
 import '../services/financial_insights_service.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
 import '../wallet_details_screen.dart';
+import 'wallets/wallets_view_model.dart';
 
-class WalletsView extends StatelessWidget {
+class WalletsView extends StatefulWidget {
   final VoidCallback onRefresh;
   final GlobalKey? walletListKey;
   final GlobalKey? singleWalletKey;
@@ -22,84 +22,91 @@ class WalletsView extends StatelessWidget {
   });
 
   @override
+  State<WalletsView> createState() => _WalletsViewState();
+}
+
+class _WalletsViewState extends State<WalletsView> {
+  late WalletsViewModel _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = WalletsViewModel();
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final account = SessionService.activeAccount;
     final theme = Theme.of(context);
-    final wallets = account != null
-        ? DatabaseService.getWallets(account.key as int)
-        : <Wallet>[];
-    final transactions = account != null
-        ? DatabaseService.getTransactions(account.key as int)
-        : <Transaction>[];
 
-    final totalBalance = wallets
-        .where((w) => !w.isExcluded)
-        .fold(0.0, (sum, w) => sum + w.balance);
-    final totalIncome = transactions
-        .where((tx) => tx.type == TransactionType.income)
-        .fold(0.0, (sum, tx) => sum + tx.amount);
-    final totalExpense = transactions
-        .where((tx) => tx.type == TransactionType.expense)
-        .fold(0.0, (sum, tx) => sum + tx.amount);
+    return ListenableBuilder(
+      listenable: _viewModel,
+      builder: (context, _) {
+        return ListView(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
+          children: [
+            Container(
+              key: widget.lifeOfMoneyKey,
+              child: _GlobalStatsBanner(
+                wallets: _viewModel.wallets,
+                transactions: _viewModel.transactions,
+                totalBalance: _viewModel.totalBalance,
+                totalIncome: _viewModel.totalIncome,
+                totalExpense: _viewModel.totalExpense,
+              ),
+            ),
+            const SizedBox(height: 28),
 
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 80),
-      children: [
-        Container(
-          key: lifeOfMoneyKey,
-          child: _GlobalStatsBanner(
-            wallets: wallets,
-            transactions: transactions,
-            totalBalance: totalBalance,
-            totalIncome: totalIncome,
-            totalExpense: totalExpense,
-          ),
-        ),
-        const SizedBox(height: 28),
+            // ── Section Label ───────────────────────────────────────────────
+            Text(
+              'MY WALLETS',
+              style: theme.textTheme.labelLarge?.copyWith(
+                letterSpacing: 2,
+                fontWeight: FontWeight.w900,
+                fontSize: 10,
+                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+              ),
+            ),
+            const SizedBox(height: 12),
 
-        // ── Section Label ───────────────────────────────────────────────
-        Text(
-          'MY WALLETS',
-          style: theme.textTheme.labelLarge?.copyWith(
-            letterSpacing: 2,
-            fontWeight: FontWeight.w900,
-            fontSize: 10,
-            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
-          ),
-        ),
-        const SizedBox(height: 12),
-
-        // ── Wallet Cards ────────────────────────────────────────────────
-        Container(
-          key: walletListKey,
-          child: wallets.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Text(
-                      'No wallets yet',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+            // ── Wallet Cards ────────────────────────────────────────────────
+            Container(
+              key: widget.walletListKey,
+              child: _viewModel.wallets.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Text(
+                          'No wallets yet',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                          ),
+                        ),
                       ),
+                    )
+                  : Column(
+                      children: _viewModel.wallets.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final wallet = entry.value;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 14),
+                          child: Container(
+                            key: index == 0 ? widget.singleWalletKey : null,
+                            child: _WalletCard(wallet: wallet, onRefresh: widget.onRefresh),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ),
-                )
-              : Column(
-                  children: wallets.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final wallet = entry.value;
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 14),
-                      child: Container(
-                        key: index == 0 ? singleWalletKey : null,
-                        child: _WalletCard(wallet: wallet, onRefresh: onRefresh),
-                      ),
-                    );
-                  }).toList(),
-                ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

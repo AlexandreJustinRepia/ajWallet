@@ -466,24 +466,23 @@ class _ShopViewState extends State<ShopView> {
                 ? theme.scaffoldBackgroundColor 
                 : Colors.grey[100],
               borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              image: s.config.assetPath != null 
-                ? DecorationImage(
-                    image: AssetImage(s.config.assetPath!),
-                    fit: BoxFit.cover,
-                    opacity: 0.3, // Dim the image if we have a view button
-                  )
-                : null,
             ),
             child: Stack(
               children: [
-                if (s.config.assetPath == null)
-                  Center(
-                    child: Icon(
-                      s.config.isTechMode ? Icons.memory_rounded : Icons.park_rounded, 
-                      color: s.config.leafColor.withValues(alpha: 0.5), 
-                      size: 48
+                // Actual animated tree preview
+                Positioned.fill(
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    child: Center(
+                      child: AnimatedTree(
+                        balance: 2000, // Fixed high balance for a healthy preview
+                        overrideSkinId: s.id,
+                        height: 140,
+                        margin: EdgeInsets.zero,
+                      ),
                     ),
                   ),
+                ),
                 
                 // Live Preview Button Overlay
                 Center(
@@ -492,9 +491,9 @@ class _ShopViewState extends State<ShopView> {
                     icon: const Icon(Icons.visibility),
                     label: const Text('Live View'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor.withValues(alpha: 0.8),
+                      backgroundColor: theme.primaryColor.withValues(alpha: 0.6), // More transparent to see the tree behind
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                     ),
                   ),

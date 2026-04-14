@@ -1,8 +1,20 @@
-# RootEXP - Minimalist Offline Budget App
+# RootEXP - Nature-Inspired Financial Management
 
-RootEXP is a professional, minimalist offline budget application built with Flutter. It prioritizes privacy, security, and a clean user experience with a monochromatic aesthetic and deep customization options.
+RootEXP is a premium, offline-first personal finance application that transforms budgeting into a living ecosystem. By combining a professional-grade accounting engine with nature-inspired gamification, RootEXP makes managing your wealth a visually stunning and rewarding experience.
 
-## 🚀 Features
+## 🚀 Key Features
+
+### 🌳 Nature-Inspired Gamification
+- **Financial Tree Visualizer:** Your wealth is represented by a living tree on your dashboard that grows branches and leaves as your balance increases.
+- **Tree Skin System:** Customize your experience with unique themes like **Sakura**, **Autumn**, **Winter Frost**, **Wealth Oak**, **Golden Money**, and the futuristic **Tech Tree**.
+- **Live Previews:** Test-drive any skin in the Rewards Shop with a real-time animated preview dialog.
+- **Health Mechanics:** The tree reacts to your financial habits—saving makes it bloom, while overspending causes it to react dynamically.
+- **Rewards Shop:** Earn and spend currency to unlock premium tree skins and cosmetic upgrades.
+
+### 🎓 Intelligent Interactive Onboarding
+- **Multi-Screen Guided Tour:** A seamless, spotlight-driven tutorial that navigates between the Dashboard, Transactions, Wallets, and Planning hubs.
+- **Live Tooltips:** Interactive callouts that highlight real-life UI components, teaching you how to manage transactions and budgets in context.
+- **Adaptive Positioning:** A smart overlay system that automatically positions itself to ensure clarity on any screen size and avoids navigation bar blockage.
 
 ### 🔐 Security & Privacy
 - **Offline First:** All data is stored locally on your device. No cloud sync, no tracking.
@@ -16,23 +28,17 @@ RootEXP is a professional, minimalist offline budget application built with Flut
 - **Debt Risk Awareness:** Warns you if debt payments threaten your near-term cashflow.
 - **Payoff Optimization:** Suggests strategies to become debt-free faster based on spare cash.
 - **Adaptive Tone:** The AI shifts its personality (Calm, Strict, Encouraging) based on your financial health.
-- **Guided Onboarding:** Interactive tutorial for first-time users to discover AI features.
 
 ### 🎯 Planning Hub & Goals
 - **Savings Strategy:** Track multiple goals with different strategies (Default vs. Aggressive).
 - **Debt Management:** Specialized tools for tracking money owed and money borrowed.
 - **Quick Shortcuts:** Instant transaction entry directly from the Planning Hub for goals and debts.
-- **Gamified Achievements:** Unlock badges like 'AI Explorer' and 'Debt Slayer' as you progress.
+- **Interactive Timeline:** A dedicated calendar view to visualize your spending habits across seasons.
 
-### 🎨 Premium Personalization
-- **Simplified Theme Engine:** Modern 'System / Light / Dark' toggle with auto-applying preset palettes.
-- **Advanced Custom Lab:** Tweak every color (Primary, Background, etc.) for a truly unique look.
-- **Tactile UI:** Rounded layouts, subtle shadows, and a "Bottom-Up" chat-inspired AI assistant.
-
-### 📱 User Experience
-- **Minimalist Design:** Clean, professional aesthetic using black, white, and gray tones.
-- **Interactive UI:** Subtle animations for field focus and button presses.
-- **Profile Menu:** Quick access to theme settings and logout from the dashboard.
+### 🎨 Premium Personalization & UI
+- **Dynamic Design System:** Modern, premium aesthetics featuring glassmorphism, smooth gradients, and vibrant color presets.
+- **Customization Lab:** Tweak every aspect of the UI for a truly bespoke financial environment.
+- **Tactile Feedback:** Subtle micro-animations and haptic-inspired interactions for a high-end feel.
 
 ## 🛠️ Tech Stack
 - **Framework:** [Flutter](https://flutter.dev/)

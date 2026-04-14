@@ -10,8 +10,16 @@ import '../models/tree_skin.dart';
 class AnimatedTree extends StatefulWidget {
   final double balance;
   final String? overrideSkinId;
+  final double height;
+  final EdgeInsetsGeometry? margin;
 
-  const AnimatedTree({super.key, required this.balance, this.overrideSkinId});
+  const AnimatedTree({
+    super.key,
+    required this.balance,
+    this.overrideSkinId,
+    this.height = 280,
+    this.margin = const EdgeInsets.symmetric(vertical: 24),
+  });
 
   @override
   State<AnimatedTree> createState() => _AnimatedTreeState();
@@ -133,9 +141,9 @@ class _AnimatedTreeState extends State<AnimatedTree>
 
         return RepaintBoundary(
           child: Container(
-            height: 280,
+            height: widget.height,
             width: double.infinity,
-            margin: const EdgeInsets.symmetric(vertical: 24),
+            margin: widget.margin,
             child: AnimatedBuilder(
               animation: Listenable.merge([
                 _controller,

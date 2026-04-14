@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../widgets/onboarding_overlay.dart';
-import '../../add_transaction_screen.dart';
+// Removed unused import
 import '../../wallet_form_screen.dart';
 import '../../screens/add_budget_screen.dart';
 import '../../screens/add_goal_screen.dart';
 import '../../screens/add_debt_screen.dart';
 import '../../services/session_service.dart';
 import 'dashboard_view_model.dart';
+import '../../transaction_details_screen.dart';
+import '../../models/transaction_model.dart';
 import 'dashboard_keys.dart';
 
 class OnboardingController {
@@ -22,19 +24,22 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.balanceKey,
         title: 'Total Balance',
-        description: 'This is your Total Balance — it shows how much money you currently have across your wallets.',
+        description:
+            'This is your Total Balance — it shows how much money you currently have across your wallets.',
         onStepEnter: () => _scrollTo(keys.balanceKey, 0.1),
       ),
       OnboardingStep(
         targetKey: keys.quickAddKey,
         title: 'Quick Add',
-        description: 'Use Quick Add to instantly record a transaction without leaving the home screen.',
+        description:
+            'Use Quick Add to instantly record a transaction without leaving the home screen.',
         onStepEnter: () => _scrollTo(keys.quickAddKey, 0.3),
       ),
       OnboardingStep(
         targetKey: keys.quickAddKey,
         title: 'Smart Parsing',
-        description: 'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
+        description:
+            'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
         onStepEnter: () {
           keys.quickAddKey.currentState?.simulateTyping('250 Food');
           _scrollTo(keys.quickAddKey, 0.3);
@@ -43,7 +48,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.balanceKey,
         title: 'Automatic Updates',
-        description: 'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
+        description:
+            'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
         onStepEnter: () async {
           _scrollTo(keys.balanceKey, 0.1);
           await Future.delayed(const Duration(milliseconds: 300));
@@ -53,24 +59,28 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.treeKey,
         title: 'Your Financial Tree',
-        description: 'This tree is the heart of RootEXP. It\'s a living visualization of your wealth. As your balance grows, the tree grows more branches and lush leaves.',
+        description:
+            'This tree is the heart of RootEXP. It\'s a living visualization of your wealth. As your balance grows, the tree grows more branches and lush leaves.',
         onStepEnter: () => _scrollTo(keys.treeKey, 0.2),
       ),
       OnboardingStep(
         targetKey: keys.treeKey,
         title: 'Real-Time Health Indicator',
-        description: 'The tree doesn\'t just look pretty—it reacts to your habits. Healthy saving makes it bloom flowers, while overspending causes it to shed leaves. It\'s your financial discipline, visualized.',
+        description:
+            'The tree doesn\'t just look pretty—it reacts to your habits. Healthy saving makes it bloom flowers, while overspending causes it to shed leaves. It\'s your financial discipline, visualized.',
       ),
       OnboardingStep(
         targetKey: keys.activityHeaderKey,
         title: 'Recent Activity',
-        description: 'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
+        description:
+            'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
         onStepEnter: () => _scrollTo(keys.activityHeaderKey, 0.5),
       ),
       OnboardingStep(
         targetKey: keys.sampleTransactionKey,
-        title: 'Transaction Details',
-        description: 'Each entry shows the amount, category, and type of transaction. Tap any item to see more details.',
+        title: 'Activity List',
+        description:
+            'Each entry here gives you a quick snapshot of your transaction. For full management tools, you can tap on these items.',
         onStepEnter: () => _scrollTo(keys.sampleTransactionKey, 0.6),
       ),
       OnboardingStep(
@@ -93,17 +103,20 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.activitySingleItemKey,
         title: 'Transaction Details',
-        description: 'Each transaction shows the amount, category, and type (income, expense, or transfer).',
+        description:
+            'Each transaction shows the amount, category, and type (income, expense, or transfer).',
       ),
       OnboardingStep(
         targetKey: keys.activityColorIndicatorKey,
         title: 'Color Indicators',
-        description: 'Quickly identify transactions — income, expenses, and transfers have different colors!',
+        description:
+            'Quickly identify transactions — income, expenses, and transfers have different colors!',
       ),
       OnboardingStep(
         targetKey: keys.activityDateHeaderKey,
         title: 'Timeline',
-        description: 'Transactions are organized by date so you can easily track your activity.',
+        description:
+            'Transactions are organized by date so you can easily track your activity.',
       ),
       OnboardingStep(
         targetKey: keys.activityFilterChipsKey,
@@ -119,69 +132,61 @@ class OnboardingController {
       ),
       OnboardingStep(
         targetKey: keys.activitySingleItemKey,
-        title: 'View Details',
-        description: 'Tap a transaction to view more details.',
+        title: 'Manage Transactions',
+        description:
+            'To edit or delete a transaction, you first need to tap on it to view its full details.',
         onStepEnter: () {
           _scrollTo(keys.activitySingleItemKey, 0.5);
-          viewModel.setOverlayState(DashboardOverlayState.none);
-        },
-      ),
-      OnboardingStep(
-        targetKey: keys.fakeDetailsModalKey,
-        title: 'Transaction Details',
-        description: 'Here you can see complete information about the transaction.',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.details);
-        },
-      ),
-      OnboardingStep(
-        targetKey: keys.fakeDetailsEditIconKey,
-        title: 'Edit Transaction',
-        description: 'Tap here to edit this transaction.',
-      ),
-      OnboardingStep(
-        targetKey: keys.fakeDetailsDeleteIconKey,
-        title: 'Delete Transaction',
-        description: 'Tap here to delete this transaction if needed.',
-        onStepEnter: () async {
-          if (!viewModel.hasShownEditTutorial) {
-            viewModel.markEditTutorialAsShown();
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => AddTransactionScreen(
-                  accountKey: accountKey ?? 0,
-                  isTutorialMode: true,
+          // Auto-navigate to real details screen with tutorial steps
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (context.mounted) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TransactionDetailsScreen(
+                    transaction: Transaction(
+                      title: 'Lunch',
+                      accountKey: accountKey ?? 0,
+                      amount: 250.00,
+                      category: 'Food',
+                      description: 'Grocery Run',
+                      date: DateTime.now(),
+                      type: TransactionType.expense,
+                      walletKey: 0,
+                    ),
+                    editKey: keys.detailsEditKey,
+                    deleteKey: keys.detailsDeleteKey,
+                    tutorialSteps: [
+                      OnboardingStep(
+                        targetKey: keys.detailsEditKey,
+                        title: 'Edit Transaction',
+                        description:
+                            'This pencil icon allows you to modify the transaction if you made a mistake.',
+                      ),
+                      OnboardingStep(
+                        targetKey: keys.detailsDeleteKey,
+                        title: 'Delete Transaction',
+                        description:
+                            'If you need to remove the record entirely, use this trash icon.',
+                      ),
+                      OnboardingStep(
+                        title: 'Transaction Management',
+                        description:
+                            'Managing your finances is that simple! Your balance and tree will update automatically whenever you make changes.',
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          }
-        },
-      ),
-      OnboardingStep(
-        targetKey: keys.fakeDetailsDeleteIconKey,
-        title: 'Permanent Deletion',
-        description: 'Deleting will permanently remove this transaction from your records.',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.deleteConfirm);
-        },
-      ),
-      OnboardingStep(
-        targetKey: keys.fakeDeleteConfirmKey,
-        title: 'Confirm Delete',
-        description: 'Confirm to delete the transaction.',
-      ),
-      OnboardingStep(
-        title: 'Easily Manageable',
-        description: 'Your transactions are always editable and easy to manage!',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.none);
+              );
+            }
+          });
         },
       ),
       OnboardingStep(
         targetKey: keys.activityCalendarTabKey,
         title: 'Calendar View',
-        description: 'Switch to the Calendar View to see your activity across the month.',
+        description:
+            'Switch to the Calendar View to see your activity across the month.',
         onStepEnter: () {
           viewModel.setOverlayState(DashboardOverlayState.none);
           viewModel.setActivityTutorialTabIndex(0);
@@ -190,7 +195,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.activityCalendarAreaKey,
         title: 'Monthly Calendar',
-        description: 'Days with transactions will have a bright marker dot. Tap on any day to see its summary!',
+        description:
+            'Days with transactions will have a bright marker dot. Tap on any day to see its summary!',
         onStepEnter: () {
           viewModel.setActivityTutorialTabIndex(1);
         },
@@ -259,7 +265,8 @@ class OnboardingController {
       ),
       OnboardingStep(
         title: 'Financial Planning',
-        description: 'Plan your money with budgets, savings, and debt tracking.',
+        description:
+            'Plan your money with budgets, savings, and debt tracking.',
       ),
       OnboardingStep(
         targetKey: keys.planBudgetSectionKey,
@@ -286,7 +293,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.planBudgetIndicatorKey,
         title: 'Track Your Limits',
-        description: 'When you add transactions, you\'ll see how much budget is left.',
+        description:
+            'When you add transactions, you\'ll see how much budget is left.',
         onStepEnter: () => _scrollTo(keys.planBudgetSectionKey, 0.2),
       ),
       OnboardingStep(
@@ -314,7 +322,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.planGoalFundKey,
         title: 'Add to Savings',
-        description: 'Add money to your goal — it will be deducted from your balance.',
+        description:
+            'Add money to your goal — it will be deducted from your balance.',
         onStepEnter: () => _scrollTo(keys.planGoalFundKey, 0.4),
       ),
       OnboardingStep(
@@ -346,7 +355,8 @@ class OnboardingController {
       ),
       OnboardingStep(
         title: 'Balance Reflections',
-        description: 'Giving money deducts from your wallet. Borrowing adds to your wallet.',
+        description:
+            'Giving money deducts from your wallet. Borrowing adds to your wallet.',
       ),
       OnboardingStep(
         title: 'Manage Your Finances',

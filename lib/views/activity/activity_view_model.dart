@@ -83,10 +83,14 @@ class ActivityViewModel extends ChangeNotifier {
 
   void _applyFilters() {
     _filteredTransactions = _allTransactions.where((tx) {
-      if (_filter != null && tx.type != _filter) return false;
+      if (_filter != null && tx.type != _filter) {
+        return false;
+      }
       if (_searchQuery.isNotEmpty) {
-        if (!tx.title.toLowerCase().contains(_searchQuery) && 
-            !tx.category.toLowerCase().contains(_searchQuery)) return false;
+        if (!tx.title.toLowerCase().contains(_searchQuery) &&
+            !tx.category.toLowerCase().contains(_searchQuery)) {
+          return false;
+        }
       }
       return true;
     }).toList();

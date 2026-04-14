@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../services/database_service.dart';
 import '../services/financial_insights_service.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
@@ -14,7 +13,7 @@ class WalletsView extends StatefulWidget {
   final GlobalKey? lifeOfMoneyKey;
 
   const WalletsView({
-    super.key, 
+    super.key,
     required this.onRefresh,
     this.walletListKey,
     this.singleWalletKey,
@@ -70,7 +69,9 @@ class _WalletsViewState extends State<WalletsView> {
                 letterSpacing: 2,
                 fontWeight: FontWeight.w900,
                 fontSize: 10,
-                color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.4,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -85,7 +86,8 @@ class _WalletsViewState extends State<WalletsView> {
                         child: Text(
                           'No wallets yet',
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4),
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.4),
                           ),
                         ),
                       ),
@@ -98,7 +100,10 @@ class _WalletsViewState extends State<WalletsView> {
                           padding: const EdgeInsets.only(bottom: 14),
                           child: Container(
                             key: index == 0 ? widget.singleWalletKey : null,
-                            child: _WalletCard(wallet: wallet, onRefresh: widget.onRefresh),
+                            child: _WalletCard(
+                              wallet: wallet,
+                              onRefresh: widget.onRefresh,
+                            ),
                           ),
                         );
                       }).toList(),
@@ -133,13 +138,15 @@ class _GlobalStatsBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final expenses =
-        transactions.where((tx) => tx.type == TransactionType.expense).toList();
+    final expenses = transactions
+        .where((tx) => tx.type == TransactionType.expense)
+        .toList();
 
     double dailyAvg = 0;
     if (expenses.isNotEmpty) {
-      final firstDate =
-          expenses.map((e) => e.date).reduce((a, b) => a.isBefore(b) ? a : b);
+      final firstDate = expenses
+          .map((e) => e.date)
+          .reduce((a, b) => a.isBefore(b) ? a : b);
       final days = DateTime.now().difference(firstDate).inDays + 1;
       dailyAvg = expenses.fold(0.0, (s, e) => s + e.amount) / days;
     }
@@ -188,8 +195,9 @@ class _GlobalStatsBanner extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w900,
                           letterSpacing: 1.5,
-                          color: theme.textTheme.bodyMedium?.color
-                              ?.withValues(alpha:0.4),
+                          color: theme.textTheme.bodyMedium?.color?.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -204,10 +212,12 @@ class _GlobalStatsBanner extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha:0.1),
+                    color: statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -249,7 +259,7 @@ class _GlobalStatsBanner extends StatelessWidget {
                         dotData: const FlDotData(show: false),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: theme.primaryColor.withValues(alpha:0.06),
+                          color: theme.primaryColor.withValues(alpha: 0.06),
                         ),
                       ),
                     ],
@@ -304,7 +314,7 @@ class _MiniStat extends StatelessWidget {
         margin: const EdgeInsets.symmetric(horizontal: 4),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
         decoration: BoxDecoration(
-          color: color.withValues(alpha:0.07),
+          color: color.withValues(alpha: 0.07),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -315,7 +325,7 @@ class _MiniStat extends StatelessWidget {
               style: TextStyle(
                 fontSize: 8,
                 fontWeight: FontWeight.w900,
-                color: color.withValues(alpha:0.7),
+                color: color.withValues(alpha: 0.7),
                 letterSpacing: 1,
               ),
             ),
@@ -349,8 +359,9 @@ class _WalletCard extends StatelessWidget {
     final theme = Theme.of(context);
     // Determine color based on exclusion state
     final isExcluded = wallet.isExcluded;
-    final accentColor =
-        isExcluded ? theme.colorScheme.error : theme.primaryColor;
+    final accentColor = isExcluded
+        ? theme.colorScheme.error
+        : theme.primaryColor;
 
     return Material(
       color: Colors.transparent,
@@ -372,7 +383,7 @@ class _WalletCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isExcluded
-                  ? theme.colorScheme.error.withValues(alpha:0.5)
+                  ? theme.colorScheme.error.withValues(alpha: 0.5)
                   : theme.dividerColor,
               width: isExcluded ? 1.5 : 0.5,
             ),
@@ -383,7 +394,7 @@ class _WalletCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha:0.07),
+                  color: accentColor.withValues(alpha: 0.07),
                   shape: BoxShape.circle,
                 ),
                 clipBehavior: Clip.antiAlias,
@@ -394,7 +405,7 @@ class _WalletCard extends StatelessWidget {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(6),
                           child: Image.asset(
-                            wallet.iconPath!, 
+                            wallet.iconPath!,
                             fit: BoxFit.contain,
                             width: 20,
                             height: 20,
@@ -419,7 +430,7 @@ class _WalletCard extends StatelessWidget {
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: isExcluded
-                                ? theme.colorScheme.error.withValues(alpha:0.7)
+                                ? theme.colorScheme.error.withValues(alpha: 0.7)
                                 : null,
                           ),
                         ),
@@ -428,7 +439,9 @@ class _WalletCard extends StatelessWidget {
                           Icon(
                             Icons.visibility_off_rounded,
                             size: 14,
-                            color: theme.colorScheme.error.withValues(alpha:0.7),
+                            color: theme.colorScheme.error.withValues(
+                              alpha: 0.7,
+                            ),
                           ),
                         ],
                       ],
@@ -437,9 +450,10 @@ class _WalletCard extends StatelessWidget {
                       isExcluded ? 'Excluded from Liquidity' : wallet.type,
                       style: theme.textTheme.labelSmall?.copyWith(
                         color: isExcluded
-                            ? theme.colorScheme.error.withValues(alpha:0.5)
-                            : theme.textTheme.bodyMedium?.color
-                                ?.withValues(alpha:0.5),
+                            ? theme.colorScheme.error.withValues(alpha: 0.5)
+                            : theme.textTheme.bodyMedium?.color?.withValues(
+                                alpha: 0.5,
+                              ),
                       ),
                     ),
                   ],
@@ -448,20 +462,21 @@ class _WalletCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                    Text(
-                      '₱${wallet.balance.toStringAsFixed(2)}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: isExcluded
-                            ? theme.colorScheme.error.withValues(alpha:0.5)
-                            : null,
-                      ),
+                  Text(
+                    '₱${wallet.balance.toStringAsFixed(2)}',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: isExcluded
+                          ? theme.colorScheme.error.withValues(alpha: 0.5)
+                          : null,
                     ),
+                  ),
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 16,
-                    color:
-                        theme.textTheme.bodyMedium?.color?.withValues(alpha:0.3),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.3,
+                    ),
                   ),
                 ],
               ),

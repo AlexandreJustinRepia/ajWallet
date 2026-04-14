@@ -6,23 +6,19 @@ import '../services/tree_skin_service.dart';
 import '../services/user_profile_service.dart';
 import '../models/user_profile.dart';
 import '../models/tree_skin.dart';
-import '../models/app_theme.dart';
 
 class AnimatedTree extends StatefulWidget {
   final double balance;
   final String? overrideSkinId;
 
-  const AnimatedTree({
-    super.key, 
-    required this.balance,
-    this.overrideSkinId,
-  });
+  const AnimatedTree({super.key, required this.balance, this.overrideSkinId});
 
   @override
   State<AnimatedTree> createState() => _AnimatedTreeState();
 }
 
-class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMixin {
+class _AnimatedTreeState extends State<AnimatedTree>
+    with TickerProviderStateMixin {
   late TreeController _controller;
   late AnimationController _swayController;
   late AnimationController _pulseController;
@@ -35,7 +31,7 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
   @override
   void initState() {
     super.initState();
-    
+
     _controller = TreeController(vsync: this, initialBalance: widget.balance);
 
     _swayController = AnimationController(
@@ -70,15 +66,39 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
       if (widget.balance > oldWidget.balance) {
         _isIncomePulse = true;
         _pulseAnimation = TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.08).chain(CurveTween(curve: Curves.easeOut)), weight: 40),
-          TweenSequenceItem(tween: Tween(begin: 1.08, end: 1.0).chain(CurveTween(curve: Curves.bounceOut)), weight: 60),
+          TweenSequenceItem(
+            tween: Tween(
+              begin: 1.0,
+              end: 1.08,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 40,
+          ),
+          TweenSequenceItem(
+            tween: Tween(
+              begin: 1.08,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.bounceOut)),
+            weight: 60,
+          ),
         ]).animate(_pulseController);
         _incomeEffectController.forward(from: 0.0);
       } else {
         _isIncomePulse = false;
         _pulseAnimation = TweenSequence<double>([
-          TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.95).chain(CurveTween(curve: Curves.easeOut)), weight: 30),
-          TweenSequenceItem(tween: Tween(begin: 0.95, end: 1.0).chain(CurveTween(curve: Curves.elasticOut)), weight: 70),
+          TweenSequenceItem(
+            tween: Tween(
+              begin: 1.0,
+              end: 0.95,
+            ).chain(CurveTween(curve: Curves.easeOut)),
+            weight: 30,
+          ),
+          TweenSequenceItem(
+            tween: Tween(
+              begin: 0.95,
+              end: 1.0,
+            ).chain(CurveTween(curve: Curves.elasticOut)),
+            weight: 70,
+          ),
         ]).animate(_pulseController);
         _expenseEffectController.forward(from: 0.0);
       }
@@ -104,7 +124,10 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
     return ValueListenableBuilder<UserProfile?>(
       valueListenable: UserProfileService.profileNotifier,
       builder: (context, profile, _) {
-        final skinId = widget.overrideSkinId ?? profile?.activeTreeSkinId ?? TreeSkinService.springId;
+        final skinId =
+            widget.overrideSkinId ??
+            profile?.activeTreeSkinId ??
+            TreeSkinService.springId;
         final skin = TreeSkinService.getSkin(skinId);
         final config = skin.config;
 
@@ -119,28 +142,38 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
                 _swayController,
                 _pulseController,
                 _incomeEffectController,
-                _expenseEffectController
+                _expenseEffectController,
               ]),
               builder: (context, child) {
                 final state = _controller.state;
                 final scaleEffect = _pulseAnimation.value;
-                final vibrancyPulse = _isIncomePulse ? (_pulseAnimation.value - 1.0) * 5 : 0.0;
-                
+                final vibrancyPulse = _isIncomePulse
+                    ? (_pulseAnimation.value - 1.0) * 5
+                    : 0.0;
+
                 // Dynamic colors based on skin
                 final trunkColor = Color.lerp(
-                  isDark ? config.trunkColor.withValues(alpha: 0.8) : config.trunkColor.withValues(alpha: 0.7),
+                  isDark
+                      ? config.trunkColor.withValues(alpha: 0.8)
+                      : config.trunkColor.withValues(alpha: 0.7),
                   config.trunkColor,
                   state.health,
                 )!;
 
                 Color leafColor = Color.lerp(
-                  isDark ? config.leafColor.withValues(alpha: 0.6) : config.leafColor.withValues(alpha: 0.5),
+                  isDark
+                      ? config.leafColor.withValues(alpha: 0.6)
+                      : config.leafColor.withValues(alpha: 0.5),
                   config.leafColor,
                   state.health,
                 )!;
 
                 if (vibrancyPulse > 0) {
-                  leafColor = Color.lerp(leafColor, config.glowColor ?? Colors.greenAccent, vibrancyPulse.clamp(0.0, 0.4))!;
+                  leafColor = Color.lerp(
+                    leafColor,
+                    config.glowColor ?? Colors.greenAccent,
+                    vibrancyPulse.clamp(0.0, 0.4),
+                  )!;
                 }
 
                 return Stack(
@@ -149,73 +182,85 @@ class _AnimatedTreeState extends State<AnimatedTree> with TickerProviderStateMix
                     // 1. Majestic Glow Layer (Static/Smooth)
                     if (state.growth > 3.0)
                       RepaintBoundary(
-                        child: _buildGlow(state.growth, isDark, config.glowColor ?? Colors.greenAccent),
+                        child: _buildGlow(
+                          state.growth,
+                          isDark,
+                          config.glowColor ?? Colors.greenAccent,
+                        ),
                       ),
 
-                // 2. Main Tree Structure (Static branches, transform sway)
-                Transform.scale(
-                  scale: scaleEffect,
-                  alignment: Alignment.bottomCenter,
-                  child: Transform.rotate(
-                    angle: sin(_swayController.value * pi * 2) * 0.01, // Slight base sway
-                    alignment: Alignment.bottomCenter,
-                    child: Stack(
+                    // 2. Main Tree Structure (Static branches, transform sway)
+                    Transform.scale(
+                      scale: scaleEffect,
                       alignment: Alignment.bottomCenter,
-                      children: [
-                        // Trunk & Branches (Cached)
-                        RepaintBoundary(
-                          child: CustomPaint(
-                            painter: TreeStructurePainter(
-                              branches: state.branches,
-                              config: config.copyWith(trunkColor: trunkColor),
-                              health: state.health,
-                              growth: state.growth,
-                            ),
-                            size: Size.infinite,
-                          ),
-                        ),
-                        
-                        // Foliage (Batched & Cached)
-                        RepaintBoundary(
-                          child: Transform.rotate(
-                            angle: sin(_swayController.value * pi * 2 + 1.0) * 0.02, // Canopy sways more
-                            alignment: Alignment.bottomCenter,
-                            child: CustomPaint(
-                              painter: LeafPainter(
-                                leaves: state.leaves,
-                                config: config.copyWith(leafColor: leafColor),
-                                growth: state.growth,
+                      child: Transform.rotate(
+                        angle:
+                            sin(_swayController.value * pi * 2) *
+                            0.01, // Slight base sway
+                        alignment: Alignment.bottomCenter,
+                        child: Stack(
+                          alignment: Alignment.bottomCenter,
+                          children: [
+                            // Trunk & Branches (Cached)
+                            RepaintBoundary(
+                              child: CustomPaint(
+                                painter: TreeStructurePainter(
+                                  branches: state.branches,
+                                  config: config.copyWith(
+                                    trunkColor: trunkColor,
+                                  ),
+                                  health: state.health,
+                                  growth: state.growth,
+                                ),
+                                size: Size.infinite,
                               ),
-                              size: Size.infinite,
                             ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
 
-                // 3. Effect Particles (Frequent repaints, isolated)
-                Positioned.fill(
-                  child: RepaintBoundary(
-                    child: CustomPaint(
-                      painter: ParticlePainter(
-                        incomeProgress: _incomeEffectController.value,
-                        expenseProgress: _expenseEffectController.value,
-                        config: config.copyWith(leafColor: leafColor),
+                            // Foliage (Batched & Cached)
+                            RepaintBoundary(
+                              child: Transform.rotate(
+                                angle:
+                                    sin(_swayController.value * pi * 2 + 1.0) *
+                                    0.02, // Canopy sways more
+                                alignment: Alignment.bottomCenter,
+                                child: CustomPaint(
+                                  painter: LeafPainter(
+                                    leaves: state.leaves,
+                                    config: config.copyWith(
+                                      leafColor: leafColor,
+                                    ),
+                                    growth: state.growth,
+                                  ),
+                                  size: Size.infinite,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
-      ),
+
+                    // 3. Effect Particles (Frequent repaints, isolated)
+                    Positioned.fill(
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          painter: ParticlePainter(
+                            incomeProgress: _incomeEffectController.value,
+                            expenseProgress: _expenseEffectController.value,
+                            config: config.copyWith(leafColor: leafColor),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        );
+      },
     );
-  },
-);
-}
+  }
 
   Widget _buildGlow(double growth, bool isDark, Color glowColor) {
     final glowProgress = (growth - 3.0).clamp(0.0, 1.0);

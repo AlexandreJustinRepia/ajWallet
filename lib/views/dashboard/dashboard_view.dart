@@ -15,7 +15,6 @@ import 'onboarding_controller.dart';
 import 'widgets/dashboard_app_bar.dart';
 import 'widgets/dashboard_bottom_nav.dart';
 import 'widgets/dashboard_update_banner.dart';
-import 'widgets/dashboard_details_overlay.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -120,10 +119,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                   ],
-                ),
-                DashboardDetailsOverlay(
-                  state: _viewModel.overlayState,
-                  keys: _keys,
                 ),
               ],
             ),

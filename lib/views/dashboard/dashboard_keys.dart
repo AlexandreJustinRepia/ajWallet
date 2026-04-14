@@ -39,7 +39,11 @@ class DashboardKeys {
   final GlobalKey planDebtSectionKey = GlobalKey();
   final GlobalKey planDebtAddKey = GlobalKey();
 
-  // Fake Details Mock Keys
+  // Real Details Keys
+  final GlobalKey detailsEditKey = GlobalKey();
+  final GlobalKey detailsDeleteKey = GlobalKey();
+
+  // Fake Details Mock Keys (Keeping for compat if needed, but will move to real ones)
   final GlobalKey fakeDetailsModalKey = GlobalKey();
   final GlobalKey fakeDetailsEditIconKey = GlobalKey();
   final GlobalKey fakeDetailsDeleteIconKey = GlobalKey();

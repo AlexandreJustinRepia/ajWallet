@@ -159,63 +159,84 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
   Widget build(BuildContext context) {
     if (!widget.visible) return widget.child;
 
-    return Stack(
-      children: [
-        widget.child,
-        FadeTransition(
-          opacity: _fadeAnimation,
-          child: Stack(
-            children: [
-              // Dark Overlay with Spotlight
-              GestureDetector(
-                onTap: _nextStep,
-                child: AnimatedBuilder(
-                  animation: _rectController,
-                  builder: (context, child) {
-                    return CustomPaint(
-                      size: Size.infinite,
-                      painter: _SpotlightPainter(targetRect: _rectTween?.evaluate(_rectCurve) ?? _targetRect),
-                    );
-                  },
-                ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return Stack(
+          children: [
+            widget.child,
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: Stack(
+                children: [
+                  // Dark Overlay with Spotlight
+                  GestureDetector(
+                    onTap: _nextStep,
+                    child: AnimatedBuilder(
+                      animation: _rectController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          size: Size.infinite,
+                          painter: _SpotlightPainter(
+                            targetRect:
+                                _rectTween?.evaluate(_rectCurve) ?? _targetRect,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  // Step Content
+                  _buildStepContent(constraints),
+                ],
               ),
-              // Step Content
-              _buildStepContent(),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildStepContent() {
+  Widget _buildStepContent(BoxConstraints constraints) {
     final step = widget.steps[_currentStepIndex];
     final theme = Theme.of(context);
-    final screenHeight = MediaQuery.of(context).size.height;
-    
-    final isSpotlightTopHalf = (_targetRect?.top ?? 0) < screenHeight / 2;
+    final availableHeight = constraints.maxHeight;
+    final padding = MediaQuery.of(context).padding;
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
 
-    final double baseTop = (_targetRect?.bottom ?? 200) + 20;
-    final double baseBottom = (screenHeight - (_targetRect?.top ?? 400)) + 20;
-    
-    // Provide safe margins
-    double? top = isSpotlightTopHalf ? baseTop.clamp(24.0, screenHeight - 150) : null;
-    double? bottom = !isSpotlightTopHalf ? baseBottom.clamp(24.0, screenHeight - 150) : null;
+    // Use actual available height from constraints
+    final double baseTop = (_targetRect?.bottom ?? 100) + 20;
+    final double baseBottom = (availableHeight - (_targetRect?.top ?? 300)) + 20;
 
-    double maxHeight = isSpotlightTopHalf 
-        ? screenHeight - top! - 24 
-        : screenHeight - bottom! - 24;
+    final double boxMinHeight = 220.0;
+    final double safePadding = 24.0;
+    // Add extra space for the navbar area if detected via media query padding
+    final double effectiveBottomPadding = (padding.bottom > 0) ? padding.bottom + 8 : safePadding;
 
-    // Fallback if target is too large to fit the text box below/above it.
-    if (maxHeight < 250) {
-      if (isSpotlightTopHalf) {
-         top = null;
-         bottom = 24.0;
-      } else {
-         bottom = null;
-         top = 24.0;
-      }
-      maxHeight = screenHeight / 2 - 24;
+    // Calculate available space with safe padding
+    double spaceBelow =
+        (availableHeight - baseTop - effectiveBottomPadding - bottomInset)
+            .clamp(0.0, availableHeight);
+    double spaceAbove =
+        (availableHeight - baseBottom - safePadding).clamp(0.0, availableHeight);
+
+    double? top;
+    double? bottom;
+    double maxHeight;
+
+    if (spaceBelow >= boxMinHeight) {
+      // Preference: Below spotlight
+      top = baseTop;
+      maxHeight = spaceBelow;
+    } else if (spaceAbove >= boxMinHeight) {
+      // Alternate: Above spotlight
+      bottom = baseBottom;
+      maxHeight = spaceAbove;
+    } else {
+      // Emergency Fallback: If target is too large or centered,
+      // place modal at bottom and let it overlap the spotlight
+      bottom = effectiveBottomPadding;
+      top = null;
+      maxHeight =
+          (availableHeight * 0.4).clamp(boxMinHeight, availableHeight - 48);
     }
 
     return AnimatedPositioned(
@@ -242,50 +263,71 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
                 ),
               ],
             ),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    step.title,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 18,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    step.description,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.7),
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: _finish,
-                        child: Text('Skip', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha:0.5))),
-                      ),
-                      ElevatedButton(
-                        onPressed: _nextStep,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.primaryColor,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          elevation: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          step.title,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
-                        child: Text(_currentStepIndex == widget.steps.length - 1 ? 'Get Started' : 'Next'),
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Text(
+                          step.description,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.textTheme.bodyMedium?.color
+                                ?.withValues(alpha: 0.7),
+                            height: 1.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TextButton(
+                      onPressed: _finish,
+                      child: Text(
+                        'Skip',
+                        style: TextStyle(
+                          color: theme.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _nextStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: theme.primaryColor,
+                        foregroundColor: theme.colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        _currentStepIndex == widget.steps.length - 1
+                            ? 'Get Started'
+                            : 'Next',
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),

@@ -3,11 +3,21 @@ import 'package:intl/intl.dart';
 import 'models/transaction_model.dart';
 import 'services/database_service.dart';
 import 'add_transaction_screen.dart';
+import 'widgets/onboarding_overlay.dart';
 
 class TransactionDetailsScreen extends StatelessWidget {
   final Transaction transaction;
+  final List<OnboardingStep>? tutorialSteps;
+  final GlobalKey? editKey;
+  final GlobalKey? deleteKey;
 
-  const TransactionDetailsScreen({super.key, required this.transaction});
+  const TransactionDetailsScreen({
+    super.key, 
+    required this.transaction,
+    this.tutorialSteps,
+    this.editKey,
+    this.deleteKey,
+  });
 
   void _confirmDelete(BuildContext context) {
     showDialog(
@@ -42,14 +52,16 @@ class TransactionDetailsScreen extends StatelessWidget {
     final isTransfer = transaction.type == TransactionType.transfer;
     final displayColor = transaction.typeColor;
   
-    return Scaffold(
+    final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Transaction Details'),
         actions: [
           IconButton(
+            key: editKey,
             icon: const Icon(Icons.edit_rounded),
             onPressed: () async {
+              if (tutorialSteps != null) return; // Disable during tutorial
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -65,8 +77,12 @@ class TransactionDetailsScreen extends StatelessWidget {
             },
           ),
           IconButton(
+            key: deleteKey,
             icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
-            onPressed: () => _confirmDelete(context),
+            onPressed: () {
+              if (tutorialSteps != null) return; // Disable during tutorial
+              _confirmDelete(context);
+            },
           ),
         ],
       ),
@@ -192,6 +208,16 @@ class TransactionDetailsScreen extends StatelessWidget {
         ),
       ),
     );
+
+    if (tutorialSteps != null) {
+      return OnboardingOverlay(
+        steps: tutorialSteps!,
+        onFinish: () => Navigator.pop(context),
+        child: content,
+      );
+    }
+
+    return content;
   }
 
   String _getWalletName(int? key) {

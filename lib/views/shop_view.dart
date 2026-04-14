@@ -65,16 +65,26 @@ class _ShopViewState extends State<ShopView> {
         body: TabBarView(
           children: [
             // THEMES TAB
-            ListView.builder(
-              padding: const EdgeInsets.all(20),
-              itemCount: premiumThemes.length,
-              itemBuilder: (context, index) {
-                final t = premiumThemes[index];
-                final isUnlocked = profile.unlockedThemeIds.contains(t.id);
-                final price = ThemeService.premiumThemePrices[t.id] ?? 999;
-                final canAfford = currentCoins >= price;
+            ValueListenableBuilder<ThemeState>(
+              valueListenable: ThemeService.themeNotifier,
+              builder: (context, themeState, _) {
+                final isPlatformDark = MediaQuery.of(context).platformBrightness == Brightness.dark;
+                final isCurrentlyDark = themeState.themeMode == ThemeMode.dark || (themeState.themeMode == ThemeMode.system && isPlatformDark);
+                final activeThemeId = isCurrentlyDark ? themeState.darkTheme.id : themeState.lightTheme.id;
 
-                return _buildThemeCard(context, t, price, isUnlocked, canAfford);
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: premiumThemes.length,
+                  itemBuilder: (context, index) {
+                    final t = premiumThemes[index];
+                    final isUnlocked = profile.unlockedThemeIds.contains(t.id);
+                    final isEquipped = activeThemeId == t.id;
+                    final price = ThemeService.premiumThemePrices[t.id] ?? 999;
+                    final canAfford = currentCoins >= price;
+
+                    return _buildThemeCard(context, t, price, isUnlocked, isEquipped, canAfford);
+                  },
+                );
               },
             ),
             
@@ -99,11 +109,13 @@ class _ShopViewState extends State<ShopView> {
     );
   }
 
-  Widget _buildThemeCard(BuildContext context, AppTheme t, int price, bool isUnlocked, bool canAfford) {
+  Widget _buildThemeCard(BuildContext context, AppTheme t, int price, bool isUnlocked, bool isEquipped, bool canAfford) {
     final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: CardDecorator(
+        child: Container(
+          decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -200,7 +212,7 @@ class _ShopViewState extends State<ShopView> {
                 ),
                 if (isUnlocked)
                   ElevatedButton(
-                    onPressed: () {
+                    onPressed: isEquipped ? null : () {
                       ThemeService.setThemeMode(t.isDark ? ThemeMode.dark : ThemeMode.light);
                       if (t.isDark) {
                         ThemeService.setDarkTheme(t);
@@ -212,11 +224,14 @@ class _ShopViewState extends State<ShopView> {
                       );
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: theme.primaryColor,
-                      foregroundColor: theme.colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      backgroundColor: isEquipped ? theme.cardColor : theme.primaryColor,
+                      foregroundColor: isEquipped ? theme.primaryColor : theme.colorScheme.onPrimary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: isEquipped ? BorderSide(color: theme.primaryColor) : BorderSide.none,
+                      ),
                     ),
-                    child: const Text('Apply'),
+                    child: Text(isEquipped ? 'Current' : 'Apply'),
                   )
                 else
                   ElevatedButton(
@@ -240,14 +255,16 @@ class _ShopViewState extends State<ShopView> {
           ),
         ],
       ),
-    );
+    )));
   }
 
   Widget _buildSkinCard(BuildContext context, CardSkin s, int price, bool isUnlocked, bool isEquipped, bool canAfford) {
     final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      decoration: BoxDecoration(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: CardDecorator(
+        child: Container(
+          decoration: BoxDecoration(
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
@@ -394,7 +411,7 @@ class _ShopViewState extends State<ShopView> {
       ),
     ],
   ),
-);
+)));
   }
 
   void _confirmPurchase(BuildContext context, String name, String id, int price, bool isSkin) {

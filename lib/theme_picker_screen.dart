@@ -5,6 +5,7 @@ import 'services/session_service.dart';
 import 'views/shop_view.dart';
 import 'services/gamification_service.dart';
 import 'services/user_profile_service.dart';
+import 'widgets/card_decorator.dart';
 
 class ThemePickerScreen extends StatefulWidget {
   const ThemePickerScreen({super.key});
@@ -419,20 +420,21 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
   }
 
   Widget _buildPreviewCard(ThemeData t) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: t.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: t.dividerColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: t.primaryColor.withValues(alpha: 0.05),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
+    return CardDecorator(
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: t.cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: t.dividerColor, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: t.primaryColor.withValues(alpha: 0.05),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -481,7 +483,7 @@ class _ThemePickerScreenState extends State<ThemePickerScreen> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Widget _previewChip(String label, Color color, IconData icon, ThemeData t) {

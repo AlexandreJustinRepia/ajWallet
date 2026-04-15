@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../services/balance_visibility_service.dart';
 import '../services/financial_insights_service.dart';
 import '../models/wallet.dart';
 import '../models/transaction_model.dart';
@@ -201,12 +202,21 @@ class _GlobalStatsBanner extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        '₱${totalBalance.toStringAsFixed(2)}',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -1,
-                        ),
+                      ValueListenableBuilder<bool>(
+                        valueListenable: BalanceVisibilityService.instance,
+                        builder: (context, isHidden, _) {
+                          return AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Text(
+                              isHidden ? '₱ ••••••' : '₱${totalBalance.toStringAsFixed(2)}',
+                              key: ValueKey(isHidden),
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: isHidden ? 4 : -1,
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -271,24 +281,29 @@ class _GlobalStatsBanner extends StatelessWidget {
           // Bottom row: Inflow, Outflow, Burn Rate
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-            child: Row(
-              children: [
-                _MiniStat(
-                  label: 'INFLOW',
-                  value: '₱${totalIncome.toStringAsFixed(0)}',
-                  color: theme.colorScheme.tertiary,
-                ),
-                _MiniStat(
-                  label: 'OUTFLOW',
-                  value: '₱${totalExpense.toStringAsFixed(0)}',
-                  color: theme.colorScheme.error,
-                ),
-                _MiniStat(
-                  label: 'RUNWAY',
-                  value: daysRemaining == -1 ? '∞ days' : '$daysRemaining days',
-                  color: theme.primaryColor,
-                ),
-              ],
+            child: ValueListenableBuilder<bool>(
+              valueListenable: BalanceVisibilityService.instance,
+              builder: (context, isHidden, _) {
+                return Row(
+                  children: [
+                    _MiniStat(
+                      label: 'INFLOW',
+                      value: isHidden ? '••••' : '₱${totalIncome.toStringAsFixed(0)}',
+                      color: theme.colorScheme.tertiary,
+                    ),
+                    _MiniStat(
+                      label: 'OUTFLOW',
+                      value: isHidden ? '••••' : '₱${totalExpense.toStringAsFixed(0)}',
+                      color: theme.colorScheme.error,
+                    ),
+                    _MiniStat(
+                      label: 'RUNWAY',
+                      value: isHidden ? '•• days' : (daysRemaining == -1 ? '∞ days' : '$daysRemaining days'),
+                      color: theme.primaryColor,
+                    ),
+                  ],
+                );
+              },
             ),
           ),
         ],
@@ -462,14 +477,24 @@ class _WalletCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '₱${wallet.balance.toStringAsFixed(2)}',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: isExcluded
-                          ? theme.colorScheme.error.withValues(alpha: 0.5)
-                          : null,
-                    ),
+                  ValueListenableBuilder<bool>(
+                    valueListenable: BalanceVisibilityService.instance,
+                    builder: (context, isHidden, _) {
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 250),
+                        child: Text(
+                          isHidden ? '₱ ••••' : '₱${wallet.balance.toStringAsFixed(2)}',
+                          key: ValueKey(isHidden),
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: isHidden ? 3 : 0,
+                            color: isExcluded
+                                ? theme.colorScheme.error.withValues(alpha: 0.5)
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
                   ),
                   Icon(
                     Icons.chevron_right_rounded,

@@ -124,18 +124,17 @@ class GamificationService {
         .map((t) => DateFormat('yyyy-MM-dd').format(t.date))
         .toSet();
     int activeDaysXp = datesActive.length * 20;
-    int activeDaysCoins = datesActive.length * 5; // 5 coins per unique day active
+    int activeDaysCoins =
+        datesActive.length * 5; // 5 coins per unique day active
 
     int totalXp = txXp + budgetXp + goalXp + debtXp + activeDaysXp;
-    int totalCoinsEarned = txCoins + goalCoinsMilestone + debtCoinsMilestone + activeDaysCoins;
+    int totalCoinsEarned =
+        txCoins + goalCoinsMilestone + debtCoinsMilestone + activeDaysCoins;
 
     if (totalXp == 0 && transactions.isEmpty) {
       totalXp = 0;
       totalCoinsEarned = 0;
     }
-
-    // TESTING BONUS: 100,000 Coins
-    totalCoinsEarned += 100000;
 
     int level = (totalXp ~/ 500) + 1;
 
@@ -152,7 +151,7 @@ class GamificationService {
         break;
       }
     }
-    
+
     // Add coins for streak milestones (every 7 days)
     totalCoinsEarned += (streak ~/ 7) * 50;
 

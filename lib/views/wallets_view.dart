@@ -208,7 +208,9 @@ class _GlobalStatsBanner extends StatelessWidget {
                           return AnimatedSwitcher(
                             duration: const Duration(milliseconds: 300),
                             child: Text(
-                              isHidden ? '₱ ••••••' : '₱${totalBalance.toStringAsFixed(2)}',
+                              isHidden
+                                  ? '₱ ••••••'
+                                  : '₱${totalBalance.toStringAsFixed(2)}',
                               key: ValueKey(isHidden),
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.w800,
@@ -288,17 +290,25 @@ class _GlobalStatsBanner extends StatelessWidget {
                   children: [
                     _MiniStat(
                       label: 'INFLOW',
-                      value: isHidden ? '••••' : '₱${totalIncome.toStringAsFixed(0)}',
+                      value: isHidden
+                          ? '••••'
+                          : '₱${totalIncome.toStringAsFixed(0)}',
                       color: theme.colorScheme.tertiary,
                     ),
                     _MiniStat(
                       label: 'OUTFLOW',
-                      value: isHidden ? '••••' : '₱${totalExpense.toStringAsFixed(0)}',
+                      value: isHidden
+                          ? '••••'
+                          : '₱${totalExpense.toStringAsFixed(0)}',
                       color: theme.colorScheme.error,
                     ),
                     _MiniStat(
                       label: 'RUNWAY',
-                      value: isHidden ? '•• days' : (daysRemaining == -1 ? '∞ days' : '$daysRemaining days'),
+                      value: isHidden
+                          ? '•• days'
+                          : (daysRemaining == -1
+                                ? '∞ days'
+                                : '$daysRemaining days'),
                       color: theme.primaryColor,
                     ),
                   ],
@@ -483,7 +493,9 @@ class _WalletCard extends StatelessWidget {
                       return AnimatedSwitcher(
                         duration: const Duration(milliseconds: 250),
                         child: Text(
-                          isHidden ? '₱ ••••' : '₱${wallet.balance.toStringAsFixed(2)}',
+                          isHidden
+                              ? '₱ ••••'
+                              : '₱${wallet.balance.toStringAsFixed(2)}',
                           key: ValueKey(isHidden),
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,

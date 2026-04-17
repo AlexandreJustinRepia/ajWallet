@@ -5,12 +5,14 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final int selectedIndex;
   final VoidCallback onRefresh;
   final VoidCallback onLogout;
+  final VoidCallback onHelp;
 
   const DashboardAppBar({
     super.key,
     required this.selectedIndex,
     required this.onRefresh,
     required this.onLogout,
+    required this.onHelp,
   });
 
   @override
@@ -33,6 +35,11 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
           : Text(_appBarTitle, style: theme.textTheme.titleLarge),
       automaticallyImplyLeading: false,
       actions: [
+        if (selectedIndex != 4)
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            onPressed: onHelp,
+          ),
         DashboardProfileMenu(
           onRefresh: onRefresh,
           onLogout: onLogout,

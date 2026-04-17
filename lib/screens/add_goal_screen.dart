@@ -5,6 +5,7 @@ import '../models/goal.dart';
 import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../widgets/calculator_input.dart';
 import '../widgets/onboarding_overlay.dart';
+import 'package:hive/hive.dart';
 
 class AddGoalScreen extends StatefulWidget {
   final int accountKey;
@@ -25,6 +26,7 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   final GlobalKey _nameKey = GlobalKey();
   final GlobalKey _targetKey = GlobalKey();
   final GlobalKey _saveKey = GlobalKey();
+  bool _showTutorial = false;
 
   @override
   void initState() {
@@ -33,6 +35,20 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
       _nameController.text = 'Vacation';
       _targetController.text = '10000';
     }
+    _checkTutorial();
+  }
+
+  void _checkTutorial() async {
+    final box = await Hive.openBox('settings');
+    final hasSeen = box.get('has_seen_goal_tutorial', defaultValue: false);
+    if (!hasSeen) {
+      if (mounted) setState(() => _showTutorial = true);
+    }
+  }
+
+  void _markTutorialSeen() async {
+    final box = await Hive.openBox('settings');
+    await box.put('has_seen_goal_tutorial', true);
   }
 
   void _saveGoal() async {
@@ -48,6 +64,18 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
 
       await DatabaseService.saveGoal(goal);
       if (mounted) Navigator.pop(context, true);
+    }
+  }
+
+  void _scrollTo(GlobalKey key) {
+    final currentContext = key.currentContext;
+    if (currentContext != null) {
+      Scrollable.ensureVisible(
+        currentContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
     }
   }
 
@@ -83,28 +111,47 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OnboardingOverlay(
-      visible: widget.isTutorialMode,
+      visible: widget.isTutorialMode || _showTutorial,
       steps: [
         OnboardingStep(
           targetKey: _nameKey,
           title: 'Goal Name',
           description: 'Name your goal.',
+          onStepEnter: () => _scrollTo(_nameKey),
         ),
         OnboardingStep(
           targetKey: _targetKey,
           title: 'Target Amount',
           description: 'Set how much you want to save.',
+          onStepEnter: () => _scrollTo(_targetKey),
         ),
         OnboardingStep(
           targetKey: _saveKey,
           title: 'Save Goal',
           description: 'Create your savings goal.',
+          onStepEnter: () => _scrollTo(_saveKey),
         ),
       ],
-      onFinish: () => Navigator.pop(context),
+      onFinish: () {
+        _markTutorialSeen();
+        if (widget.isTutorialMode) {
+          if (mounted) Navigator.pop(context);
+        } else {
+          setState(() => _showTutorial = false);
+        }
+      },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(title: const Text('New Savings Goal'), elevation: 0),
+        appBar: AppBar(
+          title: const Text('New Savings Goal'), 
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => setState(() => _showTutorial = true),
+            ),
+          ],
+        ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(

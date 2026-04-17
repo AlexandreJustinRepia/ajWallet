@@ -7,12 +7,16 @@ class OnboardingStep {
   final String title;
   final String description;
   final VoidCallback? onStepEnter;
+  final bool autoScroll;
+  final double scrollAlignment;
 
   OnboardingStep({
     this.targetKey,
     required this.title,
     required this.description,
     this.onStepEnter,
+    this.autoScroll = true,
+    this.scrollAlignment = 0.5,
   });
 }
 
@@ -74,7 +78,10 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
   void didUpdateWidget(OnboardingOverlay oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.visible && !oldWidget.visible) {
-      _animController.forward();
+      _currentStepIndex = 0;
+      _targetRect = null;
+      _rectTween = null;
+      _animController.forward(from: 0.0);
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _triggerStepEnter();
         _ticker.start();
@@ -84,22 +91,55 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
     }
   }
 
+  bool _pendingScroll = false;
+
   void _triggerStepEnter() {
-    widget.steps[_currentStepIndex].onStepEnter?.call();
+    final step = widget.steps[_currentStepIndex];
+    step.onStepEnter?.call();
+    
+    _pendingScroll = step.autoScroll;
+    _performPendingScroll();
+    
     _updateTargetRect(isStepTransition: true);
+  }
+
+  void _performPendingScroll() {
+    if (!_pendingScroll) return;
+    
+    final step = widget.steps[_currentStepIndex];
+    if (step.targetKey == null) {
+      _pendingScroll = false;
+      return;
+    }
+
+    final context = step.targetKey!.currentContext;
+    if (context != null) {
+      Scrollable.ensureVisible(
+        context,
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+        alignment: step.scrollAlignment,
+      );
+      _pendingScroll = false;
+    }
   }
 
   void _updateTargetRect({bool isStepTransition = false}) {
     if (!widget.visible) return;
     
+    if (_pendingScroll) {
+      _performPendingScroll();
+    }
+    
     final currentStep = widget.steps[_currentStepIndex];
     Rect? newRect;
     
     if (currentStep.targetKey != null) {
-      final RenderBox? box = currentStep.targetKey!.currentContext?.findRenderObject() as RenderBox?;
-      final RenderBox? overlayBox = context.findRenderObject() as RenderBox?;
+      final context = currentStep.targetKey!.currentContext;
+      final RenderBox? box = context?.findRenderObject() as RenderBox?;
+      final RenderBox? overlayBox = this.context.findRenderObject() as RenderBox?;
       
-      if (box != null && overlayBox != null) {
+      if (box != null && overlayBox != null && box.hasSize) {
         // Convert global coordinates to local overlay coordinates
         final globalPosition = box.localToGlobal(Offset.zero);
         final localPosition = overlayBox.globalToLocal(globalPosition);
@@ -112,19 +152,25 @@ class _OnboardingOverlayState extends State<OnboardingOverlay> with TickerProvid
       }
     }
 
+    if (newRect == null && _targetRect != null && !isStepTransition) {
+        // Keep old rect if target temporarily disappears during scroll
+        return;
+    }
+
     if (newRect != _targetRect || isStepTransition) {
       setState(() {
         if (isStepTransition) {
+          // If moving to a new step, start a slide/fade animation for the spotlight
           _rectTween = RectTween(
-            begin: _rectTween?.evaluate(_rectCurve) ?? newRect,
+            begin: _rectTween?.evaluate(_rectCurve) ?? _targetRect ?? newRect,
             end: newRect,
           );
           _rectController.forward(from: 0.0);
         } else {
+          // If just following a scroll, update the end of the current tween 
+          // to keep it tracking during the transition, or just update the static rect.
           if (_rectTween != null) {
             _rectTween!.end = newRect;
-          } else {
-            _rectTween = RectTween(begin: newRect, end: newRect);
           }
         }
         _targetRect = newRect;
@@ -343,27 +389,33 @@ class _SpotlightPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.black.withValues(alpha:0.7);
-    
     if (targetRect == null) {
-      canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), paint);
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint()..color = Colors.black.withValues(alpha: 0.7),
+      );
       return;
     }
 
     final fullRect = Rect.fromLTWH(0, 0, size.width, size.height);
     final RRect spotlightRect = RRect.fromRectAndRadius(
-      targetRect!.inflate(8), 
-      const Radius.circular(16)
+      targetRect!.inflate(12),
+      const Radius.circular(16),
     );
 
-    canvas.drawPath(
-      Path.combine(
-        PathOperation.difference,
-        Path()..addRect(fullRect),
-        Path()..addRRect(spotlightRect),
-      ),
-      paint,
+    // Save layer to allow BlendMode.clear to work
+    canvas.saveLayer(fullRect, Paint());
+
+    // Draw the dark background
+    canvas.drawRect(
+      fullRect,
+      Paint()..color = Colors.black.withValues(alpha: 0.7),
     );
+
+    // "Cut out" the spotlight hole
+    canvas.drawRRect(spotlightRect, Paint()..blendMode = BlendMode.clear);
+
+    canvas.restore();
   }
 
   @override

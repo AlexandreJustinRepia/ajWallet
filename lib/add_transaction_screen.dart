@@ -132,10 +132,14 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     }
   }
 
-  void _dismissTutorial() async {
+  void _markTutorialSeen() async {
     final box = await Hive.openBox('settings');
     await box.put('has_seen_tx_tutorial', true);
+  }
+
+  void _dismissTutorial() {
     setState(() => _showTutorial = false);
+    _markTutorialSeen();
   }
 
   final Map<String, IconData> _expenseCategories = {
@@ -344,6 +348,18 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
+  void _scrollTo(GlobalKey key) {
+    final currentContext = key.currentContext;
+    if (currentContext != null) {
+      Scrollable.ensureVisible(
+        currentContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -352,37 +368,37 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       OnboardingStep(
         targetKey: _typeKey,
         title: 'Transaction Type',
-        description: 'You can change the type of transaction anytime.',
+        description: 'Choose if this is an Expense, Income, or Transfer.',
       ),
       OnboardingStep(
         targetKey: _amountKey,
         title: 'Amount',
-        description: 'Update the amount if needed.',
+        description: 'Enter the transaction amount using the calculator.',
       ),
       OnboardingStep(
         targetKey: _walletKey,
-        title: 'Wallet',
-        description: 'Choose the correct wallet for this transaction.',
+        title: 'Source Wallet',
+        description: 'Select the wallet for this transaction.',
       ),
       OnboardingStep(
         targetKey: _categoryKey,
         title: 'Category',
-        description: 'Update the category to better organize your records.',
+        description: 'Select the category to stay organized.',
       ),
       OnboardingStep(
         targetKey: _noteKey,
         title: 'Description',
-        description: 'Edit or add notes for more details (optional).',
+        description: 'Add a small note if you want.',
       ),
       OnboardingStep(
         targetKey: _dateKey,
-        title: 'Date & Time',
-        description: 'You can manually change the date of this transaction.',
+        title: 'Transaction Date',
+        description: 'You can change the date if this happened in the past.',
       ),
       OnboardingStep(
         targetKey: _saveKey,
-        title: 'Update Transaction',
-        description: 'Save your changes to update the transaction.',
+        title: 'Save Transaction',
+        description: 'Tap Save to record your transaction!',
       ),
     ];
 

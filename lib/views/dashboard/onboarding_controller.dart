@@ -18,31 +18,44 @@ class OnboardingController {
   OnboardingController({required this.viewModel, required this.keys});
 
   List<OnboardingStep> getSteps(BuildContext context) {
-    final accountKey = SessionService.activeAccount?.key as int?;
+    switch (viewModel.selectedIndex) {
+      case 0:
+        return _getHomeSteps(context);
+      case 1:
+        return _getActivitySteps(context);
+      case 2:
+        return _getWalletsSteps(context);
+      case 3:
+        return _getPlanSteps(context);
+      default:
+        return [];
+    }
+  }
 
+  List<OnboardingStep> _getHomeSteps(BuildContext context) {
     return [
       OnboardingStep(
         targetKey: keys.balanceKey,
         title: 'Total Balance',
         description:
             'This is your Total Balance — it shows how much money you currently have across your wallets.',
-        onStepEnter: () => _scrollTo(keys.balanceKey, 0.1),
+        scrollAlignment: 0.1,
       ),
       OnboardingStep(
         targetKey: keys.quickAddKey,
         title: 'Quick Add',
         description:
             'Use Quick Add to instantly record a transaction without leaving the home screen.',
-        onStepEnter: () => _scrollTo(keys.quickAddKey, 0.3),
+        scrollAlignment: 0.3,
       ),
       OnboardingStep(
         targetKey: keys.quickAddKey,
         title: 'Smart Parsing',
         description:
             'For example, enter "250 Food" to quickly log an expense. AJ Wallet automatically detects the amount and category!',
+        scrollAlignment: 0.3,
         onStepEnter: () {
           keys.quickAddKey.currentState?.simulateTyping('250 Food');
-          _scrollTo(keys.quickAddKey, 0.3);
         },
       ),
       OnboardingStep(
@@ -50,8 +63,8 @@ class OnboardingController {
         title: 'Automatic Updates',
         description:
             'Your balance updates automatically after adding a transaction, giving you a real-time view of your finances.',
+        scrollAlignment: 0.1,
         onStepEnter: () async {
-          _scrollTo(keys.balanceKey, 0.1);
           await Future.delayed(const Duration(milliseconds: 300));
           await keys.quickAddKey.currentState?.simulateSubmit();
         },
@@ -61,7 +74,7 @@ class OnboardingController {
         title: 'Your Financial Tree',
         description:
             'This tree is the heart of RootEXP. It\'s a living visualization of your wealth. As your balance grows, the tree grows more branches and lush leaves.',
-        onStepEnter: () => _scrollTo(keys.treeKey, 0.2),
+        scrollAlignment: 0.2,
       ),
       OnboardingStep(
         targetKey: keys.treeKey,
@@ -74,30 +87,28 @@ class OnboardingController {
         title: 'Recent Activity',
         description:
             'Here you can see your latest transactions in real-time. Stay on top of your spending at a glance.',
-        onStepEnter: () => _scrollTo(keys.activityHeaderKey, 0.5),
+        scrollAlignment: 0.5,
       ),
       OnboardingStep(
         targetKey: keys.sampleTransactionKey,
         title: 'Activity List',
         description:
             'Each entry here gives you a quick snapshot of your transaction. For full management tools, you can tap on these items.',
-        onStepEnter: () => _scrollTo(keys.sampleTransactionKey, 0.6),
+        scrollAlignment: 0.6,
       ),
-      OnboardingStep(
-        targetKey: keys.activityTabKey,
-        title: 'Transactions Tab',
-        description: 'Tap here to view all your transactions in detail.',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.none);
-        },
-      ),
+    ];
+  }
+
+  List<OnboardingStep> _getActivitySteps(BuildContext context) {
+    final accountKey = SessionService.activeAccount?.key as int?;
+    return [
       OnboardingStep(
         targetKey: keys.activityListAreaKey,
         title: 'Transaction List',
         description: 'This is where all your transactions are displayed.',
         onStepEnter: () {
-          viewModel.setSelectedIndex(1);
           viewModel.setOverlayState(DashboardOverlayState.none);
+          viewModel.setActivityTutorialTabIndex(0);
         },
       ),
       OnboardingStep(
@@ -122,22 +133,21 @@ class OnboardingController {
         targetKey: keys.activityFilterChipsKey,
         title: 'Filters',
         description: 'Use filters to quickly find specific transactions.',
-        onStepEnter: () => _scrollTo(keys.activityFilterChipsKey, 0.1),
+        scrollAlignment: 0.1,
       ),
       OnboardingStep(
         targetKey: keys.activitySearchBarKey,
         title: 'Search Bar',
         description: 'Search for transactions by keyword, category, or amount.',
-        onStepEnter: () => _scrollTo(keys.activitySearchBarKey, 0.1),
+        scrollAlignment: 0.1,
       ),
       OnboardingStep(
         targetKey: keys.activitySingleItemKey,
         title: 'Manage Transactions',
         description:
             'To edit or delete a transaction, you first need to tap on it to view its full details.',
+        scrollAlignment: 0.5,
         onStepEnter: () {
-          _scrollTo(keys.activitySingleItemKey, 0.5);
-          // Auto-navigate to real details screen with tutorial steps
           Future.delayed(const Duration(milliseconds: 300), () {
             if (context.mounted) {
               Navigator.push(
@@ -201,21 +211,18 @@ class OnboardingController {
           viewModel.setActivityTutorialTabIndex(1);
         },
       ),
-      OnboardingStep(
-        targetKey: keys.walletsTabKey,
-        title: 'Wallets Tab',
-        description: 'Tap here to manage your wallets.',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.none);
-          viewModel.setActivityTutorialTabIndex(0);
-        },
-      ),
+    ];
+  }
+
+  List<OnboardingStep> _getWalletsSteps(BuildContext context) {
+    final accountKey = SessionService.activeAccount?.key as int?;
+    return [
       OnboardingStep(
         targetKey: keys.walletListKey,
         title: 'Your Wallets',
         description: 'Here you can see all your wallets in one place.',
         onStepEnter: () {
-          viewModel.setSelectedIndex(2);
+          viewModel.setOverlayState(DashboardOverlayState.none);
         },
       ),
       OnboardingStep(
@@ -243,7 +250,7 @@ class OnboardingController {
         targetKey: keys.lifeOfMoneyKey,
         title: 'Life of Your Money',
         description: 'This shows how long your money will last.',
-        onStepEnter: () => _scrollTo(keys.lifeOfMoneyKey, 0.1),
+        scrollAlignment: 0.1,
       ),
       OnboardingStep(
         targetKey: keys.lifeOfMoneyKey,
@@ -255,24 +262,25 @@ class OnboardingController {
         title: 'Real-time Updates',
         description: 'As your spending changes, this adjusts automatically.',
       ),
-      OnboardingStep(
-        targetKey: keys.planTabKey,
-        title: 'Plan Tab',
-        description: 'Tap here to manage your financial plans.',
-        onStepEnter: () {
-          viewModel.setSelectedIndex(3);
-        },
-      ),
+    ];
+  }
+
+  List<OnboardingStep> _getPlanSteps(BuildContext context) {
+    final accountKey = SessionService.activeAccount?.key as int?;
+    return [
       OnboardingStep(
         title: 'Financial Planning',
         description:
             'Plan your money with budgets, savings, and debt tracking.',
+        onStepEnter: () {
+          viewModel.setOverlayState(DashboardOverlayState.none);
+        },
       ),
       OnboardingStep(
         targetKey: keys.planBudgetSectionKey,
         title: 'Monthly Budget',
         description: 'Set limits for your spending categories.',
-        onStepEnter: () => _scrollTo(keys.planBudgetSectionKey, 0.1),
+        scrollAlignment: 0.1,
       ),
       OnboardingStep(
         targetKey: keys.planBudgetAddKey,
@@ -295,13 +303,13 @@ class OnboardingController {
         title: 'Track Your Limits',
         description:
             'When you add transactions, you\'ll see how much budget is left.',
-        onStepEnter: () => _scrollTo(keys.planBudgetSectionKey, 0.2),
+        scrollAlignment: 0.2,
       ),
       OnboardingStep(
         targetKey: keys.planGoalSectionKey,
         title: 'Savings Goals',
         description: 'Save money for your future plans.',
-        onStepEnter: () => _scrollTo(keys.planGoalSectionKey, 0.2),
+        scrollAlignment: 0.2,
       ),
       OnboardingStep(
         targetKey: keys.planGoalAddKey,
@@ -324,7 +332,7 @@ class OnboardingController {
         title: 'Add to Savings',
         description:
             'Add money to your goal — it will be deducted from your balance.',
-        onStepEnter: () => _scrollTo(keys.planGoalFundKey, 0.4),
+        scrollAlignment: 0.4,
       ),
       OnboardingStep(
         targetKey: keys.planGoalWithdrawKey,
@@ -335,7 +343,7 @@ class OnboardingController {
         targetKey: keys.planDebtSectionKey,
         title: 'Debts & Loans',
         description: 'Track money you gave or borrowed.',
-        onStepEnter: () => _scrollTo(keys.planDebtSectionKey, 0.4),
+        scrollAlignment: 0.4,
       ),
       OnboardingStep(
         targetKey: keys.planDebtAddKey,
@@ -361,10 +369,6 @@ class OnboardingController {
       OnboardingStep(
         title: 'Manage Your Finances',
         description: 'Now you can budget, save, and track debts easily!',
-        onStepEnter: () {
-          viewModel.setOverlayState(DashboardOverlayState.none);
-          viewModel.setActivityTutorialTabIndex(0);
-        },
       ),
     ];
   }

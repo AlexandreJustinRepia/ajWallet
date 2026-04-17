@@ -6,6 +6,7 @@ import '../models/wallet.dart';
 import '../models/transaction_model.dart';
 import '../widgets/calculator_input.dart';
 import '../widgets/onboarding_overlay.dart';
+import 'package:hive/hive.dart';
 
 class AddDebtScreen extends StatefulWidget {
   final int accountKey;
@@ -31,6 +32,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   final GlobalKey _amountKey = GlobalKey();
   final GlobalKey _walletKey = GlobalKey();
   final GlobalKey _saveKey = GlobalKey();
+  bool _showTutorial = false;
 
   @override
   void initState() {
@@ -40,6 +42,20 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
       _personController.text = 'John Doe';
       _amountController.text = '500';
     }
+    _checkTutorial();
+  }
+
+  void _checkTutorial() async {
+    final box = await Hive.openBox('settings');
+    final hasSeen = box.get('has_seen_debt_tutorial', defaultValue: false);
+    if (!hasSeen) {
+      if (mounted) setState(() => _showTutorial = true);
+    }
+  }
+
+  void _markTutorialSeen() async {
+    final box = await Hive.openBox('settings');
+    await box.put('has_seen_debt_tutorial', true);
   }
 
   void _loadWallets() {
@@ -111,6 +127,18 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
     }
   }
 
+  void _scrollTo(GlobalKey key) {
+    final currentContext = key.currentContext;
+    if (currentContext != null) {
+      Scrollable.ensureVisible(
+        currentContext,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5,
+      );
+    }
+  }
+
   void _pickDate() async {
     final date = await showDatePicker(
       context: context,
@@ -127,38 +155,59 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OnboardingOverlay(
-      visible: widget.isTutorialMode,
+      visible: widget.isTutorialMode || _showTutorial,
       steps: [
         OnboardingStep(
           targetKey: _typeKey,
           title: 'Transaction Type',
           description: 'Choose the type of transaction.',
+          onStepEnter: () => _scrollTo(_typeKey),
         ),
         OnboardingStep(
           targetKey: _nameKey,
           title: 'Person Name',
           description: 'Enter who the transaction is with.',
+          onStepEnter: () => _scrollTo(_nameKey),
         ),
         OnboardingStep(
           targetKey: _amountKey,
           title: 'Amount',
           description: 'Enter the amount.',
+          onStepEnter: () => _scrollTo(_amountKey),
         ),
         OnboardingStep(
           targetKey: _walletKey,
           title: 'Wallet Selection',
           description: 'Select the wallet involved.',
+          onStepEnter: () => _scrollTo(_walletKey),
         ),
         OnboardingStep(
           targetKey: _saveKey,
           title: 'Save Record',
           description: 'Save to record it.',
+          onStepEnter: () => _scrollTo(_saveKey),
         ),
       ],
-      onFinish: () => Navigator.pop(context),
+      onFinish: () {
+        _markTutorialSeen();
+        if (widget.isTutorialMode) {
+          if (mounted) Navigator.pop(context);
+        } else {
+          setState(() => _showTutorial = false);
+        }
+      },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(title: const Text('Add Debt/Loan'), elevation: 0),
+        appBar: AppBar(
+          title: const Text('Add Debt/Loan'), 
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => setState(() => _showTutorial = true),
+            ),
+          ],
+        ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(

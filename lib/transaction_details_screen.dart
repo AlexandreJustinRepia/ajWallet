@@ -5,7 +5,7 @@ import 'services/database_service.dart';
 import 'add_transaction_screen.dart';
 import 'widgets/onboarding_overlay.dart';
 
-class TransactionDetailsScreen extends StatelessWidget {
+class TransactionDetailsScreen extends StatefulWidget {
   final Transaction transaction;
   final List<OnboardingStep>? tutorialSteps;
   final GlobalKey? editKey;
@@ -18,6 +18,15 @@ class TransactionDetailsScreen extends StatelessWidget {
     this.editKey,
     this.deleteKey,
   });
+
+  @override
+  State<TransactionDetailsScreen> createState() => _TransactionDetailsScreenState();
+}
+
+class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
+  final GlobalKey _localEditKey = GlobalKey();
+  final GlobalKey _localDeleteKey = GlobalKey();
+  bool _showTutorial = false;
 
   void _confirmDelete(BuildContext context) {
     showDialog(
@@ -32,7 +41,7 @@ class TransactionDetailsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () async {
-              await DatabaseService.deleteTransaction(transaction);
+              await DatabaseService.deleteTransaction(widget.transaction);
               if (context.mounted) {
                 Navigator.pop(context); // Close dialog
                 Navigator.pop(context, true); // Return to previous screen with refresh flag
@@ -48,26 +57,55 @@ class TransactionDetailsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isIncome = transaction.type == TransactionType.income;
-    final isTransfer = transaction.type == TransactionType.transfer;
-    final displayColor = transaction.typeColor;
+    final isIncome = widget.transaction.type == TransactionType.income;
+    final isTransfer = widget.transaction.type == TransactionType.transfer;
+    final displayColor = widget.transaction.typeColor;
   
+    final List<OnboardingStep> activeSteps;
+    final bool isTutorialActive;
+
+    if (widget.tutorialSteps != null) {
+      activeSteps = widget.tutorialSteps!;
+      isTutorialActive = true;
+    } else if (_showTutorial) {
+      activeSteps = [
+        OnboardingStep(
+          targetKey: widget.editKey ?? _localEditKey,
+          title: 'Edit Transaction',
+          description: 'Tap here to modify the transaction details.',
+        ),
+        OnboardingStep(
+          targetKey: widget.deleteKey ?? _localDeleteKey,
+          title: 'Delete Transaction',
+          description: 'Tap here to permanently remove this transaction from your records.',
+        ),
+      ];
+      isTutorialActive = true;
+    } else {
+      activeSteps = [];
+      isTutorialActive = false;
+    }
+
     final content = Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: const Text('Transaction Details'),
         actions: [
           IconButton(
-            key: editKey,
+            icon: const Icon(Icons.help_outline),
+            onPressed: () => setState(() => _showTutorial = true),
+          ),
+          IconButton(
+            key: widget.editKey ?? _localEditKey,
             icon: const Icon(Icons.edit_rounded),
             onPressed: () async {
-              if (tutorialSteps != null) return; // Disable during tutorial
+              if (widget.tutorialSteps != null) return; // Disable during tutorial
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => AddTransactionScreen(
-                    accountKey: transaction.accountKey,
-                    existingTransaction: transaction,
+                    accountKey: widget.transaction.accountKey,
+                    existingTransaction: widget.transaction,
                   ),
                 ),
               );
@@ -77,10 +115,10 @@ class TransactionDetailsScreen extends StatelessWidget {
             },
           ),
           IconButton(
-            key: deleteKey,
+            key: widget.deleteKey ?? _localDeleteKey,
             icon: const Icon(Icons.delete_outline_rounded, color: Colors.red),
             onPressed: () {
-              if (tutorialSteps != null) return; // Disable during tutorial
+              if (widget.tutorialSteps != null) return; // Disable during tutorial
               _confirmDelete(context);
             },
           ),
@@ -117,7 +155,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    '${isIncome ? '+' : (isTransfer ? '' : '-')} ₱${transaction.amount.toStringAsFixed(2)}',
+                    '${isIncome ? '+' : (isTransfer ? '' : '-')} ₱${widget.transaction.amount.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontSize: 40,
                       fontWeight: FontWeight.w900,
@@ -127,7 +165,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    transaction.type.name.toUpperCase(),
+                    widget.transaction.type.name.toUpperCase(),
                     style: TextStyle(
                       letterSpacing: 2,
                       fontWeight: FontWeight.w900,
@@ -144,45 +182,45 @@ class TransactionDetailsScreen extends StatelessWidget {
             _InfoRow(
               icon: Icons.category_rounded,
               label: 'Category',
-              value: transaction.category,
+              value: widget.transaction.category,
               theme: theme,
             ),
             const Divider(),
             _InfoRow(
               icon: Icons.calendar_today_rounded,
               label: 'Date',
-              value: DateFormat('EEEE, MMM dd, yyyy').format(transaction.date),
+              value: DateFormat('EEEE, MMM dd, yyyy').format(widget.transaction.date),
               theme: theme,
             ),
             _InfoRow(
               icon: Icons.access_time_rounded,
               label: 'Time',
-              value: DateFormat('hh:mm a').format(transaction.date),
+              value: DateFormat('hh:mm a').format(widget.transaction.date),
               theme: theme,
             ),
             const Divider(),
             _InfoRow(
               icon: Icons.account_balance_wallet_rounded,
               label: isTransfer ? 'From Wallet' : 'Wallet',
-              value: _getWalletName(transaction.walletKey),
+              value: _getWalletName(widget.transaction.walletKey),
               theme: theme,
             ),
             if (isTransfer)
               _InfoRow(
                 icon: Icons.arrow_forward_rounded,
                 label: 'To Wallet',
-                value: _getWalletName(transaction.toWalletKey),
+                value: _getWalletName(widget.transaction.toWalletKey),
                 theme: theme,
               ),
-            if (transaction.charge != null && transaction.charge! > 0)
+            if (widget.transaction.charge != null && widget.transaction.charge! > 0)
               _InfoRow(
                 icon: Icons.receipt_long_rounded,
                 label: 'Service Fee',
-                value: '₱${transaction.charge!.toStringAsFixed(2)}',
+                value: '₱${widget.transaction.charge!.toStringAsFixed(2)}',
                 theme: theme,
               ),
             const Divider(),
-            if (transaction.description.isNotEmpty)
+            if (widget.transaction.description.isNotEmpty)
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -198,7 +236,7 @@ class TransactionDetailsScreen extends StatelessWidget {
                       border: Border.all(color: theme.dividerColor, width: 0.5),
                     ),
                     child: Text(
-                      transaction.description,
+                      widget.transaction.description,
                       style: theme.textTheme.bodyMedium,
                     ),
                   ),
@@ -209,15 +247,18 @@ class TransactionDetailsScreen extends StatelessWidget {
       ),
     );
 
-    if (tutorialSteps != null) {
-      return OnboardingOverlay(
-        steps: tutorialSteps!,
-        onFinish: () => Navigator.pop(context),
-        child: content,
-      );
-    }
-
-    return content;
+    return OnboardingOverlay(
+      steps: activeSteps,
+      visible: isTutorialActive,
+      onFinish: () {
+        if (widget.tutorialSteps != null) {
+          Navigator.pop(context);
+        } else {
+          setState(() => _showTutorial = false);
+        }
+      },
+      child: content,
+    );
   }
 
   String _getWalletName(int? key) {

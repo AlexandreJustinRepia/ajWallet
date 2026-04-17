@@ -29,6 +29,9 @@ dependencies:
   crypto: ^3.0.7
   pinput: ^6.0.2
   confetti: ^0.8.0
+  pdf: ^3.10.8
+  printing: ^5.13.1
+  share_plus: ^10.0.0
 
 dev_dependencies:
   flutter_test:

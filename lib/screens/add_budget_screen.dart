@@ -4,6 +4,7 @@ import '../services/financial_insights_service.dart';
 import '../models/budget.dart';
 import '../models/transaction_model.dart';
 import '../widgets/calculator_input.dart';
+import 'package:hive/hive.dart';
 
 import '../widgets/onboarding_overlay.dart';
 
@@ -26,6 +27,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final GlobalKey _categoryKey = GlobalKey();
   final GlobalKey _amountKey = GlobalKey();
   final GlobalKey _saveKey = GlobalKey();
+  bool _showTutorial = false;
 
   @override
   void initState() {
@@ -37,6 +39,20 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       _amountController.text = '2000';
     }
     _updateSuggestion();
+    _checkTutorial();
+  }
+
+  void _checkTutorial() async {
+    final box = await Hive.openBox('settings');
+    final hasSeen = box.get('has_seen_budget_tutorial', defaultValue: false);
+    if (!hasSeen) {
+      if (mounted) setState(() => _showTutorial = true);
+    }
+  }
+
+  void _markTutorialSeen() async {
+    final box = await Hive.openBox('settings');
+    await box.put('has_seen_budget_tutorial', true);
   }
 
   void _updateSuggestion() {
@@ -72,11 +88,12 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return OnboardingOverlay(
-      visible: widget.isTutorialMode,
+      visible: widget.isTutorialMode || _showTutorial,
       steps: [
         OnboardingStep(
           targetKey: _categoryKey,
@@ -94,10 +111,26 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
           description: 'Save your budget.',
         ),
       ],
-      onFinish: () => Navigator.pop(context),
+      onFinish: () {
+        _markTutorialSeen();
+        if (widget.isTutorialMode) {
+          if (mounted) Navigator.pop(context);
+        } else {
+          setState(() => _showTutorial = false);
+        }
+      },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(title: const Text('Add Monthly Budget'), elevation: 0),
+        appBar: AppBar(
+          title: const Text('Add Monthly Budget'), 
+          elevation: 0,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => setState(() => _showTutorial = true),
+            ),
+          ],
+        ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(

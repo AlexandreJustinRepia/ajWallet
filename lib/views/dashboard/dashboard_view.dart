@@ -37,7 +37,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       viewModel: _viewModel,
       keys: _keys,
     );
-    _viewModel.checkFirstRun();
+    _viewModel.checkTutorialForTab(0);
   }
 
   @override
@@ -99,6 +99,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             selectedIndex: _viewModel.selectedIndex,
             onRefresh: _viewModel.refresh,
             onLogout: () => _handleLogout(context),
+            onHelp: () => _viewModel.setShowTutorial(true),
           ),
           body: OnboardingOverlay(
             visible: _viewModel.showTutorial,

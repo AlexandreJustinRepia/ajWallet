@@ -4,6 +4,7 @@ import 'models/wallet.dart';
 import 'widgets/calculator_input.dart';
 import 'widgets/onboarding_overlay.dart';
 import 'widgets/institution_selector.dart';
+import 'package:hive/hive.dart';
 
 class WalletFormScreen extends StatefulWidget {
   final int accountKey;
@@ -30,6 +31,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   final GlobalKey _typeKey = GlobalKey();
   final GlobalKey _excludeKey = GlobalKey();
   final GlobalKey _saveKey = GlobalKey();
+  bool _showTutorial = false;
 
   late TextEditingController _nameController;
   late TextEditingController _balanceController;
@@ -55,6 +57,20 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
       _isExcluded = widget.wallet?.isExcluded ?? false;
       _selectedIconPath = widget.wallet?.iconPath;
     }
+    _checkTutorial();
+  }
+
+  void _checkTutorial() async {
+    final box = await Hive.openBox('settings');
+    final hasSeen = box.get('has_seen_wallet_tutorial', defaultValue: false);
+    if (!hasSeen && widget.wallet == null) {
+      if (mounted) setState(() => _showTutorial = true);
+    }
+  }
+
+  void _markTutorialSeen() async {
+    final box = await Hive.openBox('settings');
+    await box.put('has_seen_wallet_tutorial', true);
   }
 
   void _saveWallet() async {
@@ -113,6 +129,7 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
     super.dispose();
   }
 
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -158,15 +175,26 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
 
     return OnboardingOverlay(
       steps: tutorialSteps,
-      visible: widget.isTutorialMode,
+      visible: widget.isTutorialMode || _showTutorial,
       onFinish: () {
+        _markTutorialSeen();
         if (widget.isTutorialMode && mounted) {
           Navigator.pop(context);
+        } else {
+          setState(() => _showTutorial = false);
         }
       },
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
-        appBar: AppBar(title: Text(isEditing ? 'Edit Wallet' : 'Add Wallet')),
+        appBar: AppBar(
+          title: Text(isEditing ? 'Edit Wallet' : 'Add Wallet'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              onPressed: () => setState(() => _showTutorial = true),
+            ),
+          ],
+        ),
         body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Form(

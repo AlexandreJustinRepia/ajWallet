@@ -7,6 +7,7 @@ import '../widgets/slide_in_list_item.dart';
 import '../widgets/transaction_card.dart';
 import 'dashboard_helpers.dart';
 import 'activity/activity_view_model.dart';
+import '../screens/export_screen.dart';
 
 /// Merged Activity tab: toggles between a full transaction list and a calendar view.
 class ActivityView extends StatefulWidget {
@@ -82,33 +83,62 @@ class _ActivityViewState extends State<ActivityView>
             // ── Toggle Header ──────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
-              child: Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: theme.dividerColor, width: 0.5),
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: theme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: theme.dividerColor, width: 0.5),
+                      ),
+                      child: TabBar(
+                        controller: _tabController,
+                        indicator: BoxDecoration(
+                          color: theme.primaryColor,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        labelColor: theme.scaffoldBackgroundColor,
+                        unselectedLabelColor:
+                            theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                        labelStyle: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                        dividerColor: Colors.transparent,
+                        tabs: [
+                          const Tab(text: 'List'),
+                          Tab(key: widget.calendarTabKey, text: 'Calendar'),
+                        ],
+                      ),
+                    ),
                   ),
-                  indicatorSize: TabBarIndicatorSize.tab,
-                  labelColor: theme.scaffoldBackgroundColor,
-                  unselectedLabelColor:
-                      theme.textTheme.bodyMedium?.color?.withValues(alpha:0.5),
-                  labelStyle: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                  const SizedBox(width: 10),
+                  // ── Export button ──────────────────────────────────────────
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ExportScreen(),
+                      ),
+                    ),
+                    child: Container(
+                      height: 44,
+                      width: 44,
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: theme.dividerColor, width: 0.5),
+                      ),
+                      child: Icon(
+                        Icons.file_download_outlined,
+                        size: 20,
+                        color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.7),
+                      ),
+                    ),
                   ),
-                  dividerColor: Colors.transparent,
-                  tabs: [
-                    const Tab(text: 'List'),
-                    Tab(key: widget.calendarTabKey, text: 'Calendar'),
-                  ],
-                ),
+                ],
               ),
             ),
 

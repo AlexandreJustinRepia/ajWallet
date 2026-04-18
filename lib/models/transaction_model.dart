@@ -68,7 +68,11 @@ class Transaction extends HiveObject {
     this.goalKey,
     this.budgetKey,
     this.debtKey,
+    this.squadTxKey,
   });
+
+  @HiveField(13)
+  int? squadTxKey;
 
   Map<String, dynamic> toMap() {
     return {

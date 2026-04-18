@@ -8,6 +8,7 @@ import '../widgets/transaction_card.dart';
 import 'dashboard_helpers.dart';
 import 'activity/activity_view_model.dart';
 import '../screens/export_screen.dart';
+import 'activity/squads_tab_view.dart';
 
 /// Merged Activity tab: toggles between a full transaction list and a calendar view.
 class ActivityView extends StatefulWidget {
@@ -51,7 +52,7 @@ class _ActivityViewState extends State<ActivityView>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
     _viewModel = ActivityViewModel(isTutorialActive: widget.isTutorialActive);
   }
 
@@ -111,6 +112,7 @@ class _ActivityViewState extends State<ActivityView>
                         tabs: [
                           const Tab(text: 'List'),
                           Tab(key: widget.calendarTabKey, text: 'Calendar'),
+                          const Tab(text: 'Squads'),
                         ],
                       ),
                     ),
@@ -221,6 +223,9 @@ class _ActivityViewState extends State<ActivityView>
                     viewModel: _viewModel,
                     onRefresh: widget.onRefresh,
                     calendarAreaKey: widget.calendarAreaKey,
+                  ),
+                  SquadsTabView(
+                    onRefresh: widget.onRefresh,
                   ),
                 ],
               ),

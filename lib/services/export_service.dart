@@ -12,6 +12,10 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/transaction_model.dart';
 import '../models/wallet.dart';
+import '../models/squad.dart';
+import '../models/squad_member.dart';
+import '../models/squad_transaction.dart';
+import 'squad_service.dart';
 
 enum ExportStatus { success, cancelled, failed }
 
@@ -253,6 +257,450 @@ class ExportService {
     );
 
     return doc.save();
+  }
+
+  static Future<Uint8List> buildSquadPdf(
+    Squad squad,
+    List<SquadMember> members,
+    List<SquadTransaction> transactions,
+    SquadBalances balances,
+    String accountName,
+  ) async {
+    pw.Font fontRegular;
+    pw.Font fontBold;
+
+    try {
+      fontRegular = await PdfGoogleFonts.robotoRegular();
+      fontBold = await PdfGoogleFonts.robotoBold();
+    } catch (e) {
+      fontRegular = pw.Font.helvetica();
+      fontBold = pw.Font.helveticaBold();
+    }
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: fontRegular,
+        bold: fontBold,
+      ),
+    );
+
+    // Colors
+    final primaryColor = squad.color != null ? PdfColor.fromInt(int.parse(squad.color!)) : PdfColor.fromInt(0xFF1B5E20);
+    const incomeColor = PdfColor.fromInt(0xFF2E7D32);
+    const expenseColor = PdfColor.fromInt(0xFFC62828);
+    const bgColor = PdfColor.fromInt(0xFFF5F5F5);
+    const cardBg = PdfColors.white;
+    const textMuted = PdfColor.fromInt(0xFF757575);
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(32),
+        header: (ctx) => _buildSquadHeader(ctx, squad, accountName, primaryColor),
+        footer: (ctx) => _buildFooter(ctx, textMuted),
+        build: (ctx) => [
+          pw.SizedBox(height: 16),
+          // ── Summary sections ──────────────────────────────────────────
+          _buildSquadSummary(balances, incomeColor, expenseColor, primaryColor, bgColor),
+          pw.SizedBox(height: 24),
+          // ── Members & Balances ────────────────────────────────────────
+          _buildSectionTitle('Member Balances', primaryColor),
+          pw.SizedBox(height: 8),
+          _buildMemberBalancesTable(members, balances, incomeColor, expenseColor, bgColor, cardBg),
+          pw.SizedBox(height: 24),
+          // ── Activity History ──────────────────────────────────────────
+          _buildSectionTitle('Squad Activity History', primaryColor),
+          pw.SizedBox(height: 8),
+          if (transactions.isEmpty)
+            pw.Text('No activity recorded yet.', style: pw.TextStyle(color: textMuted, fontSize: 11))
+          else
+            _buildSquadTransactionTable(transactions, members, incomeColor, expenseColor, bgColor, cardBg, textMuted),
+        ],
+      ),
+    );
+
+    return doc.save();
+  }
+
+  static Future<Uint8List> buildSquadTransactionPdf(
+    SquadTransaction tx,
+    Squad squad,
+    List<SquadMember> members,
+    SquadBalances balances,
+    String accountName,
+  ) async {
+    pw.Font fontRegular;
+    pw.Font fontBold;
+
+    try {
+      fontRegular = await PdfGoogleFonts.robotoRegular();
+      fontBold = await PdfGoogleFonts.robotoBold();
+    } catch (e) {
+      fontRegular = pw.Font.helvetica();
+      fontBold = pw.Font.helveticaBold();
+    }
+
+    final doc = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: fontRegular,
+        bold: fontBold,
+      ),
+    );
+
+    final primaryColor = squad.color != null ? PdfColor.fromInt(int.parse(squad.color!)) : PdfColor.fromInt(0xFF1B5E20);
+
+    final payer = members.firstWhere((m) => m.key == tx.payerMemberKey);
+
+    doc.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a5,
+        margin: const pw.EdgeInsets.all(24),
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            // Header
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text('BILL RECEIPT', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                    pw.Text(squad.name, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  ],
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(_displayDate.format(tx.date), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
+                    pw.Text('ID: ${tx.key}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                  ],
+                ),
+              ],
+            ),
+            pw.Divider(color: primaryColor, thickness: 1.5, height: 24),
+
+            // Title & Amount
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  pw.Text(tx.title.toUpperCase(), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  pw.SizedBox(height: 8),
+                  pw.Text('₱${_currency.format(tx.amount)}', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  pw.SizedBox(height: 4),
+                  pw.Text('Paid by ${payer.name}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 32),
+
+            // Split Breakdown
+            _buildSectionTitle('Split Breakdown', primaryColor),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(3),
+                1: const pw.FixedColumnWidth(70),
+                2: const pw.FixedColumnWidth(85),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+                  children: [
+                    _tableHeaderSquad('MEMBER'),
+                    _tableHeaderSquad('BILL SHARE', align: pw.TextAlign.right),
+                    _tableHeaderSquad('TOTAL PENDING', align: pw.TextAlign.right),
+                  ],
+                ),
+                ...tx.memberSplits.entries.map((entry) {
+                  final member = members.firstWhere((m) => m.key == entry.key);
+                  final netBalance = balances.memberNetBalances[member.key as int] ?? 0.0;
+                  final isPositive = netBalance > 0;
+                  final isNegative = netBalance < 0;
+
+                  double share = entry.value;
+                  if (tx.splitType == SplitType.percentage) {
+                    share = (entry.value / 100) * tx.amount;
+                  } else if (tx.splitType == SplitType.equal) {
+                    share = tx.amount / tx.memberSplits.length;
+                  }
+                  return pw.TableRow(
+                    children: [
+                      _cell(member.name + (member.isYou ? ' (You)' : '')),
+                      _cell('₱${_currency.format(share)}', align: pw.TextAlign.right, bold: true),
+                      _cell(
+                        isPositive ? 'Gets ₱${_currency.format(netBalance)}' : (isNegative ? 'Owes ₱${_currency.format(netBalance.abs())}' : 'Settled'),
+                        align: pw.TextAlign.right,
+                        color: isPositive ? PdfColors.green : (isNegative ? PdfColors.red : PdfColors.grey700),
+                        bold: true,
+                      ),
+                    ],
+                  );
+                }),
+              ],
+            ),
+            
+            pw.Spacer(),
+            pw.Divider(color: PdfColors.grey300),
+            pw.Center(
+              child: pw.Text(
+                'Generated via RootEXP • Shared Economy Tracking',
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    return doc.save();
+  }
+
+  static pw.Widget _buildSquadHeader(
+    pw.Context ctx,
+    Squad squad,
+    String accountName,
+    PdfColor primary,
+  ) {
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: primary, width: 2)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                squad.name.toUpperCase(),
+                style: pw.TextStyle(
+                  fontSize: 20,
+                  fontWeight: pw.FontWeight.bold,
+                  color: primary,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              pw.Text(
+                'Squad Expense Report — $accountName',
+                style: pw.TextStyle(fontSize: 10, color: PdfColors.grey700),
+              ),
+            ],
+          ),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              pw.Text(
+                'DATE GENERATED',
+                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.Text(
+                _displayDate.format(DateTime.now()),
+                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primary),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildSquadSummary(
+    SquadBalances balances,
+    PdfColor incomeColor,
+    PdfColor expenseColor,
+    PdfColor primary,
+    PdfColor bg,
+  ) {
+    return pw.Row(
+      children: [
+        _summaryCard('YOU ARE OWED', '₱${_currency.format(balances.youAreOwed)}', incomeColor, bg),
+        pw.SizedBox(width: 8),
+        _summaryCard('YOU OWE', '₱${_currency.format(balances.youOwe)}', expenseColor, bg),
+        pw.SizedBox(width: 8),
+        _summaryCard(
+          'YOUR NET STATUS',
+          '${balances.net >= 0 ? "+" : ""}₱${_currency.format(balances.net)}',
+          balances.net >= 0 ? incomeColor : expenseColor,
+          bg,
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildMemberBalancesTable(
+    List<SquadMember> members,
+    SquadBalances balances,
+    PdfColor incomeColor,
+    PdfColor expenseColor,
+    PdfColor bg,
+    PdfColor cardBg,
+  ) {
+    final rows = members.asMap().entries.map((entry) {
+      final i = entry.key;
+      final m = entry.value;
+      final balance = balances.memberNetBalances[m.key as int] ?? 0.0;
+      final isPositive = balance > 0;
+      final isNegative = balance < 0;
+      final rowColor = i.isEven ? cardBg : bg;
+      final statusColor = isPositive ? incomeColor : (isNegative ? expenseColor : PdfColors.grey700);
+
+      return pw.TableRow(
+        decoration: pw.BoxDecoration(color: rowColor),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: pw.Row(
+              children: [
+                pw.Text(m.name, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                if (m.isYou) ...[
+                  pw.SizedBox(width: 4),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: pw.BoxDecoration(color: PdfColors.grey200, borderRadius: pw.BorderRadius.circular(2)),
+                    child: pw.Text('YOU', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: pw.Text(
+              isPositive ? 'Gets back' : (isNegative ? 'Owes' : 'Settled'),
+              style: pw.TextStyle(color: statusColor, fontSize: 10, fontWeight: pw.FontWeight.bold),
+            ),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: pw.Text(
+              '₱${_currency.format(balance.abs())}',
+              style: pw.TextStyle(color: statusColor, fontSize: 11, fontWeight: pw.FontWeight.bold),
+              textAlign: pw.TextAlign.right,
+            ),
+          ),
+        ],
+      );
+    }).toList();
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(3),
+        1: const pw.FlexColumnWidth(2),
+        2: const pw.FixedColumnWidth(100),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _tableHeaderSquad('MEMBER NAME'),
+            _tableHeaderSquad('STATUS'),
+            _tableHeaderSquad('AMOUNT', align: pw.TextAlign.right),
+          ],
+        ),
+        ...rows,
+      ],
+    );
+  }
+
+  static pw.Widget _buildSquadTransactionTable(
+    List<SquadTransaction> transactions,
+    List<SquadMember> members,
+    PdfColor incomeColor,
+    PdfColor expenseColor,
+    PdfColor bg,
+    PdfColor cardBg,
+    PdfColor muted,
+  ) {
+    // Sort transactions by date descending
+    final sorted = transactions.toList()..sort((a, b) => b.date.compareTo(a.date));
+
+    final rows = sorted.asMap().entries.map((entry) {
+      final i = entry.key;
+      final tx = entry.value;
+      final payer = members.firstWhere((m) => m.key == tx.payerMemberKey);
+      final rowColor = i.isEven ? cardBg : bg;
+
+      return pw.TableRow(
+        decoration: pw.BoxDecoration(color: rowColor),
+        children: [
+          _cell(DateFormat('MM/dd').format(tx.date), muted: muted),
+          _cell(tx.title, bold: !tx.isSettlement),
+          _cell(payer.name, muted: muted),
+          _cell(tx.isSettlement ? 'Settlement' : tx.splitType.name),
+          _cell(
+            '₱${_currency.format(tx.amount)}',
+            bold: true,
+            color: tx.isSettlement ? incomeColor : expenseColor,
+            align: pw.TextAlign.right,
+          ),
+        ],
+      );
+    }).toList();
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(40),
+        1: const pw.FlexColumnWidth(3),
+        2: const pw.FlexColumnWidth(2),
+        3: const pw.FixedColumnWidth(60),
+        4: const pw.FixedColumnWidth(80),
+      },
+      children: [
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.grey200),
+          children: [
+            _tableHeaderSquad('DATE'),
+            _tableHeaderSquad('DESCRIPTION'),
+            _tableHeaderSquad('PAID BY'),
+            _tableHeaderSquad('TYPE'),
+            _tableHeaderSquad('AMOUNT', align: pw.TextAlign.right),
+          ],
+        ),
+        ...rows,
+      ],
+    );
+  }
+
+  static pw.Widget _tableHeaderSquad(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 8,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.grey800,
+          letterSpacing: 0.5,
+        ),
+        textAlign: align,
+      ),
+    );
+  }
+
+  static pw.Widget _cell(
+    String text, {
+    PdfColor? color,
+    PdfColor? muted,
+    bool bold = false,
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          fontSize: 9,
+          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
+          color: color ?? muted ?? PdfColors.black,
+        ),
+        textAlign: align,
+      ),
+    );
   }
 
   static pw.Widget _buildHeader(
@@ -581,26 +1029,6 @@ class ExportService {
         ),
         ...rows,
       ],
-    );
-  }
-
-  static pw.Widget _cell(
-    String text, {
-    PdfColor? color,
-    PdfColor? muted,
-    bool bold = false,
-  }) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-      child: pw.Text(
-        text,
-        style: pw.TextStyle(
-          fontSize: 9,
-          fontWeight: bold ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color ?? muted ?? PdfColors.black,
-        ),
-        overflow: pw.TextOverflow.clip,
-      ),
     );
   }
 

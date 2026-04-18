@@ -30,13 +30,14 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       goalKey: fields[10] as int?,
       budgetKey: fields[11] as int?,
       debtKey: fields[12] as int?,
+      squadTxKey: fields[13] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Transaction obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.title)
       ..writeByte(1)
@@ -62,7 +63,9 @@ class TransactionAdapter extends TypeAdapter<Transaction> {
       ..writeByte(11)
       ..write(obj.budgetKey)
       ..writeByte(12)
-      ..write(obj.debtKey);
+      ..write(obj.debtKey)
+      ..writeByte(13)
+      ..write(obj.squadTxKey);
   }
 
   @override

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/account.dart';
 import '../models/app_theme.dart';
@@ -7,6 +8,9 @@ import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/debt.dart';
 import '../models/backup_history.dart';
+import '../models/squad.dart';
+import '../models/squad_member.dart';
+import '../models/squad_transaction.dart';
 
 class DatabaseService {
   static const String _boxName = 'accounts';
@@ -16,6 +20,9 @@ class DatabaseService {
   static const String _budgetBoxName = 'budgets';
   static const String _debtBoxName = 'debts';
   static const String _backupHistoryBoxName = 'backup_history';
+  static const String _squadBoxName = 'squads';
+  static const String _squadMemberBoxName = 'squad_members';
+  static const String _squadTransactionBoxName = 'squad_transactions';
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -45,6 +52,18 @@ class DatabaseService {
     if (!Hive.isAdapterRegistered(7)) {
       Hive.registerAdapter(DebtAdapter());
     }
+    if (!Hive.isAdapterRegistered(9)) {
+      Hive.registerAdapter(SquadAdapter());
+    }
+    if (!Hive.isAdapterRegistered(10)) {
+      Hive.registerAdapter(SquadMemberAdapter());
+    }
+    if (!Hive.isAdapterRegistered(11)) {
+      Hive.registerAdapter(SquadTransactionAdapter());
+    }
+    if (!Hive.isAdapterRegistered(12)) {
+      Hive.registerAdapter(SplitTypeAdapter());
+    }
 
     await _openTypedBox<Account>(_boxName);
 
@@ -53,6 +72,9 @@ class DatabaseService {
     await _openTypedBox<Goal>(_goalBoxName);
     await _openTypedBox<Budget>(_budgetBoxName);
     await _openTypedBox<Debt>(_debtBoxName);
+    await _openTypedBox<Squad>(_squadBoxName);
+    await _openTypedBox<SquadMember>(_squadMemberBoxName);
+    await _openTypedBox<SquadTransaction>(_squadTransactionBoxName);
     await _openUntypedBox(_backupHistoryBoxName);
   }
 
@@ -63,6 +85,11 @@ class DatabaseService {
   static Box<Goal> get _goalBox => Hive.box<Goal>(_goalBoxName);
   static Box<Budget> get _budgetBox => Hive.box<Budget>(_budgetBoxName);
   static Box<Debt> get _debtBox => Hive.box<Debt>(_debtBoxName);
+  static Box<Squad> get _squadBox => Hive.box<Squad>(_squadBoxName);
+  static Box<SquadMember> get _memberBox =>
+      Hive.box<SquadMember>(_squadMemberBoxName);
+  static Box<SquadTransaction> get _squadTxBox =>
+      Hive.box<SquadTransaction>(_squadTransactionBoxName);
 
   // Watchers for reactive UI
   static Stream<BoxEvent> get transactionWatcher => _transactionBox.watch();
@@ -70,6 +97,10 @@ class DatabaseService {
   static Stream<BoxEvent> get goalWatcher => _goalBox.watch();
   static Stream<BoxEvent> get budgetWatcher => _budgetBox.watch();
   static Stream<BoxEvent> get debtWatcher => _debtBox.watch();
+  static Stream<BoxEvent> get squadWatcher => _squadBox.watch();
+  static Stream<BoxEvent> get memberWatcher => _memberBox.watch();
+  static Stream<BoxEvent> get squadTxWatcher => _squadTxBox.watch();
+  static ValueListenable<Box<SquadTransaction>> get squadTxListenable => _squadTxBox.listenable();
 
   static Future<void> _openTypedBox<T>(String boxName) async {
     try {
@@ -419,6 +450,123 @@ class DatabaseService {
     return _debtBox.values.toList();
   }
 
+  // Squad Operations
+  static Future<int> saveSquad(Squad squad) async {
+    return await _squadBox.add(squad);
+  }
+
+  static Future<void> updateSquad(Squad squad) async {
+    await squad.save();
+  }
+
+  static Future<void> deleteSquad(Squad squad) async {
+    final squadKey = squad.key as int;
+    // Delete members
+    final members = _memberBox.values.where((m) => m.squadKey == squadKey).toList();
+    for (var m in members) {
+      await m.delete();
+    }
+    // Delete squad transactions
+    final txs =
+        _squadTxBox.values.where((tx) => tx.squadKey == squadKey).toList();
+    for (var tx in txs) {
+      await deleteSquadTransaction(tx);
+    }
+    await squad.delete();
+  }
+
+  static List<Squad> getSquads(int accountKey) {
+    return _squadBox.values.where((s) => s.accountKey == accountKey).toList();
+  }
+
+  static Squad? getSquad(int key) {
+    return _squadBox.get(key);
+  }
+
+  // Member Operations
+  static Future<int> saveSquadMember(SquadMember member) async {
+    return await _memberBox.add(member);
+  }
+
+  static Future<void> updateSquadMember(SquadMember member) async {
+    await member.save();
+  }
+
+  static Future<void> deleteSquadMember(SquadMember member) async {
+    await member.delete();
+  }
+
+  static List<SquadMember> getSquadMembers(int squadKey) {
+    return _memberBox.values.where((m) => m.squadKey == squadKey).toList();
+  }
+
+  // Squad Transaction Operations
+  static Future<int> saveSquadTransaction(SquadTransaction tx) async {
+    final key = await _squadTxBox.add(tx);
+
+    // If a wallet is selected, we sync this to personal Transactions
+    if (tx.walletKey != null) {
+      final squad = getSquad(tx.squadKey);
+      final squadName = squad?.name ?? 'Squad';
+
+      TransactionType mainType = TransactionType.expense;
+      if (tx.isSettlement) {
+        // Find if user is the one paying or receiving
+        final payer = _memberBox.get(tx.payerMemberKey);
+        if (payer != null && !payer.isYou) {
+          // Someone else paid YOU back
+          mainType = TransactionType.income;
+        }
+      }
+
+      final mainTx = Transaction(
+        title: '[$squadName] ${tx.title}',
+        amount: tx.amount,
+        date: tx.date,
+        category: tx.isSettlement ? 'Settlement' : 'Group Split',
+        description: 'Auto-linked from Squad Transaction',
+        type: mainType,
+        accountKey: squad?.accountKey ?? 0,
+        walletKey: tx.walletKey,
+        squadTxKey: key,
+      );
+
+      // This will handle balance, budget, and other side effects
+      await saveTransaction(mainTx);
+    }
+    return key;
+  }
+
+  static Future<void> updateSquadTransaction(SquadTransaction tx) async {
+    await tx.save();
+  }
+
+  static Future<void> deleteSquadTransaction(SquadTransaction tx) async {
+    // 1. Find and delete linked main transaction
+    try {
+      final linkedTx = _transactionBox.values.firstWhere(
+        (t) => t.squadTxKey == tx.key,
+      );
+      await deleteTransaction(linkedTx);
+    } catch (_) {
+      // No linked transaction found, or already deleted
+      // Fallback: manually restore balance if it was a legacy squad tx
+      if (tx.walletKey != null && !tx.isSettlement) {
+        final wallet = _walletBox.get(tx.walletKey);
+        if (wallet != null) {
+          wallet.balance += tx.amount;
+          await wallet.save();
+        }
+      }
+    }
+
+    await tx.delete();
+  }
+
+  static List<SquadTransaction> getSquadTransactions(int squadKey) {
+    return _squadTxBox.values.where((tx) => tx.squadKey == squadKey).toList();
+  }
+
   static Future<void> wipeAccountData(int accountKey) async {
     // Delete wallets
     final walletKeys = _walletBox.values
@@ -464,6 +612,13 @@ class DatabaseService {
     for (var key in debtKeys) {
       await _debtBox.delete(key);
     }
+
+    // Delete squads and related
+    final squads =
+        _squadBox.values.where((s) => s.accountKey == accountKey).toList();
+    for (var s in squads) {
+      await deleteSquad(s);
+    }
   }
 
   static Future<void> wipeAllData() async {
@@ -473,6 +628,9 @@ class DatabaseService {
     await _goalBox.clear();
     await _budgetBox.clear();
     await _debtBox.clear();
+    await _squadBox.clear();
+    await _memberBox.clear();
+    await _squadTxBox.clear();
   }
 
   static Wallet? getWalletByKey(int key) {

@@ -293,7 +293,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
               const SizedBox(height: 24),
               SwitchListTile(
                 title: const Text('Include in Wallet Balance', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                subtitle: Text('Turn off if you already included this amount in a wallet.', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
+                subtitle: Text('Are you sure you want to include this amount in your wallet balance?', style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
                 value: _affectWallet,
                 activeThumbColor: theme.primaryColor,
                 contentPadding: EdgeInsets.zero,

@@ -206,11 +206,36 @@ class ExportService {
           // ── Summary cards ──────────────────────────────────────────────
           _buildSummarySection(summary, incomeColor, expenseColor, primaryColor, bgColor),
           pw.SizedBox(height: 20),
-          // ── Top categories ─────────────────────────────────────────────
+          // ── Expense Chart & Categories ──────────────────────────────────
           if (summary.topCategories.isNotEmpty) ...[
-            _buildSectionTitle('Top Spending Categories', primaryColor),
-            pw.SizedBox(height: 8),
-            _buildCategoryTable(summary.topCategories, summary.totalExpenses, primaryColor, bgColor, cardBg),
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('Spending Breakdown', primaryColor),
+                      pw.SizedBox(height: 12),
+                      _buildCategoryChart(summary.topCategories, primaryColor),
+                    ],
+                  ),
+                ),
+                pw.SizedBox(width: 32),
+                pw.Expanded(
+                  flex: 1,
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('Top Spending Categories', primaryColor),
+                      pw.SizedBox(height: 8),
+                      _buildCategoryTable(summary.topCategories, summary.totalExpenses, primaryColor, bgColor, cardBg),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             pw.SizedBox(height: 20),
           ],
           // ── Transactions table ─────────────────────────────────────────
@@ -329,6 +354,43 @@ class ExportService {
         pw.SizedBox(width: 8),
         _summaryCard('TRANSACTIONS', '${summary.transactionCount}', primary, bg),
       ],
+    );
+  }
+
+  static pw.Widget _buildCategoryChart(
+    List<MapEntry<String, double>> categories,
+    PdfColor primary,
+  ) {
+    // Top 5 categories for chart stability
+    final chartData = categories.take(5).toList();
+    if (chartData.isEmpty) return pw.SizedBox();
+
+    // Botanical / Material themed green palette
+    final List<PdfColor> distinctColors = [
+      PdfColor.fromInt(0xFF1B5E20), // Green 900
+      PdfColor.fromInt(0xFF2E7D32), // Green 800
+      PdfColor.fromInt(0xFF43A047), // Green 600
+      PdfColor.fromInt(0xFF66BB6A), // Green 400
+      PdfColor.fromInt(0xFF81C784), // Green 300
+    ];
+
+    return pw.Container(
+      height: 140,
+      child: pw.Chart(
+        grid: pw.PieGrid(),
+        datasets: List.generate(chartData.length, (index) {
+          final entry = chartData[index];
+          return pw.PieDataSet(
+            value: entry.value,
+            color: index < distinctColors.length ? distinctColors[index] : PdfColors.grey500,
+            legend: entry.key,
+            drawSurface: true,
+            drawBorder: true,
+            borderColor: PdfColors.white,
+            borderWidth: 1,
+          );
+        }),
+      ),
     );
   }
 

@@ -3,13 +3,16 @@ import '../../models/squad.dart';
 import '../../services/database_service.dart';
 import '../../services/squad_service.dart';
 import '../../services/session_service.dart';
-import '../../services/export_service.dart';
-import 'package:printing/printing.dart';
-import 'add_squad_transaction_screen.dart';
-import 'settle_up_screen.dart';
 import '../../models/squad_member.dart';
 import '../../models/squad_transaction.dart';
+import 'add_squad_transaction_screen.dart';
+import 'settle_up_screen.dart';
 import 'package:intl/intl.dart';
+import 'dart:ui' as ui;
+import 'dart:io';
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class SquadDetailScreen extends StatefulWidget {
   final Squad squad;
@@ -22,6 +25,10 @@ class SquadDetailScreen extends StatefulWidget {
 class _SquadDetailScreenState extends State<SquadDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final GlobalKey _summaryKey = GlobalKey();
+  final GlobalKey _receiptKey = GlobalKey();
+  bool _isSharingSummary = false;
+  SquadTransaction? _txToCapture; 
 
   @override
   void initState() {
@@ -43,8 +50,40 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     final squadKey = widget.squad.key as int;
     final balances = SquadService.calculateBalances(squadKey);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
+    return Stack(
+      children: [
+        // GHOST SQUAD SUMMARY (Hidden but used for capture)
+        Positioned(
+          left: -10000,
+          child: RepaintBoundary(
+            key: _summaryKey,
+            child: _SquadSummaryWidget(
+              squad: widget.squad,
+              balances: balances,
+              members: DatabaseService.getSquadMembers(squadKey),
+            ),
+          ),
+        ),
+
+        // GHOST RECEIPT (Hidden but used for capture from anywhere)
+        if (_txToCapture != null)
+          Positioned(
+            left: -10000,
+            child: RepaintBoundary(
+              key: _receiptKey,
+              child: _InvoiceWidget(
+                tx: _txToCapture!,
+                members: DatabaseService.getSquadMembers(squadKey),
+                payerName: DatabaseService.getSquadMembers(squadKey)
+                    .firstWhere((m) => m.key == _txToCapture!.payerMemberKey, 
+                    orElse: () => DatabaseService.getSquadMembers(squadKey).first).name,
+              ),
+            ),
+          ),
+
+        // MAIN APP UI
+        Scaffold(
+          backgroundColor: theme.scaffoldBackgroundColor,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
@@ -105,10 +144,13 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                 ),
               ),
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.share_outlined),
-                  onPressed: () => _exportSquadPdf(),
-                ),
+                if (_isSharingSummary)
+                  const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+                if (!_isSharingSummary)
+                  IconButton(
+                    icon: const Icon(Icons.share_outlined),
+                    onPressed: () => _shareSquadSummaryImage(),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded),
                   color: theme.colorScheme.error,
@@ -140,7 +182,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
             _ActivityTab(
               squad: widget.squad,
               onRefresh: _refresh,
-              onShare: _shareActivityPdf,
+              onShare: _shareActivityImage,
             ),
             _BalancesTab(squad: widget.squad, onRefresh: _refresh),
           ],
@@ -187,7 +229,9 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           ),
         ],
       ),
-    );
+    ),
+  ],
+);
   }
 
   void _confirmDeleteSquad() async {
@@ -221,75 +265,83 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     }
   }
 
-  void _exportSquadPdf() async {
+  void _shareSquadSummaryImage() async {
+    setState(() => _isSharingSummary = true);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     
     scaffoldMessenger.showSnackBar(
-      const SnackBar(
-        content: Text('Generating Squad PDF...'),
-        duration: Duration(seconds: 2),
-      ),
+      const SnackBar(content: Text('Preparing Squad Summary...'), duration: Duration(seconds: 1)),
     );
 
+    // Give it a frame to render
+    await Future.delayed(const Duration(milliseconds: 100));
+
     try {
-      final squadKey = widget.squad.key as int;
-      final members = DatabaseService.getSquadMembers(squadKey);
-      final transactions = DatabaseService.getSquadTransactions(squadKey);
-      final balances = SquadService.calculateBalances(squadKey);
-      final accountName = SessionService.activeAccount?.name ?? 'Account';
+      final boundary = _summaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw 'Could not find summary boundary';
 
-      final pdfBytes = await ExportService.buildSquadPdf(
-        widget.squad,
-        members,
-        transactions,
-        balances,
-        accountName,
-      );
+      final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw 'Could not get byte data';
 
-      final fileName = 'Squad_${widget.squad.name.replaceAll(' ', '_')}_Report';
-      await Printing.sharePdf(
-        bytes: pdfBytes,
-        filename: '$fileName.pdf',
+      final bytes = byteData.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/Squad_Summary_${widget.squad.name.replaceAll(' ', '_')}.png');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Financial Status for ${widget.squad.name}',
       );
     } catch (e) {
-      debugPrint('Error exporting squad PDF: $e');
+      debugPrint('Error sharing squad summary: $e');
       scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text('Failed to generate PDF: $e'),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text('Failed to share summary: $e'), backgroundColor: Colors.red),
       );
+    } finally {
+      if (mounted) setState(() => _isSharingSummary = false);
     }
   }
 
-  void _shareActivityPdf(SquadTransaction tx) async {
+  void _shareActivityImage(SquadTransaction tx) async {
+    setState(() => _txToCapture = tx);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
+    
     scaffoldMessenger.showSnackBar(
-      const SnackBar(content: Text('Generating Receipt...'), duration: Duration(seconds: 1)),
+      const SnackBar(content: Text('Preparing Receipt...'), duration: Duration(seconds: 1)),
     );
 
+    // Give it two frames to ensure the ghost is built with the new TX
+    await Future.delayed(const Duration(milliseconds: 150));
+
     try {
-      final members = DatabaseService.getSquadMembers(widget.squad.key as int);
-      final balances = SquadService.calculateBalances(widget.squad.key as int);
-      final accountName = SessionService.activeAccount?.name ?? 'Account';
+      final boundary = _receiptKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw 'Could not find receipt boundary';
 
-      final pdfBytes = await ExportService.buildSquadTransactionPdf(
-        tx,
-        widget.squad,
-        members,
-        balances,
-        accountName,
-      );
+      final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw 'Could not get byte data';
 
-      await Printing.sharePdf(
-        bytes: pdfBytes,
-        filename: 'Receipt_${tx.title.replaceAll(' ', '_')}.pdf',
+      final bytes = byteData.buffer.asUint8List();
+
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/Receipt_${tx.title.replaceAll(' ', '_')}.png');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Receipt for ${tx.title} - Squad Splitting',
       );
     } catch (e) {
-      debugPrint('Error sharing activity PDF: $e');
+      debugPrint('Error sharing receipt: $e');
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Failed to generate receipt: $e'), backgroundColor: Colors.red),
+        SnackBar(content: Text('Failed to share receipt: $e'), backgroundColor: Colors.red),
       );
+    } finally {
+      if (mounted) {
+        setState(() => _txToCapture = null);
+      }
     }
   }
 }
@@ -400,7 +452,12 @@ class _ActivityTab extends StatelessWidget {
                 context: context,
                 isScrollControlled: true,
                 backgroundColor: Colors.transparent,
-                builder: (context) => _ActivityDetailSheet(tx: tx, members: members, onRefresh: onRefresh),
+                builder: (context) => _ActivityDetailSheet(
+                  tx: tx, 
+                  members: members, 
+                  onRefresh: onRefresh,
+                  onShare: onShare,
+                ),
               );
             },
             onLongPress: () async {
@@ -841,8 +898,14 @@ class _ActivityDetailSheet extends StatefulWidget {
   final SquadTransaction tx;
   final List<SquadMember> members;
   final VoidCallback onRefresh;
+  final Function(SquadTransaction) onShare;
 
-  const _ActivityDetailSheet({required this.tx, required this.members, required this.onRefresh});
+  const _ActivityDetailSheet({
+    required this.tx,
+    required this.members,
+    required this.onRefresh,
+    required this.onShare,
+  });
 
   @override
   State<_ActivityDetailSheet> createState() => _ActivityDetailSheetState();
@@ -851,6 +914,7 @@ class _ActivityDetailSheet extends StatefulWidget {
 class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
   late List<SquadTransaction> _allTxs;
   late List<SquadTransaction> _relatedPayments;
+  bool _isSharing = false;
 
   void _loadData() {
     _allTxs = DatabaseService.getSquadTransactions(widget.tx.squadKey);
@@ -957,45 +1021,47 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     }
   }
 
+  void _onShareRequested() async {
+    setState(() => _isSharing = true);
+    await widget.onShare(widget.tx);
+    if (mounted) setState(() => _isSharing = false);
+  }
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder(
-      valueListenable: DatabaseService.squadTxListenable,
-      builder: (context, box, _) {
-        _loadData(); // Re-load data whenever the box changes
+    _loadData(); // Re-load data whenever the sheet builds
 
-        final theme = Theme.of(context);
-        final payer = widget.members.firstWhere((m) => m.key == widget.tx.payerMemberKey);
-        final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    final theme = Theme.of(context);
+    final payer = widget.members.firstWhere((m) => m.key == widget.tx.payerMemberKey);
+    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
 
-        // Pre-calculate if any payments (Auto or Linked) exist to show the section
-        bool anyPayments = _relatedPayments.isNotEmpty;
-        if (!anyPayments) {
-          for (var entry in widget.tx.memberSplits.entries) {
-            final memberKey = entry.key;
-            if (memberKey == widget.tx.payerMemberKey) continue;
+    // Pre-calculate if any payments (Auto or Linked) exist to show the section
+    bool anyPayments = _relatedPayments.isNotEmpty;
+    if (!anyPayments) {
+      for (var entry in widget.tx.memberSplits.entries) {
+        final memberKey = entry.key;
+        if (memberKey == widget.tx.payerMemberKey) continue;
 
-            double sh = entry.value;
-            if (widget.tx.splitType == SplitType.percentage) {
-              sh = (entry.value / 100) * widget.tx.amount;
-            } else if (widget.tx.splitType == SplitType.equal) {
-              sh = widget.tx.amount / widget.tx.memberSplits.length;
-            }
-
-            final explicit = _getExplicitPayments(memberKey);
-            final totalP = _getTotalPayments(memberKey);
-            final prevS = _getPreviousShares(memberKey);
-            final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
-            final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
-
-            if (attrA > 0.01) {
-              anyPayments = true;
-              break;
-            }
-          }
+        double sh = entry.value;
+        if (widget.tx.splitType == SplitType.percentage) {
+          sh = (entry.value / 100) * widget.tx.amount;
+        } else if (widget.tx.splitType == SplitType.equal) {
+          sh = widget.tx.amount / widget.tx.memberSplits.length;
         }
 
-        return Container(
+        final explicit = _getExplicitPayments(memberKey);
+        final totalP = _getTotalPayments(memberKey);
+        final prevS = _getPreviousShares(memberKey);
+        final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
+        final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
+
+        if (attrA > 0.01) {
+          anyPayments = true;
+          break;
+        }
+      }
+    }
+
+    return Container(
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
@@ -1045,6 +1111,12 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                   ],
                 ),
               ),
+              if (!_isSharing)
+                IconButton(
+                  icon: const Icon(Icons.share_rounded),
+                  color: theme.primaryColor,
+                  onPressed: _onShareRequested,
+                ),
             ],
           ),
 
@@ -1088,110 +1160,86 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
               child: Column(
                 children: [
                   ...widget.tx.memberSplits.entries.map((entry) {
-                    final member = widget.members.firstWhere((m) => m.key == entry.key);
+                    final memberKey = entry.key;
+                    final member = widget.members.firstWhere((m) => m.key == memberKey);
                     
-                    double share = entry.value;
-                    String? subtitle;
-
+                    double sh = entry.value;
                     if (widget.tx.splitType == SplitType.percentage) {
-                      share = (entry.value / 100) * widget.tx.amount;
-                      subtitle = '${entry.value.toStringAsFixed(0)}%';
+                      sh = (entry.value / 100) * widget.tx.amount;
                     } else if (widget.tx.splitType == SplitType.equal) {
-                      share = widget.tx.amount / widget.tx.memberSplits.length;
-                      subtitle = 'Equal share';
+                      sh = widget.tx.amount / widget.tx.memberSplits.length;
                     }
 
-                    final isPayer = member.key == widget.tx.payerMemberKey;
+                    final isPayer = memberKey == widget.tx.payerMemberKey;
+                    final explicit = _getExplicitPayments(memberKey);
+                    final totalP = _getTotalPayments(memberKey);
+                    final prevS = _getPreviousShares(memberKey);
+                    final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
+                    final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
+                    final remaining = isPayer ? 0.0 : (sh - explicit - attrA).clamp(0.0, double.infinity);
 
-                    // REFINED SMART ATTRIBUTION LOGIC (Avoid Duplicates)
-                    final explicitPaid = _getExplicitPayments(member.key as int);
-                    final totalGlobalPaid = _getTotalPayments(member.key as int);
-                    final previousShares = _getPreviousShares(member.key as int);
-                    
-                    // Available credit after paying previous bills AND ignoring what's already explicitly linked to this one
-                    final availableCredit = (totalGlobalPaid - previousShares - explicitPaid).clamp(0.0, double.infinity);
-                    final autoAttrAmount = availableCredit.clamp(0.0, (share - explicitPaid).clamp(0.0, double.infinity));
-                    
-                    final totalSettledForBill = explicitPaid + autoAttrAmount;
-                    final isFull = totalSettledForBill >= (share - 0.01);
-                    final isPartial = totalSettledForBill > 0.01 && !isFull;
-                    
-                    final isSettled = isFull;
-
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: theme.dividerColor.withValues(alpha:0.05)),
+                      ),
                       child: Row(
                         children: [
                           CircleAvatar(
                             radius: 14,
-                            backgroundColor: theme.dividerColor.withValues(alpha: 0.1),
-                            child: Text(
-                              member.name[0].toUpperCase(),
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color),
-                            ),
+                            backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                            child: Text(member.name[0].toUpperCase(), style: TextStyle(fontSize: 10, color: theme.primaryColor, fontWeight: FontWeight.bold)),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  member.name + (member.isYou ? ' (You)' : ''),
-                                  style: TextStyle(
-                                    fontWeight: isPayer ? FontWeight.bold : FontWeight.normal,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                                  if (isPartial)
-                                    Text(
-                                      '${format.format(totalSettledForBill)} / ${format.format(share)} paid',
-                                      style: const TextStyle(fontSize: 10, color: Colors.orange, fontWeight: FontWeight.bold),
-                                    )
-                                  else if (subtitle != null)
-                                    Text(subtitle, style: TextStyle(fontSize: 10, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
-                                ],
-                              ),
-                            ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                format.format(share),
-                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-                              ),
-                              if (!isPayer) ...[
-                                const SizedBox(width: 8),
-                                if (isSettled)
-                                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20)
-                                else
-                                  IconButton(
-                                    icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.blue, size: 20),
-                                    onPressed: () => _markAsPaid(member, (share - totalSettledForBill).clamp(0.0, double.infinity)),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                  ),
+                                Text(member.name + (member.isYou ? ' (You)' : ''), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                if (remaining > 0.01)
+                                  Text('Owes ${format.format(remaining)}', style: TextStyle(fontSize: 11, color: theme.colorScheme.error)),
+                                if (remaining <= 0.01)
+                                  Text(isPayer ? 'Fully Settled (Payer)' : 'Fully Settled', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                               ],
-                            ],
+                            ),
                           ),
+                          if (remaining > 0.01 && memberKey != widget.tx.payerMemberKey)
+                            TextButton(
+                              onPressed: () => _markAsPaid(member, remaining),
+                              style: TextButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                visualDensity: VisualDensity.compact,
+                                backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('Settle', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                          if (remaining <= 0.01 && memberKey != widget.tx.payerMemberKey)
+                            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                         ],
                       ),
                     );
                   }),
 
+                  // PAYMENT HISTORY SECTION
                   if (anyPayments) ...[
                     const SizedBox(height: 24),
-                    const Divider(),
-                    const SizedBox(height: 16),
-                    Text(
-                      'PAYMENTS FOR THIS BILL',
-                      style: theme.textTheme.labelLarge?.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 10, color: theme.colorScheme.tertiary),
+                    Row(
+                      children: [
+                        Text('SETTLEMENTS', style: theme.textTheme.labelLarge?.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 10, color: theme.textTheme.labelLarge?.color?.withValues(alpha: 0.6))),
+                        const Spacer(),
+                        const Icon(Icons.history_rounded, size: 14, color: Colors.grey),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     ...widget.tx.memberSplits.entries.map((entry) {
-                      final member = widget.members.firstWhere((m) => m.key == entry.key);
-                      if (member.key == widget.tx.payerMemberKey) return const SizedBox();
-
-                      // Recalculate logic for the attribution list (FIFO)
+                      final memberKey = entry.key;
+                      if (memberKey == widget.tx.payerMemberKey) return const SizedBox.shrink();
+                      
+                      final member = widget.members.firstWhere((m) => m.key == memberKey);
                       double sh = entry.value;
                       if (widget.tx.splitType == SplitType.percentage) {
                         sh = (entry.value / 100) * widget.tx.amount;
@@ -1199,20 +1247,19 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                         sh = widget.tx.amount / widget.tx.memberSplits.length;
                       }
 
-                      final explicit = _getExplicitPayments(member.key as int);
-                      final totalP = _getTotalPayments(member.key as int);
-                      final prevS = _getPreviousShares(member.key as int);
-                      
+                      final explicit = _getExplicitPayments(memberKey);
+                      final totalP = _getTotalPayments(memberKey);
+                      final prevS = _getPreviousShares(memberKey);
                       final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
                       final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
 
-                      if (attrA <= 0.01) return const SizedBox();
+                      if (attrA <= 0.01) return const SizedBox.shrink();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: [
-                            const Icon(Icons.arrow_forward_rounded, size: 12, color: Colors.green),
+                            const Icon(Icons.auto_fix_high_rounded, size: 12, color: Colors.green),
                             const SizedBox(width: 8),
                             Expanded(child: Text('${member.name} settled ${attrA >= (sh - explicit - 0.01) ? 'share' : 'partially'} (Auto)', style: const TextStyle(fontSize: 12))),
                             Text(format.format(attrA), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green)),
@@ -1242,7 +1289,234 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
         ],
       ),
     );
-      },
+  }
+}
+class _InvoiceWidget extends StatelessWidget {
+  final SquadTransaction tx;
+  final List<SquadMember> members;
+  final String payerName;
+
+  const _InvoiceWidget({
+    required this.tx,
+    required this.members,
+    required this.payerName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    
+    // Receipt design colors (Clean, High Contrast)
+    const bg = Colors.white; 
+    final primary = theme.primaryColor;
+
+    return Container(
+      width: 400, // Fixed width for consistent high-quality export
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // High Contrast Branding Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'RootEXP',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                        color: primary,
+                      ),
+                    ),
+                    Text(
+                      'VERIFIED DIGITAL RECEIPT',
+                      style: TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
+                        color: Colors.grey.shade800, // Much darker label
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.verified_rounded, size: 24, color: primary),
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          Divider(color: Colors.black.withValues(alpha: 0.1), thickness: 2),
+          const SizedBox(height: 32),
+
+          // Bill Title (Pure Black)
+          Text(
+            tx.title.toUpperCase(),
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -0.5),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            DateFormat('EEEE, MMMM dd, yyyy • hh:mm a').format(tx.date),
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade700), // Darker date
+          ),
+          
+          const SizedBox(height: 48),
+
+          // Core Info Section
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('TOTAL SETTLEMENT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1)),
+                  const SizedBox(height: 4),
+                  Text(format.format(tx.amount), style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: Colors.black)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('PRIMARY PAYER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1)),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black, // High contrast payer box
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Text(
+                      payerName.toUpperCase(),
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 56),
+
+          // Member Breakdown (High Contrast)
+          Row(
+            children: [
+              Text(
+                'MEMBER SPLIT BREAKDOWN',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87, letterSpacing: 1.5),
+              ),
+              const Expanded(child: Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Divider(color: Colors.black12, thickness: 1))),
+            ],
+          ),
+          const SizedBox(height: 24),
+          
+          ...tx.memberSplits.entries.map((entry) {
+            final member = members.firstWhere((m) => m.key == entry.key);
+            final isPrimaryPayer = member.key == tx.payerMemberKey;
+            double share = entry.value;
+            if (tx.splitType == SplitType.percentage) {
+              share = (entry.value / 100) * tx.amount;
+            } else if (tx.splitType == SplitType.equal) {
+              share = tx.amount / tx.memberSplits.length;
+            }
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: isPrimaryPayer ? primary : Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      member.name[0].toUpperCase(), 
+                      style: TextStyle(
+                        fontSize: 12, 
+                        fontWeight: FontWeight.bold, 
+                        color: isPrimaryPayer ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.name,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.black),
+                        ),
+                        if (isPrimaryPayer)
+                          Text('ORIGINAL PAYER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: primary, letterSpacing: 0.5)),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    format.format(share),
+                    style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.black),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: 64),
+          
+          // Branding Footer (High Contrast)
+          Center(
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(height: 1.5, width: 40, color: Colors.black.withValues(alpha: 0.05)),
+                    const SizedBox(width: 16),
+                    Text(
+                      'RootEXP',
+                      style: TextStyle(
+                        fontSize: 14, 
+                        fontWeight: FontWeight.w900, 
+                        color: Colors.black.withValues(alpha: 0.2),
+                        letterSpacing: 2,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(height: 1.5, width: 40, color: Colors.black.withValues(alpha: 0.05)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'GENERATED BY RootEXP FINANCIAL • PREMIUM EDITION',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.grey.shade500, letterSpacing: 1.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 }
@@ -1292,6 +1566,232 @@ class _DetailCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SquadSummaryWidget extends StatelessWidget {
+  final Squad squad;
+  final SquadBalances balances;
+  final List<SquadMember> members;
+
+  const _SquadSummaryWidget({
+    required this.squad,
+    required this.balances,
+    required this.members,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    const bg = Colors.white;
+    final primary = theme.primaryColor;
+
+    // Calculate total spending manually
+    final transactions = DatabaseService.getSquadTransactions(squad.key as int);
+    final totalSpending = transactions.where((tx) => !tx.isSettlement).map((tx) => tx.amount).fold(0.0, (a, b) => a + b);
+
+    return Container(
+      width: 450,
+      padding: const EdgeInsets.all(40),
+      decoration: const BoxDecoration(color: bg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Branding Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'RootEXP',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                      color: primary,
+                    ),
+                  ),
+                  Text(
+                    'SQUAD STATUS',
+                    style: TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+              Icon(Icons.query_stats_rounded, size: 28, color: primary.withValues(alpha: 0.1)),
+            ],
+          ),
+          const SizedBox(height: 32),
+
+          // Squad Identity
+          Text(
+            squad.name.toUpperCase(),
+            style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -1),
+          ),
+          Text(
+            DateFormat('EEEE, MMMM dd, yyyy').format(DateTime.now()),
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade400),
+          ),
+
+          const SizedBox(height: 40),
+
+          // High Level Stat Card
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [primary.withValues(alpha: 0.08), primary.withValues(alpha: 0.02)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: primary.withValues(alpha: 0.1), width: 2),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'TOTAL SQUAD SPENDING',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: primary, letterSpacing: 1.5),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  format.format(totalSpending),
+                  style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: Colors.black),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 48),
+
+          // Member Standings
+          Row(
+            children: [
+              Text(
+                'MEMBER STANDINGS',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.grey.shade400, letterSpacing: 1.5),
+              ),
+              const Expanded(child: Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Divider())),
+            ],
+          ),
+          const SizedBox(height: 24),
+
+          ...members.map((member) {
+            final bal = balances.memberNetBalances[member.key] ?? 0;
+            final isCredit = bal >= 0;
+            final statusColor = isCredit ? Colors.green.shade600 : Colors.red.shade600;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor.withValues(alpha: 0.08), width: 1.5),
+              ),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: statusColor.withValues(alpha: 0.1),
+                    child: Text(
+                      member.name[0].toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                        color: statusColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          member.name + (member.isYou ? ' (You)' : ''),
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900, color: Colors.black),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(isCredit ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded, size: 10, color: statusColor),
+                            const SizedBox(width: 4),
+                            Text(
+                              isCredit ? 'PAYER' : 'CURRENTLY OWES',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: 0.5),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        format.format(bal.abs()),
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: statusColor,
+                        ),
+                      ),
+                      Text(
+                        'GROSS',
+                        style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: statusColor.withValues(alpha: 0.4)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: 48),
+
+          // Branding Footer
+          Center(
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(height: 1, width: 30, color: Colors.grey.shade200),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Generated by RootEXP',
+                      style: TextStyle(
+                        fontSize: 11, 
+                        fontWeight: FontWeight.w900, 
+                        color: Colors.grey.shade300,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Container(height: 1, width: 30, color: Colors.grey.shade200),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'SQUAD FINANCIAL ANALYTICS • VERSION 2.0',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.grey.shade200, letterSpacing: 1.5),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+        ],
       ),
     );
   }

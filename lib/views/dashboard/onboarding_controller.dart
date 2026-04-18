@@ -372,16 +372,4 @@ class OnboardingController {
       ),
     ];
   }
-
-  void _scrollTo(GlobalKey key, double alignment) {
-    final context = key.currentContext;
-    if (context != null) {
-      Scrollable.ensureVisible(
-        context,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutCubic,
-        alignment: alignment,
-      );
-    }
-  }
 }

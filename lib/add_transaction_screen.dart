@@ -348,18 +348,6 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     super.dispose();
   }
 
-  void _scrollTo(GlobalKey key) {
-    final currentContext = key.currentContext;
-    if (currentContext != null) {
-      Scrollable.ensureVisible(
-        currentContext,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOutCubic,
-        alignment: 0.5,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

@@ -7,6 +7,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:excel/excel.dart' as xl;
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/transaction_model.dart';
 import '../models/wallet.dart';
@@ -108,7 +110,7 @@ class ExportService {
     final buf = StringBuffer();
 
     // Summary header block
-    buf.writeln('ajWallet — Transaction Export');
+    buf.writeln('RootEXP — Transaction Export');
     buf.writeln(
         'Period,${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}');
     buf.writeln('Total Income,₱${_currency.format(summary.totalIncome)}');
@@ -163,8 +165,18 @@ class ExportService {
     ExportFilters filters,
     String accountName,
   ) async {
-    final fontRegular = await PdfGoogleFonts.robotoRegular();
-    final fontBold = await PdfGoogleFonts.robotoBold();
+    pw.Font fontRegular;
+    pw.Font fontBold;
+
+    try {
+      // Robust font loading with fallback
+      fontRegular = await PdfGoogleFonts.robotoRegular();
+      fontBold = await PdfGoogleFonts.robotoBold();
+    } catch (e) {
+      debugPrint('PDF regular fonts failed, falling back to Helvetica: $e');
+      fontRegular = pw.Font.helvetica();
+      fontBold = pw.Font.helveticaBold();
+    }
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(
@@ -237,7 +249,7 @@ class ExportService {
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'ajWallet',
+                'RootEXP',
                 style: pw.TextStyle(
                   fontSize: 18,
                   fontWeight: pw.FontWeight.bold,
@@ -328,31 +340,50 @@ class ExportService {
   ) {
     return pw.Expanded(
       child: pw.Container(
-        padding: const pw.EdgeInsets.all(12),
+        height: 40, // Fixed height for balance
         decoration: pw.BoxDecoration(
           color: bg,
-          borderRadius: pw.BorderRadius.circular(8),
-          border: pw.Border(left: pw.BorderSide(color: color, width: 3)),
+          borderRadius: pw.BorderRadius.circular(6),
         ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+        child: pw.Row(
           children: [
-            pw.Text(
-              label,
-              style: pw.TextStyle(
-                fontSize: 7,
-                fontWeight: pw.FontWeight.bold,
-                letterSpacing: 0.8,
-                color: PdfColors.grey600,
+            // Left indicator bar
+            pw.Container(
+              width: 3,
+              margin: const pw.EdgeInsets.symmetric(vertical: 4),
+              decoration: pw.BoxDecoration(
+                color: color,
+                borderRadius: pw.BorderRadius.circular(2),
               ),
             ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              value,
-              style: pw.TextStyle(
-                fontSize: 12,
-                fontWeight: pw.FontWeight.bold,
-                color: color,
+            pw.SizedBox(width: 8),
+            pw.Expanded(
+              child: pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 6),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  children: [
+                    pw.Text(
+                      label,
+                      style: pw.TextStyle(
+                        fontSize: 6,
+                        fontWeight: pw.FontWeight.bold,
+                        letterSpacing: 0.5,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      value,
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -511,7 +542,145 @@ class ExportService {
     );
   }
 
+  // ─── Excel export ──────────────────────────────────────────────────────────
+
+  static Future<Uint8List?> buildExcel(
+    List<Transaction> transactions,
+    Map<int, Wallet> walletMap,
+    ExportSummary summary,
+    ExportFilters filters,
+  ) async {
+    final excel = xl.Excel.createExcel();
+    
+    // --- Sheet 1: Summary ---
+    final summarySheet = excel['Summary'];
+    excel.delete('Sheet1'); // Remove default sheet
+
+    // Styles for Summary
+    final headerStyle = xl.CellStyle(
+      bold: true,
+      fontSize: 14,
+      fontColorHex: xl.ExcelColor.fromHexString('#FFFFFF'),
+      backgroundColorHex: xl.ExcelColor.fromHexString('#1B5E20'), // Theme Green
+      horizontalAlign: xl.HorizontalAlign.Center,
+    );
+
+    final subHeaderStyle = xl.CellStyle(
+      bold: true,
+      fontSize: 11,
+      fontColorHex: xl.ExcelColor.fromHexString('#757575'),
+    );
+
+    final incomeStyle = xl.CellStyle(
+      fontColorHex: xl.ExcelColor.fromHexString('#2E7D32'),
+      bold: true,
+    );
+
+    final expenseStyle = xl.CellStyle(
+      fontColorHex: xl.ExcelColor.fromHexString('#C62828'),
+      bold: true,
+    );
+
+    // Title Row
+    summarySheet.merge(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0), 
+                      xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0));
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+      ..value = xl.TextCellValue('RootEXP — Financial Summary')
+      ..cellStyle = headerStyle;
+
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1))
+      ..value = xl.TextCellValue('Period')
+      ..cellStyle = subHeaderStyle;
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1))
+      .value = xl.TextCellValue('${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}');
+
+    // Summary Stats
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3)).value = xl.TextCellValue('TOTAL INCOME');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3))
+      ..value = xl.DoubleCellValue(summary.totalIncome)
+      ..cellStyle = incomeStyle;
+
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 4)).value = xl.TextCellValue('TOTAL EXPENSES');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 4))
+      ..value = xl.DoubleCellValue(summary.totalExpenses)
+      ..cellStyle = expenseStyle;
+
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5)).value = xl.TextCellValue('NET BALANCE');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 5))
+      ..value = xl.DoubleCellValue(summary.netBalance)
+      ..cellStyle = summary.netBalance >= 0 ? incomeStyle : expenseStyle;
+
+    // --- Sheet 2: Transactions ---
+    final txSheet = excel['Transactions'];
+    
+    final txHeaderStyle = xl.CellStyle(
+      bold: true,
+      backgroundColorHex: xl.ExcelColor.fromHexString('#1B5E20'),
+      fontColorHex: xl.ExcelColor.fromHexString('#FFFFFF'),
+    );
+
+    final headers = ['Date', 'Title', 'Category', 'Type', 'Amount', 'Wallet', 'Description'];
+    for (int i = 0; i < headers.length; i++) {
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
+        ..value = xl.TextCellValue(headers[i])
+        ..cellStyle = txHeaderStyle;
+    }
+
+    for (int i = 0; i < transactions.length; i++) {
+      final tx = transactions[i];
+      final wallet = tx.walletKey != null ? walletMap[tx.walletKey] : null;
+      final rowIndex = i + 1;
+      
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = xl.TextCellValue(_dateFormat.format(tx.date));
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = xl.TextCellValue(tx.title);
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = xl.TextCellValue(tx.category);
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = xl.TextCellValue(tx.type.name);
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = xl.DoubleCellValue(tx.amount);
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = xl.TextCellValue(wallet?.name ?? '');
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = xl.TextCellValue(tx.description);
+      
+      // Zebra striping
+      if (rowIndex % 2 == 0) {
+        final stripeStyle = xl.CellStyle(backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'));
+        for (int col = 0; col < headers.length; col++) {
+          txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = stripeStyle;
+        }
+      }
+    }
+
+    return Uint8List.fromList(excel.encode()!);
+  }
+
   // ─── Save / Share ──────────────────────────────────────────────────────────
+
+  static Future<ExportStatus> saveExcel(
+    Uint8List excelBytes,
+    String fileName,
+  ) async {
+    try {
+      final file = await _writeTempFile('$fileName.xlsx', excelBytes);
+      if (Platform.isAndroid || Platform.isIOS) {
+        final result = await Share.shareXFiles(
+          [XFile(file.path, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
+          subject: fileName,
+        );
+        return result.status == ShareResultStatus.dismissed ? ExportStatus.cancelled : ExportStatus.success;
+      } else {
+        // Desktop (Windows): Launch the file to open it in Excel
+        final uri = Uri.file(file.path);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+          return ExportStatus.success;
+        } else {
+          debugPrint('Excel saved to but could not launch: ${file.path}');
+          return ExportStatus.success;
+        }
+      }
+    } catch (e) {
+      debugPrint('Excel export error: $e');
+      return ExportStatus.failed;
+    }
+  }
 
   static Future<ExportStatus> saveCsv(
     String csvContent,
@@ -531,8 +700,13 @@ class ExportService {
         }
         return ExportStatus.success;
       } else {
-        // Desktop: open the file location
-        debugPrint('CSV saved to: ${file.path}');
+        // Desktop (Windows): Launch the file to open it in NotePad/Excel
+        final uri = Uri.file(file.path);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri);
+        } else {
+          debugPrint('CSV saved to: ${file.path}');
+        }
         return ExportStatus.success;
       }
     } catch (e) {
@@ -550,12 +724,16 @@ class ExportService {
         final ok = await Printing.sharePdf(bytes: pdfBytes, filename: '$fileName.pdf');
         return ok ? ExportStatus.success : ExportStatus.cancelled;
       } else {
-        final file = await _writeTempFile('$fileName.pdf', pdfBytes);
-        debugPrint('PDF saved to: ${file.path}');
-        return ExportStatus.success;
+        // On Windows/Desktop, Printing.layoutPdf shows the native print preview dialog
+        // which includes "Save as PDF" and physical printer selection.
+        final ok = await Printing.layoutPdf(
+          onLayout: (format) async => pdfBytes,
+          name: fileName,
+        );
+        return ok ? ExportStatus.success : ExportStatus.cancelled;
       }
     } catch (e) {
-      debugPrint('PDF export error: $e');
+      debugPrint('PDF export error details: $e');
       return ExportStatus.failed;
     }
   }
@@ -571,6 +749,6 @@ class ExportService {
   static String buildFileName(ExportFilters filters, String suffix) {
     final s = DateFormat('yyyyMMdd').format(filters.startDate);
     final e = DateFormat('yyyyMMdd').format(filters.endDate);
-    return 'ajwallet_${s}_$e$suffix';
+    return 'rootexp_${s}_$e$suffix';
   }
 }

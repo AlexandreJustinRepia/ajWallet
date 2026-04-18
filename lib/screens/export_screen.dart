@@ -29,6 +29,7 @@ class _ExportScreenState extends State<ExportScreen>
   // ── State ─────────────────────────────────────────────────────────────────
   bool _isExportingCsv = false;
   bool _isExportingPdf = false;
+  bool _isExportingExcel = false;
 
   // ── Data ──────────────────────────────────────────────────────────────────
   late List<Transaction> _allTransactions;
@@ -189,11 +190,42 @@ class _ExportScreenState extends State<ExportScreen>
         } else if (status == ExportStatus.cancelled) {
           _showSnack('PDF export cancelled', false);
         } else {
-          _showSnack('PDF export failed.', false);
+          _showSnack('PDF export failed. Check internet or permissions.', false);
         }
       }
+    } catch (e) {
+      debugPrint('UI PDF Error: $e');
+      if (mounted) _showSnack('Failed to generate PDF.', false);
     } finally {
       if (mounted) setState(() => _isExportingPdf = false);
+    }
+  }
+
+  Future<void> _exportExcel() async {
+    final filtered = _filtered;
+    if (filtered.isEmpty) return;
+    setState(() => _isExportingExcel = true);
+    try {
+      final summary = ExportService.buildSummary(filtered);
+      final bytes = await ExportService.buildExcel(filtered, _walletMap, summary, _filters);
+      if (bytes == null) throw Exception('Failed to encode Excel');
+      
+      final fileName = ExportService.buildFileName(_filters, '');
+      final status = await ExportService.saveExcel(bytes, fileName);
+      if (mounted) {
+        if (status == ExportStatus.success) {
+          _showSnack('Excel exported successfully!', true);
+        } else if (status == ExportStatus.cancelled) {
+          _showSnack('Excel export cancelled', false);
+        } else {
+          _showSnack('Excel export failed.', false);
+        }
+      }
+    } catch (e) {
+      debugPrint('UI Excel Error: $e');
+      if (mounted) _showSnack('Failed to generate Excel file.', false);
+    } finally {
+      if (mounted) setState(() => _isExportingExcel = false);
     }
   }
 
@@ -327,10 +359,13 @@ class _ExportScreenState extends State<ExportScreen>
                 isEmpty: isEmpty,
                 isExportingCsv: _isExportingCsv,
                 isExportingPdf: _isExportingPdf,
+                isExportingExcel: _isExportingExcel,
                 onCsv: _exportCsv,
                 onPdf: _exportPdf,
+                onExcel: _exportExcel,
                 theme: theme,
               ),
+              const SizedBox(height: 32),
             ],
           ),
         ),
@@ -798,16 +833,20 @@ class _ExportButtons extends StatelessWidget {
   final bool isEmpty;
   final bool isExportingCsv;
   final bool isExportingPdf;
+  final bool isExportingExcel;
   final VoidCallback onCsv;
   final VoidCallback onPdf;
+  final VoidCallback onExcel;
   final ThemeData theme;
 
   const _ExportButtons({
     required this.isEmpty,
     required this.isExportingCsv,
     required this.isExportingPdf,
+    required this.isExportingExcel,
     required this.onCsv,
     required this.onPdf,
+    required this.onExcel,
     required this.theme,
   });
 
@@ -815,13 +854,25 @@ class _ExportButtons extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // Excel Button (Premium)
+        _ExportButton(
+          label: 'Export to Excel (.xlsx)',
+          subtitle: 'Professional multi-sheet summary & data',
+          icon: Icons.grid_on_rounded,
+          isLoading: isExportingExcel,
+          isDisabled: isEmpty || isExportingCsv || isExportingPdf,
+          color: const Color(0xFF1B5E20), // Botanical Green
+          onTap: onExcel,
+          theme: theme,
+        ),
+        const SizedBox(height: 12),
         // CSV Button
         _ExportButton(
           label: 'Export as CSV',
-          subtitle: 'Open in Excel, Google Sheets, etc.',
+          subtitle: 'Simple text format for other apps',
           icon: Icons.table_chart_rounded,
           isLoading: isExportingCsv,
-          isDisabled: isEmpty || isExportingPdf,
+          isDisabled: isEmpty || isExportingPdf || isExportingExcel,
           color: const Color(0xFF1565C0),
           onTap: onCsv,
           theme: theme,
@@ -829,11 +880,11 @@ class _ExportButtons extends StatelessWidget {
         const SizedBox(height: 12),
         // PDF Button
         _ExportButton(
-          label: 'Export as PDF',
-          subtitle: 'Clean formatted report with charts',
+          label: 'Export as PDF Report',
+          subtitle: 'Clean botanical report for printing',
           icon: Icons.picture_as_pdf_rounded,
           isLoading: isExportingPdf,
-          isDisabled: isEmpty || isExportingCsv,
+          isDisabled: isEmpty || isExportingCsv || isExportingExcel,
           color: const Color(0xFFC62828),
           onTap: onPdf,
           theme: theme,

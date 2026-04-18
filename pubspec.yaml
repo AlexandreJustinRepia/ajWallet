@@ -33,6 +33,8 @@ dependencies:
   printing: ^5.13.1
   share_plus: ^10.0.0
   excel: ^4.0.0
+  quick_actions: ^1.0.9
+  home_widget: ^0.9.1
 
 dev_dependencies:
   flutter_test:

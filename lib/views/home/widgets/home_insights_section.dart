@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
+import '../../../screens/analytics_dashboard_screen.dart';
 import '../../../services/financial_insights_service.dart';
 import '../../insight_card.dart';
 
 class HomeInsightsSection extends StatelessWidget {
   final List<Insight> insights;
+  final DashboardAnalytics? analytics;
 
-  const HomeInsightsSection({super.key, required this.insights});
+  const HomeInsightsSection({
+    super.key,
+    required this.insights,
+    this.analytics,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,10 +41,35 @@ class HomeInsightsSection extends StatelessWidget {
             color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
           ),
         ),
-        Icon(
-          Icons.auto_awesome_rounded,
-          size: 14,
-          color: theme.colorScheme.tertiary,
+        GestureDetector(
+          onTap: () {
+            if (analytics != null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AnalyticsDashboardScreen(analytics: analytics!),
+                ),
+              );
+            }
+          },
+          child: Row(
+            children: [
+              Text(
+                'SEE ALL',
+                style: theme.textTheme.labelLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward_ios_rounded,
+                size: 10,
+                color: theme.colorScheme.primary,
+              ),
+            ],
+          ),
         ),
       ],
     );

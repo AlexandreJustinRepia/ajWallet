@@ -17,7 +17,8 @@ import 'widgets/dashboard_bottom_nav.dart';
 import 'widgets/dashboard_update_banner.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key});
+  final int initialIndex;
+  const DashboardScreen({super.key, this.initialIndex = 0});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -31,7 +32,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _viewModel = DashboardViewModel();
+    _viewModel = DashboardViewModel(initialIndex: widget.initialIndex);
     _keys = DashboardKeys();
     _onboardingController = OnboardingController(
       viewModel: _viewModel,

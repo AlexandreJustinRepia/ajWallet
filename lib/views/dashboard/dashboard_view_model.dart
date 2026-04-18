@@ -12,6 +12,8 @@ class DashboardViewModel extends ChangeNotifier {
   int _activityTutorialTabIndex = 0;
   bool _hasShownEditTutorial = false;
 
+  DashboardViewModel({int initialIndex = 0}) : _selectedIndex = initialIndex;
+
   int get selectedIndex => _selectedIndex;
   bool get showTutorial => _showTutorial;
   DashboardOverlayState get overlayState => _overlayState;

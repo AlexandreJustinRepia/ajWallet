@@ -4,6 +4,7 @@ import '../../services/database_service.dart';
 import '../../services/session_service.dart';
 import '../../services/financial_insights_service.dart';
 import '../../services/gamification_service.dart';
+import '../../services/widget_sync_service.dart';
 import '../../models/wallet.dart';
 import '../../models/transaction_model.dart';
 
@@ -14,6 +15,7 @@ class HomeViewModel extends ChangeNotifier {
   List<Wallet> _wallets = [];
   double _totalBalance = 0;
   List<Insight> _insights = [];
+  DashboardAnalytics? _analytics;
   GamificationProfile? _gamificationProfile;
   
   bool _isNetWorthMode = false;
@@ -48,6 +50,7 @@ class HomeViewModel extends ChangeNotifier {
   List<Wallet> get wallets => isTutorialActive ? _tutorialWallets : _wallets;
   double get totalBalance => _totalBalance;
   List<Insight> get insights => _insights;
+  DashboardAnalytics? get analytics => _analytics;
   GamificationProfile get gamificationProfile => _gamificationProfile ?? GamificationService.generateGlobalProfile();
   
   bool get isNetWorthMode => _isNetWorthMode;
@@ -96,10 +99,23 @@ class HomeViewModel extends ChangeNotifier {
       _triggerGlow();
     }
     _prevBalance = _totalBalance;
+
+    // Sync with Home Widget
+    if (!isTutorialActive) {
+      final account = SessionService.activeAccount;
+      WidgetSyncService.sync(
+        balance: _totalBalance,
+        accountName: account?.name ?? 'Account',
+      );
+    }
   }
 
   void _generateInsights() {
     _insights = FinancialInsightsService.generateInsights(
+      transactions,
+      _totalBalance,
+    );
+    _analytics = FinancialInsightsService.getDashboardAnalytics(
       transactions,
       _totalBalance,
     );

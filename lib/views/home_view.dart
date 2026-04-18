@@ -115,7 +115,10 @@ class _HomeViewState extends State<HomeView> {
               const SizedBox(height: 32),
 
               // Insights
-              HomeInsightsSection(insights: _viewModel.insights),
+              HomeInsightsSection(
+                insights: _viewModel.insights,
+                analytics: _viewModel.analytics,
+              ),
               const SizedBox(height: 32),
 
               // Recent Activity

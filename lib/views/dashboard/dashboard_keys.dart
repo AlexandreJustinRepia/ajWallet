@@ -48,4 +48,11 @@ class DashboardKeys {
   final GlobalKey fakeDetailsEditIconKey = GlobalKey();
   final GlobalKey fakeDetailsDeleteIconKey = GlobalKey();
   final GlobalKey fakeDeleteConfirmKey = GlobalKey();
+  // Analytics Dashboard Keys
+  final GlobalKey analyticsBurnRateKey = GlobalKey();
+  final GlobalKey analyticsSavingsRateKey = GlobalKey();
+  final GlobalKey analyticsPieChartKey = GlobalKey();
+  final GlobalKey analyticsTrendBarKey = GlobalKey();
+  final GlobalKey analyticsNotableHabitsKey = GlobalKey();
+  final GlobalKey analyticsStrategicInsightsKey = GlobalKey();
 }

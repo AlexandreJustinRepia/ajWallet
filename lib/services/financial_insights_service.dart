@@ -16,7 +16,122 @@ class Insight {
   });
 }
 
+class DashboardAnalytics {
+  final double dailyBurn;
+  final double monthlyComparisonPercent; // MoM trend
+  final double savingsRate;
+  final Map<String, double> categoryPercentages;
+  final List<CategoryTrend> extremeTrends;
+  final List<Insight> smartInsights;
+
+  DashboardAnalytics({
+    required this.dailyBurn,
+    required this.monthlyComparisonPercent,
+    required this.savingsRate,
+    required this.categoryPercentages,
+    required this.extremeTrends,
+    required this.smartInsights,
+  });
+}
+
+class CategoryTrend {
+  final String category;
+  final double changePercent;
+  final bool isIncrease;
+
+  CategoryTrend({
+    required this.category,
+    required this.changePercent,
+    required this.isIncrease,
+  });
+}
+
 class FinancialInsightsService {
+  static DashboardAnalytics getDashboardAnalytics(List<Transaction> transactions, double balance) {
+    final now = DateTime.now();
+    final firstOfMonth = DateTime(now.year, now.month, 1);
+    final firstOfLastMonth = DateTime(now.year, now.month - 1, 1);
+    final endOfLastMonthMTD = DateTime(now.year, now.month - 1, now.day);
+
+    final expenses = transactions.where((t) => t.type == TransactionType.expense).toList();
+    final income = transactions.where((t) => t.type == TransactionType.income).toList();
+
+    // 1. Daily Burn
+    final dailyBurn = getDailyBurn(expenses);
+
+    // 2. Monthly Comparison (MTD vs Prev MTD)
+    final thisMonthTotal = expenses.where((e) => e.date.isAfter(firstOfMonth.subtract(const Duration(seconds: 1)))).fold(0.0, (s, e) => s + e.amount);
+    final lastMonthMTDTotal = expenses.where((e) => e.date.isAfter(firstOfLastMonth.subtract(const Duration(seconds: 1))) && e.date.isBefore(endOfLastMonthMTD)).fold(0.0, (s, e) => s + e.amount);
+    final monthlyComparison = lastMonthMTDTotal > 0 ? ((thisMonthTotal - lastMonthMTDTotal) / lastMonthMTDTotal) * 100 : 0.0;
+
+    // 3. Savings Rate (Last 30 days)
+    final last30Days = now.subtract(const Duration(days: 30));
+    final income30 = income.where((e) => e.date.isAfter(last30Days)).fold(0.0, (s, e) => s + e.amount);
+    final expense30 = expenses.where((e) => e.date.isAfter(last30Days)).fold(0.0, (s, e) => s + e.amount);
+    final savingsRate = income30 > 0 ? ((income30 - expense30) / income30) : 0.0;
+
+    // 4. Category Percentages
+    final catData = getCategoryData(expenses);
+    final totalExp = catData.values.fold(0.0, (s, v) => s + v);
+    final Map<String, double> percentages = {};
+    if (totalExp > 0) {
+      catData.forEach((key, value) {
+        percentages[key] = (value / totalExp) * 100;
+      });
+    }
+
+    // 5. Extreme Trends
+    final trends = _calculateExtremeTrends(expenses, firstOfMonth, firstOfLastMonth, endOfLastMonthMTD);
+
+    // 6. Smart Insights
+    final smartInsights = generateInsights(transactions, balance);
+
+    return DashboardAnalytics(
+      dailyBurn: dailyBurn,
+      monthlyComparisonPercent: monthlyComparison,
+      savingsRate: savingsRate,
+      categoryPercentages: percentages,
+      extremeTrends: trends,
+      smartInsights: smartInsights,
+    );
+  }
+
+  static List<CategoryTrend> _calculateExtremeTrends(
+    List<Transaction> expenses, 
+    DateTime thisMonth, 
+    DateTime lastMonthStart, 
+    DateTime lastMonthMTDEnd
+  ) {
+    final trends = <CategoryTrend>[];
+    final thisMonthCats = <String, double>{};
+    final lastMonthCats = <String, double>{};
+
+    for (var e in expenses) {
+      if (e.date.isAfter(thisMonth.subtract(const Duration(seconds: 1)))) {
+        thisMonthCats[e.category] = (thisMonthCats[e.category] ?? 0) + e.amount;
+      } else if (e.date.isAfter(lastMonthStart.subtract(const Duration(seconds: 1))) && e.date.isBefore(lastMonthMTDEnd)) {
+        lastMonthCats[e.category] = (lastMonthCats[e.category] ?? 0) + e.amount;
+      }
+    }
+
+    thisMonthCats.forEach((cat, amount) {
+      final prevAmount = lastMonthCats[cat] ?? 0;
+      if (prevAmount > 0) {
+        final diff = ((amount - prevAmount) / prevAmount) * 100;
+        if (diff.abs() > 15) { // Only record significant changes
+          trends.add(CategoryTrend(
+            category: cat,
+            changePercent: diff.abs(),
+            isIncrease: diff > 0,
+          ));
+        }
+      }
+    });
+
+    trends.sort((a, b) => b.changePercent.compareTo(a.changePercent));
+    return trends.take(3).toList();
+  }
+
   static List<Insight> generateInsights(List<Transaction> transactions, double currentBalance) {
     if (transactions.isEmpty) return [];
 

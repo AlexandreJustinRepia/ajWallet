@@ -5,7 +5,10 @@ import 'services/session_service.dart';
 import 'services/update_service.dart';
 import 'services/achievement_service.dart';
 import 'services/user_profile_service.dart';
+import 'services/quick_action_service.dart';
 import 'splash_screen.dart';
+import 'views/dashboard/dashboard_view.dart';
+import 'add_transaction_screen.dart';
 import 'widgets/security_wrapper.dart';
 
 void main() async {
@@ -32,8 +35,24 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize Quick Actions
+    QuickActionService.init((type) {
+      ShortcutHandler.handle(type, _navigatorKey);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,12 +61,23 @@ class MyApp extends StatelessWidget {
       builder: (context, themeState, _) {
         return MaterialApp(
           title: 'RootEXP',
+          navigatorKey: _navigatorKey,
           debugShowCheckedModeBanner: false,
           theme: themeState.lightTheme.toThemeData(),
           darkTheme: themeState.darkTheme.toThemeData(),
           themeMode: themeState.themeMode,
           builder: (context, child) => SecurityWrapper(child: child!),
           home: const SplashScreen(),
+          routes: {
+            '/dashboard': (context) {
+              final index = ModalRoute.of(context)?.settings.arguments as int? ?? 0;
+              return DashboardScreen(initialIndex: index);
+            },
+            '/add_transaction': (context) {
+              final accountKey = SessionService.activeAccount?.key as int? ?? 0;
+              return AddTransactionScreen(accountKey: accountKey);
+            },
+          },
         );
       },
     );

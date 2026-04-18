@@ -53,6 +53,10 @@ class _ActivityViewState extends State<ActivityView>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
+    _tabController.addListener(() {
+      if (!mounted) return;
+      setState(() {}); // Rebuild to hide/show search & filters based on index
+    });
     _viewModel = ActivityViewModel(isTutorialActive: widget.isTutorialActive);
   }
 
@@ -144,67 +148,68 @@ class _ActivityViewState extends State<ActivityView>
               ),
             ),
 
-            // ── Search Bar ─────────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Container(
-                key: widget.searchBarKey,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: theme.cardColor,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: theme.dividerColor, width: 0.5),
-                ),
-                child: TextField(
-                  controller: _searchController,
-                  onChanged: (val) => _viewModel.searchQuery = val,
-                  decoration: InputDecoration(
-                    hintText: 'Search transactions...',
-                    hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4), fontSize: 13),
-                    prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
-                    border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+            // ── Search Bar & Filter Chips (Hidden on Squads Tab) ────────────────────────
+            if (_tabController.index != 2) ...[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Container(
+                  key: widget.searchBarKey,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: theme.dividerColor, width: 0.5),
                   ),
-                  style: const TextStyle(fontSize: 13),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (val) => _viewModel.searchQuery = val,
+                    decoration: InputDecoration(
+                      hintText: 'Search transactions...',
+                      hintStyle: TextStyle(color: theme.textTheme.bodyMedium?.color?.withValues(alpha:0.4), fontSize: 13),
+                      prefixIcon: Icon(Icons.search, size: 20, color: theme.dividerColor),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ),
               ),
-            ),
 
-            // ── Filter Chips (Shared) ──────────────────────────────────────────
-            Padding(
-              key: widget.filterChipsKey,
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  children: [
-                    FilterTab(
-                      label: 'All',
-                      isSelected: _viewModel.filter == null,
-                      onTap: () => _viewModel.filter = null,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterTab(
-                      label: 'Income',
-                      isSelected: _viewModel.filter == TransactionType.income,
-                      onTap: () => _viewModel.filter = TransactionType.income,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterTab(
-                      label: 'Expense',
-                      isSelected: _viewModel.filter == TransactionType.expense,
-                      onTap: () => _viewModel.filter = TransactionType.expense,
-                    ),
-                    const SizedBox(width: 8),
-                    FilterTab(
-                      label: 'Transfer',
-                      isSelected: _viewModel.filter == TransactionType.transfer,
-                      onTap: () => _viewModel.filter = TransactionType.transfer,
-                    ),
-                  ],
+              Padding(
+                key: widget.filterChipsKey,
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      FilterTab(
+                        label: 'All',
+                        isSelected: _viewModel.filter == null,
+                        onTap: () => _viewModel.filter = null,
+                      ),
+                      const SizedBox(width: 8),
+                      FilterTab(
+                        label: 'Income',
+                        isSelected: _viewModel.filter == TransactionType.income,
+                        onTap: () => _viewModel.filter = TransactionType.income,
+                      ),
+                      const SizedBox(width: 8),
+                      FilterTab(
+                        label: 'Expense',
+                        isSelected: _viewModel.filter == TransactionType.expense,
+                        onTap: () => _viewModel.filter = TransactionType.expense,
+                      ),
+                      const SizedBox(width: 8),
+                      FilterTab(
+                        label: 'Transfer',
+                        isSelected: _viewModel.filter == TransactionType.transfer,
+                        onTap: () => _viewModel.filter = TransactionType.transfer,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ],
 
             // ── Content ────────────────────────────────────────────────────────
             Expanded(

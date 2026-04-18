@@ -13,6 +13,7 @@ import 'dart:io';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import '../../widgets/onboarding_overlay.dart';
 
 class SquadDetailScreen extends StatefulWidget {
   final Squad squad;
@@ -27,7 +28,13 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
   late TabController _tabController;
   final GlobalKey _summaryKey = GlobalKey();
   final GlobalKey _receiptKey = GlobalKey();
+  final GlobalKey _helpKey = GlobalKey();
+  final GlobalKey _settleKey = GlobalKey();
+  final GlobalKey _splitKey = GlobalKey();
+  final GlobalKey _activityTabKey = GlobalKey();
+  
   bool _isSharingSummary = false;
+  bool _isTutorialActive = false;
   SquadTransaction? _txToCapture; 
 
   @override
@@ -82,7 +89,31 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           ),
 
         // MAIN APP UI
-        Scaffold(
+        OnboardingOverlay(
+          visible: _isTutorialActive,
+          onFinish: () => setState(() => _isTutorialActive = false),
+          steps: [
+            OnboardingStep(
+              title: 'Welcome to Squad 2.0',
+              description: 'Manage group expenses and share premium RootEXP picture receipts with ease.',
+            ),
+            OnboardingStep(
+              targetKey: _helpKey,
+              title: 'Help & Tutorials',
+              description: 'Tap this icon anytime to replay this guide and discover new features.',
+            ),
+            OnboardingStep(
+              targetKey: _summaryKey,
+              title: 'Squad Status Report',
+              description: 'Capture and share a high-contrast visual of the whole squad\'s financial standing.',
+            ),
+            OnboardingStep(
+              targetKey: _splitKey,
+              title: 'Quick Split',
+              description: 'Add new group expenses and choose how to divide the cost among members.',
+            ),
+          ],
+          child: Scaffold(
           backgroundColor: theme.scaffoldBackgroundColor,
       body: NestedScrollView(
         headerSliverBuilder: (context, innerBoxIsScrolled) {
@@ -147,10 +178,16 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                 if (_isSharingSummary)
                   const Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
                 if (!_isSharingSummary)
-                  IconButton(
-                    icon: const Icon(Icons.share_outlined),
-                    onPressed: () => _shareSquadSummaryImage(),
-                  ),
+                IconButton(
+                  key: _helpKey,
+                  icon: const Icon(Icons.help_outline_rounded),
+                  onPressed: () => setState(() => _isTutorialActive = true),
+                ),
+                IconButton(
+                  key: _summaryKey,
+                  icon: const Icon(Icons.share_outlined),
+                  onPressed: () => _shareSquadSummaryImage(),
+                ),
                 IconButton(
                   icon: const Icon(Icons.delete_outline_rounded),
                   color: theme.colorScheme.error,
@@ -180,6 +217,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           controller: _tabController,
           children: [
             _ActivityTab(
+              key: _activityTabKey,
               squad: widget.squad,
               onRefresh: _refresh,
               onShare: _shareActivityImage,
@@ -192,6 +230,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         mainAxisSize: MainAxisSize.min,
         children: [
           FloatingActionButton.extended(
+            key: _settleKey,
             heroTag: 'settle',
             onPressed: () async {
               final result = await Navigator.push(
@@ -209,6 +248,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           ),
           const SizedBox(height: 12),
           FloatingActionButton.extended(
+            key: _splitKey,
             heroTag: 'split',
             onPressed: () async {
               final accountKey = SessionService.activeAccount?.key as int?;
@@ -230,6 +270,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         ],
       ),
     ),
+  ),
   ],
 );
   }
@@ -383,6 +424,7 @@ class _ActivityTab extends StatelessWidget {
   final Function(SquadTransaction) onShare;
 
   const _ActivityTab({
+    super.key,
     required this.squad,
     required this.onRefresh,
     required this.onShare,

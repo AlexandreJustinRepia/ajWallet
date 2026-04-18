@@ -459,6 +459,7 @@ class _BalancesTab extends StatelessWidget {
                 member: member, 
                 allTransactions: txs,
                 netBalance: balance,
+                onRefresh: onRefresh,
               ),
             );
           },
@@ -547,11 +548,13 @@ class _MemberDetailSheet extends StatelessWidget {
   final SquadMember member;
   final List<SquadTransaction> allTransactions;
   final double netBalance;
-
+  final VoidCallback onRefresh;
+ 
   const _MemberDetailSheet({
     required this.member,
     required this.allTransactions,
     required this.netBalance,
+    required this.onRefresh,
   });
 
   @override
@@ -617,6 +620,25 @@ class _MemberDetailSheet extends StatelessWidget {
               ),
             ],
           ),
+
+          const SizedBox(height: 32),
+          
+          if (!member.isYou && netBalance != 0)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _handleSettleUp(context),
+                icon: const Icon(Icons.handshake_rounded, size: 18),
+                label: Text(netBalance < 0 ? 'RECORD PAYMENT RECEIVED' : 'RECORD SETTLEMENT PAYOUT'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.primaryColor,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  elevation: 0,
+                ),
+              ),
+            ),
 
           const SizedBox(height: 32),
           Text(
@@ -714,6 +736,83 @@ class _MemberDetailSheet extends StatelessWidget {
       ),
     );
   }
+
+  void _handleSettleUp(BuildContext context) async {
+    final theme = Theme.of(context);
+    final wallets = DatabaseService.getAllWallets();
+    int? selectedWalletKey;
+    final amountController = TextEditingController(text: netBalance.abs().toStringAsFixed(0));
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(netBalance < 0 ? 'Member Settling Up' : 'Paying Member Back'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: 'Amount (₱)', hintText: '0.00'),
+              ),
+              const SizedBox(height: 24),
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text('RECORD TO WALLET (OPTIONAL)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                initialValue: selectedWalletKey,
+                decoration: InputDecoration(
+                  hintText: 'Select Wallet',
+                  fillColor: theme.dividerColor.withValues(alpha: 0.05),
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: wallets.map((w) => DropdownMenuItem(
+                  value: w.key as int,
+                  child: Text(w.name),
+                )).toList(),
+                onChanged: (val) => setDialogState(() => selectedWalletKey = val),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Record', style: TextStyle(fontWeight: FontWeight.bold))),
+          ],
+        ),
+      ),
+    );
+
+    if (confirmed == true) {
+      final amt = double.tryParse(amountController.text) ?? 0;
+      if (amt <= 0) return;
+
+      // Find "You" to be the other side of the settlement
+      final members = DatabaseService.getSquadMembers(member.squadKey);
+      final you = members.firstWhere((m) => m.isYou);
+
+      final tx = SquadTransaction(
+        title: netBalance < 0 ? 'Settle Up from ${member.name}' : 'Paid back ${member.name}',
+        amount: amt,
+        date: DateTime.now(),
+        squadKey: member.squadKey,
+        payerMemberKey: netBalance < 0 ? member.key as int : you.key as int,
+        splitType: SplitType.equal,
+        memberSplits: {netBalance < 0 ? you.key as int : member.key as int: 0},
+        isSettlement: true,
+        walletKey: selectedWalletKey,
+      );
+
+      await DatabaseService.saveSquadTransaction(tx);
+      onRefresh();
+      if (context.mounted) {
+        Navigator.pop(context); // Close sheet
+      }
+    }
+  }
 }
 
 class _SliverTabDelegate extends SliverPersistentHeaderDelegate {
@@ -791,26 +890,56 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
         .fold(0.0, (a, b) => a + b);
   }
 
-  void _markAsPaid(SquadMember member, double share) async {
+  void _markAsPaid(SquadMember member, double remainingAmount) async {
+    if (remainingAmount <= 0.01) return;
+
+    int? selectedWalletKey;
+    final wallets = DatabaseService.getAllWallets();
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Record Payment?'),
-        content: Text('Record ₱${share.toStringAsFixed(0)} payment from ${member.name} for this bill?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Record Remaining Payment?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Record ₱${remainingAmount.toStringAsFixed(0)} payment from ${member.name} for this bill?'),
+              const SizedBox(height: 20),
+              const Text('RECORD TO WALLET (OPTIONAL)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+              const SizedBox(height: 8),
+              DropdownButtonFormField<int>(
+                initialValue: selectedWalletKey,
+                decoration: InputDecoration(
+                  hintText: 'Select Wallet',
+                  fillColor: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                  filled: true,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+                items: wallets.map((w) => DropdownMenuItem(
+                  value: w.key as int,
+                  child: Text(w.name),
+                )).toList(),
+                onChanged: (val) => setDialogState(() => selectedWalletKey = val),
+              ),
+            ],
           ),
-        ],
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
 
     if (confirmed == true) {
       final payment = SquadTransaction(
         title: 'Payment for ${widget.tx.title}',
-        amount: share,
+        amount: remainingAmount,
         date: DateTime.now(),
         squadKey: widget.tx.squadKey,
         payerMemberKey: member.key as int,
@@ -818,10 +947,13 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
         memberSplits: {widget.tx.payerMemberKey: 0}, // Move credit to the original bill payer
         isSettlement: true,
         relatedBillKey: widget.tx.key as int,
+        walletKey: selectedWalletKey,
       );
 
       await DatabaseService.saveSquadTransaction(payment);
-      widget.onRefresh();
+      if (mounted) {
+        widget.onRefresh();
+      }
     }
   }
 
@@ -1034,7 +1166,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                                 else
                                   IconButton(
                                     icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.blue, size: 20),
-                                    onPressed: () => _markAsPaid(member, share),
+                                    onPressed: () => _markAsPaid(member, (share - totalSettledForBill).clamp(0.0, double.infinity)),
                                     padding: EdgeInsets.zero,
                                     constraints: const BoxConstraints(),
                                   ),

@@ -118,25 +118,39 @@ class SquadService {
       
       if (tx.splitType == SplitType.equal) {
         final share = tx.amount / tx.memberSplits.length;
-        for (var ower in tx.memberSplits.keys) {
-          if (ower != payer) {
-            debts[ower]![payer] = (debts[ower]![payer] ?? 0) + share;
+        for (var recipient in tx.memberSplits.keys) {
+          if (recipient != payer) {
+            if (tx.isSettlement) {
+              // Payer is giving money back to recipient
+              debts[payer]![recipient] = (debts[payer]![recipient] ?? 0) - share;
+            } else {
+              // Regular bill: ower owes share to payer
+              debts[recipient]![payer] = (debts[recipient]![payer] ?? 0) + share;
+            }
           }
         }
       } else if (tx.splitType == SplitType.amount) {
         for (var entry in tx.memberSplits.entries) {
-          final ower = entry.key;
+          final recipient = entry.key;
           final share = entry.value;
-          if (ower != payer) {
-            debts[ower]![payer] = (debts[ower]![payer] ?? 0) + share;
+          if (recipient != payer) {
+            if (tx.isSettlement) {
+              debts[payer]![recipient] = (debts[payer]![recipient] ?? 0) - share;
+            } else {
+              debts[recipient]![payer] = (debts[recipient]![payer] ?? 0) + share;
+            }
           }
         }
       } else if (tx.splitType == SplitType.percentage) {
         for (var entry in tx.memberSplits.entries) {
-          final ower = entry.key;
+          final recipient = entry.key;
           final share = (entry.value / 100) * tx.amount;
-          if (ower != payer) {
-            debts[ower]![payer] = (debts[ower]![payer] ?? 0) + share;
+          if (recipient != payer) {
+            if (tx.isSettlement) {
+              debts[payer]![recipient] = (debts[payer]![recipient] ?? 0) - share;
+            } else {
+              debts[recipient]![payer] = (debts[recipient]![payer] ?? 0) + share;
+            }
           }
         }
       }

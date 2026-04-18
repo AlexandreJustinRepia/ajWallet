@@ -559,27 +559,39 @@ class ExportService {
     // Styles for Summary
     final headerStyle = xl.CellStyle(
       bold: true,
-      fontSize: 14,
+      fontSize: 16,
       fontColorHex: xl.ExcelColor.fromHexString('#FFFFFF'),
       backgroundColorHex: xl.ExcelColor.fromHexString('#1B5E20'), // Theme Green
       horizontalAlign: xl.HorizontalAlign.Center,
+      verticalAlign: xl.VerticalAlign.Center,
     );
 
     final subHeaderStyle = xl.CellStyle(
       bold: true,
-      fontSize: 11,
+      fontSize: 12,
       fontColorHex: xl.ExcelColor.fromHexString('#757575'),
     );
 
     final incomeStyle = xl.CellStyle(
       fontColorHex: xl.ExcelColor.fromHexString('#2E7D32'),
       bold: true,
+      horizontalAlign: xl.HorizontalAlign.Right,
     );
 
     final expenseStyle = xl.CellStyle(
       fontColorHex: xl.ExcelColor.fromHexString('#C62828'),
       bold: true,
+      horizontalAlign: xl.HorizontalAlign.Right,
     );
+
+    final labelStyle = xl.CellStyle(
+      bold: true,
+      horizontalAlign: xl.HorizontalAlign.Left,
+    );
+
+    // Set Column Widths for Summary
+    summarySheet.setColumnWidth(0, 25.0);
+    summarySheet.setColumnWidth(1, 40.0);
 
     // Title Row
     summarySheet.merge(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0), 
@@ -595,29 +607,54 @@ class ExportService {
       .value = xl.TextCellValue('${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}');
 
     // Summary Stats
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3)).value = xl.TextCellValue('TOTAL INCOME');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3))
+      ..value = xl.TextCellValue('TOTAL INCOME')
+      ..cellStyle = labelStyle;
     summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3))
       ..value = xl.DoubleCellValue(summary.totalIncome)
       ..cellStyle = incomeStyle;
 
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 4)).value = xl.TextCellValue('TOTAL EXPENSES');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 4))
+      ..value = xl.TextCellValue('TOTAL EXPENSES')
+      ..cellStyle = labelStyle;
     summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 4))
       ..value = xl.DoubleCellValue(summary.totalExpenses)
       ..cellStyle = expenseStyle;
 
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5)).value = xl.TextCellValue('NET BALANCE');
+    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5))
+      ..value = xl.TextCellValue('NET BALANCE')
+      ..cellStyle = labelStyle;
+    
+    final finalNetStyle = xl.CellStyle(
+      bold: true,
+      horizontalAlign: xl.HorizontalAlign.Right,
+      fontColorHex: xl.ExcelColor.fromHexString(summary.netBalance >= 0 ? '#2E7D32' : '#C62828'),
+    );
+        
     summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 5))
       ..value = xl.DoubleCellValue(summary.netBalance)
-      ..cellStyle = summary.netBalance >= 0 ? incomeStyle : expenseStyle;
+      ..cellStyle = finalNetStyle;
 
     // --- Sheet 2: Transactions ---
     final txSheet = excel['Transactions'];
     
     final txHeaderStyle = xl.CellStyle(
       bold: true,
+      fontSize: 12,
       backgroundColorHex: xl.ExcelColor.fromHexString('#1B5E20'),
       fontColorHex: xl.ExcelColor.fromHexString('#FFFFFF'),
+      horizontalAlign: xl.HorizontalAlign.Center,
+      verticalAlign: xl.VerticalAlign.Center,
     );
+
+    // Set Column Widths for Transactions
+    txSheet.setColumnWidth(0, 15.0); // Date
+    txSheet.setColumnWidth(1, 30.0); // Title
+    txSheet.setColumnWidth(2, 20.0); // Category
+    txSheet.setColumnWidth(3, 15.0); // Type
+    txSheet.setColumnWidth(4, 18.0); // Amount
+    txSheet.setColumnWidth(5, 20.0); // Wallet
+    txSheet.setColumnWidth(6, 40.0); // Description
 
     final headers = ['Date', 'Title', 'Category', 'Type', 'Amount', 'Wallet', 'Description'];
     for (int i = 0; i < headers.length; i++) {
@@ -626,24 +663,46 @@ class ExportService {
         ..cellStyle = txHeaderStyle;
     }
 
+    final amountCellFormat = xl.CellStyle(horizontalAlign: xl.HorizontalAlign.Right);
+    final dateCellFormat = xl.CellStyle(horizontalAlign: xl.HorizontalAlign.Center);
+
     for (int i = 0; i < transactions.length; i++) {
       final tx = transactions[i];
       final wallet = tx.walletKey != null ? walletMap[tx.walletKey] : null;
       final rowIndex = i + 1;
       
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex)).value = xl.TextCellValue(_dateFormat.format(tx.date));
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
+        ..value = xl.TextCellValue(_dateFormat.format(tx.date))
+        ..cellStyle = dateCellFormat;
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = xl.TextCellValue(tx.title);
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = xl.TextCellValue(tx.category);
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = xl.TextCellValue(tx.type.name);
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex)).value = xl.DoubleCellValue(tx.amount);
+      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
+        ..value = xl.DoubleCellValue(tx.amount)
+        ..cellStyle = amountCellFormat;
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = xl.TextCellValue(wallet?.name ?? '');
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = xl.TextCellValue(tx.description);
       
       // Zebra striping
       if (rowIndex % 2 == 0) {
-        final stripeStyle = xl.CellStyle(backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'));
+        final currentAmountStyle = xl.CellStyle(
+          horizontalAlign: xl.HorizontalAlign.Right,
+          backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'),
+        );
+        final currentDateStyle = xl.CellStyle(
+          horizontalAlign: xl.HorizontalAlign.Center,
+          backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'),
+        );
+        final defaultStripeStyle = xl.CellStyle(backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'));
+        
         for (int col = 0; col < headers.length; col++) {
-          txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = stripeStyle;
+          if (col == 0) {
+            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = currentDateStyle;
+          } else if (col == 4) {
+            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = currentAmountStyle;
+          } else {
+            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = defaultStripeStyle;
+          }
         }
       }
     }

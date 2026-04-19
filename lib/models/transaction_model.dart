@@ -89,13 +89,14 @@ class Transaction extends HiveObject {
       'goalKey': goalKey,
       'budgetKey': budgetKey,
       'debtKey': debtKey,
+      'squadTxKey': squadTxKey,
     };
   }
 
   factory Transaction.fromMap(Map<String, dynamic> map) {
     return Transaction(
       title: map['title'],
-      amount: map['amount'],
+      amount: (map['amount'] as num).toDouble(),
       date: DateTime.parse(map['date']),
       category: map['category'],
       description: map['description'],
@@ -103,10 +104,11 @@ class Transaction extends HiveObject {
       accountKey: map['accountKey'],
       walletKey: map['walletKey'],
       toWalletKey: map['toWalletKey'],
-      charge: map['charge'],
+      charge: map['charge']?.toDouble(),
       goalKey: map['goalKey'],
       budgetKey: map['budgetKey'],
       debtKey: map['debtKey'],
+      squadTxKey: map['squadTxKey'],
     );
   }
 

@@ -501,11 +501,14 @@ class DatabaseService {
   }
 
   // Squad Transaction Operations
-  static Future<int> saveSquadTransaction(SquadTransaction tx) async {
+  static Future<int> saveSquadTransaction(
+    SquadTransaction tx, {
+    bool silent = false,
+  }) async {
     final key = await _squadTxBox.add(tx);
 
     // If a wallet is selected, we sync this to personal Transactions
-    if (tx.walletKey != null) {
+    if (!silent && tx.walletKey != null) {
       final squad = getSquad(tx.squadKey);
       final squadName = squad?.name ?? 'Squad';
 

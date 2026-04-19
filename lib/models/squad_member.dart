@@ -18,4 +18,20 @@ class SquadMember extends HiveObject {
     required this.squadKey,
     this.isYou = false,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'squadKey': squadKey,
+      'isYou': isYou,
+    };
+  }
+
+  factory SquadMember.fromMap(Map<String, dynamic> map) {
+    return SquadMember(
+      name: map['name'],
+      squadKey: map['squadKey'],
+      isYou: map['isYou'],
+    );
+  }
 }

@@ -10,6 +10,9 @@ import '../models/transaction_model.dart';
 import '../models/goal.dart';
 import '../models/budget.dart';
 import '../models/debt.dart';
+import '../models/squad.dart';
+import '../models/squad_member.dart';
+import '../models/squad_transaction.dart';
 import '../models/backup_history.dart';
 import 'database_service.dart';
 
@@ -26,6 +29,15 @@ class BackupService {
       final goals = DatabaseService.getGoals(accountKey);
       final budgets = DatabaseService.getBudgets(accountKey);
       final debts = DatabaseService.getDebts(accountKey);
+      final squads = DatabaseService.getSquads(accountKey);
+      final squadMembers = <SquadMember>[];
+      final squadTransactions = <SquadTransaction>[];
+
+      for (var squad in squads) {
+        final sk = squad.key as int;
+        squadMembers.addAll(DatabaseService.getSquadMembers(sk));
+        squadTransactions.addAll(DatabaseService.getSquadTransactions(sk));
+      }
 
       final dataMap = {
         'header': _magicHeader,
@@ -38,6 +50,9 @@ class BackupService {
         'goals': goals.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
         'budgets': budgets.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
         'debts': debts.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'squads': squads.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'squadMembers': squadMembers.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'squadTransactions': squadTransactions.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
       };
 
       final jsonString = jsonEncode(dataMap);
@@ -148,6 +163,9 @@ class BackupService {
       final goalKeyMap = <int, int>{};
       final budgetKeyMap = <int, int>{};
       final debtKeyMap = <int, int>{};
+      final squadKeyMap = <int, int>{};
+      final memberKeyMap = <int, int>{};
+      final squadTxKeyMap = <int, int>{};
 
       // Stage 1: Account Mapping & Update
       final targetAccount = DatabaseService.getAccounts().firstWhere((a) => a.key == targetAccountKey);
@@ -209,6 +227,86 @@ class BackupService {
           debtKeyMap[oldKey] = newKey;
         }
       }
+
+      // Stage 3.5: Squads
+      if (dataMap.containsKey('squads')) {
+        final squadsJson = dataMap['squads'] as List;
+        for (var sMap in squadsJson) {
+          final oldKey = sMap['key'] as int;
+          final squad = Squad.fromMap(sMap);
+          squad.accountKey = targetAccountKey;
+          final newKey = await DatabaseService.saveSquad(squad);
+          squadKeyMap[oldKey] = newKey;
+        }
+      }
+
+      // Stage 3.6: Squad Members
+      if (dataMap.containsKey('squadMembers')) {
+        final membersJson = dataMap['squadMembers'] as List;
+        for (var mMap in membersJson) {
+          final oldKey = mMap['key'] as int;
+          final member = SquadMember.fromMap(mMap);
+          if (squadKeyMap.containsKey(mMap['squadKey'] as int)) {
+            member.squadKey = squadKeyMap[mMap['squadKey'] as int]!;
+            final newKey = await DatabaseService.saveSquadMember(member);
+            memberKeyMap[oldKey] = newKey;
+          }
+        }
+      }
+
+      // Stage 3.7: Squad Transactions
+      if (dataMap.containsKey('squadTransactions')) {
+        final squadTxsJson = dataMap['squadTransactions'] as List;
+        final squadTxs = <int, SquadTransaction>{};
+
+        for (var stMap in squadTxsJson) {
+          final oldKey = stMap['key'] as int;
+          final tx = SquadTransaction.fromMap(stMap);
+          
+          if (squadKeyMap.containsKey(stMap['squadKey'] as int) && 
+              memberKeyMap.containsKey(stMap['payerMemberKey'] as int)) {
+            
+            tx.squadKey = squadKeyMap[stMap['squadKey'] as int]!;
+            tx.payerMemberKey = memberKeyMap[stMap['payerMemberKey'] as int]!;
+            
+            if (stMap['walletKey'] != null) {
+              tx.walletKey = walletKeyMap[stMap['walletKey'] as int];
+            }
+
+            // Remap memberSplits keys
+            final oldSplits = Map<int, double>.from(tx.memberSplits);
+            tx.memberSplits.clear();
+            oldSplits.forEach((oldMemberKey, share) {
+              final newMemberKey = memberKeyMap[oldMemberKey];
+              if (newMemberKey != null) {
+                tx.memberSplits[newMemberKey] = share;
+              }
+            });
+
+            // Save silently to avoid duplicating personal transactions (they will be restored in Stage 4)
+            final newKey = await DatabaseService.saveSquadTransaction(tx, silent: true);
+            squadTxKeyMap[oldKey] = newKey;
+            squadTxs[oldKey] = tx;
+          }
+        }
+
+        // Stage 3.8: Re-link Settlements (relatedBillKey)
+        for (var stMap in squadTxsJson) {
+          if (stMap['relatedBillKey'] != null) {
+            final oldBillKey = stMap['relatedBillKey'] as int;
+            final newBillKey = squadTxKeyMap[oldBillKey];
+            if (newBillKey != null) {
+              final oldTxKey = stMap['key'] as int;
+              final newTxKey = squadTxKeyMap[oldTxKey];
+              if (newTxKey != null) {
+                final tx = squadTxs[oldTxKey]!;
+                tx.relatedBillKey = newBillKey;
+                await tx.save();
+              }
+            }
+          }
+        }
+      }
       
       // Stage 4: Transactions
       final transactionsJson = dataMap['transactions'] as List;
@@ -230,6 +328,9 @@ class BackupService {
         }
         if (tMap['debtKey'] != null) {
           transaction.debtKey = debtKeyMap[tMap['debtKey'] as int];
+        }
+        if (tMap['squadTxKey'] != null) {
+          transaction.squadTxKey = squadTxKeyMap[tMap['squadTxKey'] as int];
         }
         
         // Save silently to avoid re-applying effects to already correct balances

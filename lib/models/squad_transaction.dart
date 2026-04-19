@@ -56,4 +56,34 @@ class SquadTransaction extends HiveObject {
     this.walletKey,
     this.relatedBillKey,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'squadKey': squadKey,
+      'payerMemberKey': payerMemberKey,
+      'splitType': splitType.index,
+      'memberSplits': memberSplits.map((key, value) => MapEntry(key.toString(), value)),
+      'isSettlement': isSettlement,
+      'walletKey': walletKey,
+      'relatedBillKey': relatedBillKey,
+    };
+  }
+
+  factory SquadTransaction.fromMap(Map<String, dynamic> map) {
+    return SquadTransaction(
+      title: map['title'],
+      amount: (map['amount'] as num).toDouble(),
+      date: DateTime.parse(map['date']),
+      squadKey: map['squadKey'],
+      payerMemberKey: map['payerMemberKey'],
+      splitType: SplitType.values[map['splitType']],
+      memberSplits: (map['memberSplits'] as Map).cast<String, num>().map((k, v) => MapEntry(int.parse(k), v.toDouble())),
+      isSettlement: map['isSettlement'] ?? false,
+      walletKey: map['walletKey'],
+      relatedBillKey: map['relatedBillKey'],
+    );
+  }
 }

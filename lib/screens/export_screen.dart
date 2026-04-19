@@ -55,10 +55,10 @@ class _ExportScreenState extends State<ExportScreen>
     final account = SessionService.activeAccount;
     final key = account?.key as int?;
 
-    _allTransactions =
-        key != null ? DatabaseService.getTransactions(key) : [];
-    _wallets =
-        key != null ? DatabaseService.getWallets(key) : DatabaseService.getAllWallets();
+    _allTransactions = key != null ? DatabaseService.getTransactions(key) : [];
+    _wallets = key != null
+        ? DatabaseService.getWallets(key)
+        : DatabaseService.getAllWallets();
     _walletMap = {for (final w in _wallets) w.key as int: w};
 
     final catSet = <String>{};
@@ -100,12 +100,12 @@ class _ExportScreenState extends State<ExportScreen>
   }
 
   ExportFilters get _filters => ExportFilters(
-        startDate: _startDate,
-        endDate: _endDate,
-        walletKey: _selectedWalletKey,
-        category: _selectedCategory,
-        type: _selectedType,
-      );
+    startDate: _startDate,
+    endDate: _endDate,
+    walletKey: _selectedWalletKey,
+    category: _selectedCategory,
+    type: _selectedType,
+  );
 
   List<Transaction> get _filtered =>
       ExportService.applyFilters(_allTransactions, _filters);
@@ -151,7 +151,12 @@ class _ExportScreenState extends State<ExportScreen>
     setState(() => _isExportingCsv = true);
     try {
       final summary = ExportService.buildSummary(filtered);
-      final csv = ExportService.buildCsv(filtered, _walletMap, summary, _filters);
+      final csv = ExportService.buildCsv(
+        filtered,
+        _walletMap,
+        summary,
+        _filters,
+      );
       final fileName = ExportService.buildFileName(_filters, '');
       final status = await ExportService.saveCsv(csv, fileName);
       if (mounted) {
@@ -190,7 +195,10 @@ class _ExportScreenState extends State<ExportScreen>
         } else if (status == ExportStatus.cancelled) {
           _showSnack('PDF export cancelled', false);
         } else {
-          _showSnack('PDF export failed. Check internet or permissions.', false);
+          _showSnack(
+            'PDF export failed. Check internet or permissions.',
+            false,
+          );
         }
       }
     } catch (e) {
@@ -207,9 +215,14 @@ class _ExportScreenState extends State<ExportScreen>
     setState(() => _isExportingExcel = true);
     try {
       final summary = ExportService.buildSummary(filtered);
-      final bytes = await ExportService.buildExcel(filtered, _walletMap, summary, _filters);
+      final bytes = await ExportService.buildExcel(
+        filtered,
+        _walletMap,
+        summary,
+        _filters,
+      );
       if (bytes == null) throw Exception('Failed to encode Excel');
-      
+
       final fileName = ExportService.buildFileName(_filters, '');
       final status = await ExportService.saveExcel(bytes, fileName);
       if (mounted) {
@@ -234,7 +247,9 @@ class _ExportScreenState extends State<ExportScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: isSuccess ? theme.colorScheme.tertiary : theme.colorScheme.error,
+        backgroundColor: isSuccess
+            ? theme.colorScheme.tertiary
+            : theme.colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -293,7 +308,10 @@ class _ExportScreenState extends State<ExportScreen>
               _FilterDropdown<int?>(
                 value: _selectedWalletKey,
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('All Wallets')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('All Wallets'),
+                  ),
                   ..._wallets.map(
                     (w) => DropdownMenuItem(
                       value: w.key as int,
@@ -313,7 +331,10 @@ class _ExportScreenState extends State<ExportScreen>
               _FilterDropdown<String?>(
                 value: _selectedCategory,
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('All Categories')),
+                  const DropdownMenuItem(
+                    value: null,
+                    child: Text('All Categories'),
+                  ),
                   ..._categories.map(
                     (c) => DropdownMenuItem(value: c, child: Text(c)),
                   ),
@@ -340,7 +361,9 @@ class _ExportScreenState extends State<ExportScreen>
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 250),
                 child: _SummaryCard(
-                  key: ValueKey('${summary.transactionCount}_${summary.totalIncome}'),
+                  key: ValueKey(
+                    '${summary.transactionCount}_${summary.totalIncome}',
+                  ),
                   summary: summary,
                   theme: theme,
                   isEmpty: isEmpty,
@@ -585,9 +608,11 @@ class _TypeSelector extends StatelessWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(icons[i],
-                        size: 18,
-                        color: isSelected ? colors[i] : theme.dividerColor),
+                    Icon(
+                      icons[i],
+                      size: 18,
+                      color: isSelected ? colors[i] : theme.dividerColor,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       labels[i],
@@ -596,8 +621,9 @@ class _TypeSelector extends StatelessWidget {
                         fontWeight: FontWeight.w600,
                         color: isSelected
                             ? colors[i]
-                            : theme.textTheme.bodyMedium?.color
-                                ?.withValues(alpha: 0.5),
+                            : theme.textTheme.bodyMedium?.color?.withValues(
+                                alpha: 0.5,
+                              ),
                       ),
                     ),
                   ],
@@ -652,8 +678,9 @@ class _SummaryCard extends StatelessWidget {
                 Text(
                   '${dateFmt.format(startDate)} — ${dateFmt.format(endDate)}',
                   style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.textTheme.bodyMedium?.color
-                        ?.withValues(alpha: 0.45),
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.45,
+                    ),
                     letterSpacing: 0.5,
                   ),
                 ),
@@ -678,8 +705,7 @@ class _SummaryCard extends StatelessWidget {
                     const SizedBox(width: 8),
                     _StatChip(
                       label: 'Net',
-                      value:
-                          '₱${currencyFmt.format(summary.netBalance)}',
+                      value: '₱${currencyFmt.format(summary.netBalance)}',
                       color: summary.netBalance >= 0
                           ? theme.colorScheme.tertiary
                           : theme.colorScheme.error,
@@ -694,8 +720,9 @@ class _SummaryCard extends StatelessWidget {
                   child: Text(
                     '${summary.transactionCount} transaction${summary.transactionCount == 1 ? '' : 's'}',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.textTheme.bodyMedium?.color
-                          ?.withValues(alpha: 0.45),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.45,
+                      ),
                     ),
                   ),
                 ),
@@ -710,12 +737,15 @@ class _SummaryCard extends StatelessWidget {
                     style: theme.textTheme.labelSmall?.copyWith(
                       letterSpacing: 1.5,
                       fontWeight: FontWeight.w800,
-                      color: theme.textTheme.bodyMedium?.color
-                          ?.withValues(alpha: 0.35),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: 0.35,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ...summary.topCategories.take(3).map(
+                  ...summary.topCategories
+                      .take(3)
+                      .map(
                         (e) => Padding(
                           padding: const EdgeInsets.only(bottom: 6),
                           child: Row(
@@ -760,14 +790,14 @@ class _SummaryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Column(
           children: [
-            Icon(Icons.inbox_outlined,
-                size: 36, color: theme.dividerColor),
+            Icon(Icons.inbox_outlined, size: 36, color: theme.dividerColor),
             const SizedBox(height: 8),
             Text(
               'No transactions in this range',
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.textTheme.bodyMedium?.color
-                    ?.withValues(alpha: 0.4),
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.4,
+                ),
               ),
             ),
           ],
@@ -931,8 +961,7 @@ class _ExportButton extends StatelessWidget {
               : effectiveColor.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color:
-                isDisabled ? theme.dividerColor : effectiveColor,
+            color: isDisabled ? theme.dividerColor : effectiveColor,
             width: isDisabled ? 0.5 : 1.5,
           ),
         ),
@@ -942,7 +971,9 @@ class _ExportButton extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: effectiveColor.withValues(alpha: isDisabled ? 0.06 : 0.12),
+                color: effectiveColor.withValues(
+                  alpha: isDisabled ? 0.06 : 0.12,
+                ),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: isLoading
@@ -973,8 +1004,9 @@ class _ExportButton extends StatelessWidget {
                     subtitle,
                     style: TextStyle(
                       fontSize: 12,
-                      color: theme.textTheme.bodyMedium?.color
-                          ?.withValues(alpha: isDisabled ? 0.3 : 0.5),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(
+                        alpha: isDisabled ? 0.3 : 0.5,
+                      ),
                     ),
                   ),
                 ],

@@ -22,8 +22,8 @@ enum ExportStatus { success, cancelled, failed }
 class ExportFilters {
   final DateTime startDate;
   final DateTime endDate;
-  final int? walletKey;       // null = all wallets
-  final String? category;     // null = all categories
+  final int? walletKey; // null = all wallets
+  final String? category; // null = all categories
   final TransactionType? type; // null = all types
 
   const ExportFilters({
@@ -64,17 +64,28 @@ class ExportService {
   ) {
     return all.where((tx) {
       final date = DateTime(tx.date.year, tx.date.month, tx.date.day);
-      final start = DateTime(f.startDate.year, f.startDate.month, f.startDate.day);
+      final start = DateTime(
+        f.startDate.year,
+        f.startDate.month,
+        f.startDate.day,
+      );
       final end = DateTime(f.endDate.year, f.endDate.month, f.endDate.day);
-      if (date.isBefore(start) || date.isAfter(end)) { return false; }
+      if (date.isBefore(start) || date.isAfter(end)) {
+        return false;
+      }
       if (f.walletKey != null &&
           tx.walletKey != f.walletKey &&
-          tx.toWalletKey != f.walletKey) { return false; }
-      if (f.category != null && tx.category != f.category) { return false; }
-      if (f.type != null && tx.type != f.type) { return false; }
+          tx.toWalletKey != f.walletKey) {
+        return false;
+      }
+      if (f.category != null && tx.category != f.category) {
+        return false;
+      }
+      if (f.type != null && tx.type != f.type) {
+        return false;
+      }
       return true;
-    }).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+    }).toList()..sort((a, b) => b.date.compareTo(a.date));
   }
 
   static ExportSummary buildSummary(List<Transaction> transactions) {
@@ -116,7 +127,8 @@ class ExportService {
     // Summary header block
     buf.writeln('RootEXP — Transaction Export');
     buf.writeln(
-        'Period,${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}');
+      'Period,${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}',
+    );
     buf.writeln('Total Income,₱${_currency.format(summary.totalIncome)}');
     buf.writeln('Total Expenses,₱${_currency.format(summary.totalExpenses)}');
     buf.writeln('Net Balance,₱${_currency.format(summary.netBalance)}');
@@ -139,15 +151,17 @@ class ExportService {
     for (final tx in transactions) {
       final wallet = tx.walletKey != null ? walletMap[tx.walletKey] : null;
       final walletName = wallet?.name ?? '';
-      buf.writeln([
-        _dateFormat.format(tx.date),
-        _escapeCsv(tx.title),
-        _escapeCsv(tx.category),
-        tx.type.name,
-        tx.amount.toStringAsFixed(2),
-        _escapeCsv(walletName),
-        _escapeCsv(tx.description),
-      ].join(','));
+      buf.writeln(
+        [
+          _dateFormat.format(tx.date),
+          _escapeCsv(tx.title),
+          _escapeCsv(tx.category),
+          tx.type.name,
+          tx.amount.toStringAsFixed(2),
+          _escapeCsv(walletName),
+          _escapeCsv(tx.description),
+        ].join(','),
+      );
     }
 
     return buf.toString();
@@ -185,14 +199,11 @@ class ExportService {
     }
 
     final doc = pw.Document(
-      theme: pw.ThemeData.withFont(
-        base: fontRegular,
-        bold: fontBold,
-      ),
+      theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
     );
 
     // Colors
-    const primaryColor = PdfColor.fromInt(0xFF1B5E20);      // deep green
+    const primaryColor = PdfColor.fromInt(0xFF1B5E20); // deep green
     const incomeColor = PdfColor.fromInt(0xFF2E7D32);
     const expenseColor = PdfColor.fromInt(0xFFC62828);
     const bgColor = PdfColor.fromInt(0xFFF5F5F5);
@@ -203,14 +214,20 @@ class ExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        header: (ctx) => _buildHeader(
-          ctx, accountName, filters, primaryColor, bgColor,
-        ),
+        header: (ctx) =>
+            _buildHeader(ctx, accountName, filters, primaryColor, bgColor),
         footer: (ctx) => _buildFooter(ctx, textMuted),
         build: (ctx) => [
           pw.SizedBox(height: 16),
           // ── Summary cards ──────────────────────────────────────────────
-          _buildSummarySection(summary, incomeColor, expenseColor, primaryColor, bgColor, symbol),
+          _buildSummarySection(
+            summary,
+            incomeColor,
+            expenseColor,
+            primaryColor,
+            bgColor,
+            symbol,
+          ),
           pw.SizedBox(height: 20),
           // ── Expense Chart & Categories ──────────────────────────────────
           if (summary.topCategories.isNotEmpty) ...[
@@ -234,9 +251,19 @@ class ExportService {
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      _buildSectionTitle('Top Spending Categories', primaryColor),
+                      _buildSectionTitle(
+                        'Top Spending Categories',
+                        primaryColor,
+                      ),
                       pw.SizedBox(height: 8),
-                      _buildCategoryTable(summary.topCategories, summary.totalExpenses, primaryColor, bgColor, cardBg, symbol),
+                      _buildCategoryTable(
+                        summary.topCategories,
+                        summary.totalExpenses,
+                        primaryColor,
+                        bgColor,
+                        cardBg,
+                        symbol,
+                      ),
                     ],
                   ),
                 ),
@@ -253,7 +280,16 @@ class ExportService {
               style: pw.TextStyle(color: textMuted, fontSize: 11),
             )
           else
-            _buildTransactionTable(transactions, walletMap, incomeColor, expenseColor, bgColor, cardBg, textMuted, symbol),
+            _buildTransactionTable(
+              transactions,
+              walletMap,
+              incomeColor,
+              expenseColor,
+              bgColor,
+              cardBg,
+              textMuted,
+              symbol,
+            ),
         ],
       ),
     );
@@ -282,14 +318,13 @@ class ExportService {
     }
 
     final doc = pw.Document(
-      theme: pw.ThemeData.withFont(
-        base: fontRegular,
-        bold: fontBold,
-      ),
+      theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
     );
 
     // Colors
-    final primaryColor = squad.color != null ? PdfColor.fromInt(int.parse(squad.color!)) : PdfColor.fromInt(0xFF1B5E20);
+    final primaryColor = squad.color != null
+        ? PdfColor.fromInt(int.parse(squad.color!))
+        : PdfColor.fromInt(0xFF1B5E20);
     const incomeColor = PdfColor.fromInt(0xFF2E7D32);
     const expenseColor = PdfColor.fromInt(0xFFC62828);
     const bgColor = PdfColor.fromInt(0xFFF5F5F5);
@@ -300,25 +335,53 @@ class ExportService {
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(32),
-        header: (ctx) => _buildSquadHeader(ctx, squad, accountName, primaryColor),
+        header: (ctx) =>
+            _buildSquadHeader(ctx, squad, accountName, primaryColor),
         footer: (ctx) => _buildFooter(ctx, textMuted),
         build: (ctx) => [
           pw.SizedBox(height: 16),
           // ── Summary sections ──────────────────────────────────────────
-          _buildSquadSummary(balances, incomeColor, expenseColor, primaryColor, bgColor, symbol),
+          _buildSquadSummary(
+            balances,
+            incomeColor,
+            expenseColor,
+            primaryColor,
+            bgColor,
+            symbol,
+          ),
           pw.SizedBox(height: 24),
           // ── Members & Balances ────────────────────────────────────────
           _buildSectionTitle('Member Balances', primaryColor),
           pw.SizedBox(height: 8),
-          _buildMemberBalancesTable(members, balances, incomeColor, expenseColor, bgColor, cardBg, symbol),
+          _buildMemberBalancesTable(
+            members,
+            balances,
+            incomeColor,
+            expenseColor,
+            bgColor,
+            cardBg,
+            symbol,
+          ),
           pw.SizedBox(height: 24),
           // ── Activity History ──────────────────────────────────────────
           _buildSectionTitle('Squad Activity History', primaryColor),
           pw.SizedBox(height: 8),
           if (transactions.isEmpty)
-            pw.Text('No activity recorded yet.', style: pw.TextStyle(color: textMuted, fontSize: 11))
+            pw.Text(
+              'No activity recorded yet.',
+              style: pw.TextStyle(color: textMuted, fontSize: 11),
+            )
           else
-            _buildSquadTransactionTable(transactions, members, incomeColor, expenseColor, bgColor, cardBg, textMuted, symbol),
+            _buildSquadTransactionTable(
+              transactions,
+              members,
+              incomeColor,
+              expenseColor,
+              bgColor,
+              cardBg,
+              textMuted,
+              symbol,
+            ),
         ],
       ),
     );
@@ -347,13 +410,12 @@ class ExportService {
     }
 
     final doc = pw.Document(
-      theme: pw.ThemeData.withFont(
-        base: fontRegular,
-        bold: fontBold,
-      ),
+      theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
     );
 
-    final primaryColor = squad.color != null ? PdfColor.fromInt(int.parse(squad.color!)) : PdfColor.fromInt(0xFF1B5E20);
+    final primaryColor = squad.color != null
+        ? PdfColor.fromInt(int.parse(squad.color!))
+        : PdfColor.fromInt(0xFF1B5E20);
 
     final payer = members.firstWhere((m) => m.key == tx.payerMemberKey);
 
@@ -371,15 +433,40 @@ class ExportService {
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    pw.Text('BILL RECEIPT', style: pw.TextStyle(fontSize: 18, fontWeight: pw.FontWeight.bold, color: primaryColor)),
-                    pw.Text(squad.name, style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                    pw.Text(
+                      'BILL RECEIPT',
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                        color: primaryColor,
+                      ),
+                    ),
+                    pw.Text(
+                      squad.name,
+                      style: const pw.TextStyle(
+                        fontSize: 10,
+                        color: PdfColors.grey700,
+                      ),
+                    ),
                   ],
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
-                    pw.Text(_displayDate.format(tx.date), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                    pw.Text('ID: ${tx.key}', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600)),
+                    pw.Text(
+                      _displayDate.format(tx.date),
+                      style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                    pw.Text(
+                      'ID: ${tx.key}',
+                      style: const pw.TextStyle(
+                        fontSize: 8,
+                        color: PdfColors.grey600,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -390,11 +477,30 @@ class ExportService {
             pw.Center(
               child: pw.Column(
                 children: [
-                  pw.Text(tx.title.toUpperCase(), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                  pw.Text(
+                    tx.title.toUpperCase(),
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
                   pw.SizedBox(height: 8),
-                  pw.Text('$symbol${_currency.format(tx.amount)}', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  pw.Text(
+                    '$symbol${_currency.format(tx.amount)}',
+                    style: pw.TextStyle(
+                      fontSize: 24,
+                      fontWeight: pw.FontWeight.bold,
+                      color: primaryColor,
+                    ),
+                  ),
                   pw.SizedBox(height: 4),
-                  pw.Text('Paid by ${payer.name}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
+                  pw.Text(
+                    'Paid by ${payer.name}',
+                    style: const pw.TextStyle(
+                      fontSize: 10,
+                      color: PdfColors.grey700,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -416,12 +522,16 @@ class ExportService {
                   children: [
                     _tableHeaderSquad('MEMBER'),
                     _tableHeaderSquad('BILL SHARE', align: pw.TextAlign.right),
-                    _tableHeaderSquad('TOTAL PENDING', align: pw.TextAlign.right),
+                    _tableHeaderSquad(
+                      'TOTAL PENDING',
+                      align: pw.TextAlign.right,
+                    ),
                   ],
                 ),
                 ...tx.memberSplits.entries.map((entry) {
                   final member = members.firstWhere((m) => m.key == entry.key);
-                  final netBalance = balances.memberNetBalances[member.key as int] ?? 0.0;
+                  final netBalance =
+                      balances.memberNetBalances[member.key as int] ?? 0.0;
                   final isPositive = netBalance > 0;
                   final isNegative = netBalance < 0;
 
@@ -434,11 +544,21 @@ class ExportService {
                   return pw.TableRow(
                     children: [
                       _cell(member.name + (member.isYou ? ' (You)' : '')),
-                      _cell('$symbol${_currency.format(share)}', align: pw.TextAlign.right, bold: true),
                       _cell(
-                        isPositive ? 'Gets $symbol${_currency.format(netBalance)}' : (isNegative ? 'Owes $symbol${_currency.format(netBalance.abs())}' : 'Settled'),
+                        '$symbol${_currency.format(share)}',
                         align: pw.TextAlign.right,
-                        color: isPositive ? PdfColors.green : (isNegative ? PdfColors.red : PdfColors.grey700),
+                        bold: true,
+                      ),
+                      _cell(
+                        isPositive
+                            ? 'Gets $symbol${_currency.format(netBalance)}'
+                            : (isNegative
+                                  ? 'Owes $symbol${_currency.format(netBalance.abs())}'
+                                  : 'Settled'),
+                        align: pw.TextAlign.right,
+                        color: isPositive
+                            ? PdfColors.green
+                            : (isNegative ? PdfColors.red : PdfColors.grey700),
                         bold: true,
                       ),
                     ],
@@ -446,13 +566,16 @@ class ExportService {
                 }),
               ],
             ),
-            
+
             pw.Spacer(),
             pw.Divider(color: PdfColors.grey300),
             pw.Center(
               child: pw.Text(
                 'Generated via RootEXP • Shared Economy Tracking',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey500,
+                ),
               ),
             ),
           ],
@@ -500,11 +623,19 @@ class ExportService {
             children: [
               pw.Text(
                 'DATE GENERATED',
-                style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontWeight: pw.FontWeight.bold),
+                style: pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey600,
+                  fontWeight: pw.FontWeight.bold,
+                ),
               ),
               pw.Text(
                 _displayDate.format(DateTime.now()),
-                style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: primary),
+                style: pw.TextStyle(
+                  fontSize: 11,
+                  fontWeight: pw.FontWeight.bold,
+                  color: primary,
+                ),
               ),
             ],
           ),
@@ -523,9 +654,19 @@ class ExportService {
   ) {
     return pw.Row(
       children: [
-        _summaryCard('YOU ARE OWED', '$symbol${_currency.format(balances.youAreOwed)}', incomeColor, bg),
+        _summaryCard(
+          'YOU ARE OWED',
+          '$symbol${_currency.format(balances.youAreOwed)}',
+          incomeColor,
+          bg,
+        ),
         pw.SizedBox(width: 8),
-        _summaryCard('YOU OWE', '$symbol${_currency.format(balances.youOwe)}', expenseColor, bg),
+        _summaryCard(
+          'YOU OWE',
+          '$symbol${_currency.format(balances.youOwe)}',
+          expenseColor,
+          bg,
+        ),
         pw.SizedBox(width: 8),
         _summaryCard(
           'YOUR NET STATUS',
@@ -553,39 +694,76 @@ class ExportService {
       final isPositive = balance > 0;
       final isNegative = balance < 0;
       final rowColor = i.isEven ? cardBg : bg;
-      final statusColor = isPositive ? incomeColor : (isNegative ? expenseColor : PdfColors.grey700);
+      final statusColor = isPositive
+          ? incomeColor
+          : (isNegative ? expenseColor : PdfColors.grey700);
 
       return pw.TableRow(
         decoration: pw.BoxDecoration(color: rowColor),
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const pw.EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             child: pw.Row(
               children: [
-                pw.Text(m.name, style: pw.TextStyle(fontWeight: pw.FontWeight.bold, fontSize: 10)),
+                pw.Text(
+                  m.name,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
                 if (m.isYou) ...[
                   pw.SizedBox(width: 4),
                   pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                    decoration: pw.BoxDecoration(color: PdfColors.grey200, borderRadius: pw.BorderRadius.circular(2)),
-                    child: pw.Text('YOU', style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold)),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 1,
+                    ),
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.grey200,
+                      borderRadius: pw.BorderRadius.circular(2),
+                    ),
+                    child: pw.Text(
+                      'YOU',
+                      style: pw.TextStyle(
+                        fontSize: 7,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ],
             ),
           ),
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const pw.EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             child: pw.Text(
               isPositive ? 'Gets back' : (isNegative ? 'Owes' : 'Settled'),
-              style: pw.TextStyle(color: statusColor, fontSize: 10, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(
+                color: statusColor,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+              ),
             ),
           ),
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const pw.EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 10,
+            ),
             child: pw.Text(
               '$symbol${_currency.format(balance.abs())}',
-              style: pw.TextStyle(color: statusColor, fontSize: 11, fontWeight: pw.FontWeight.bold),
+              style: pw.TextStyle(
+                color: statusColor,
+                fontSize: 11,
+                fontWeight: pw.FontWeight.bold,
+              ),
               textAlign: pw.TextAlign.right,
             ),
           ),
@@ -625,7 +803,8 @@ class ExportService {
     String symbol,
   ) {
     // Sort transactions by date descending
-    final sorted = transactions.toList()..sort((a, b) => b.date.compareTo(a.date));
+    final sorted = transactions.toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
 
     final rows = sorted.asMap().entries.map((entry) {
       final i = entry.key;
@@ -675,7 +854,10 @@ class ExportService {
     );
   }
 
-  static pw.Widget _tableHeaderSquad(String text, {pw.TextAlign align = pw.TextAlign.left}) {
+  static pw.Widget _tableHeaderSquad(
+    String text, {
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
     return pw.Padding(
       padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: pw.Text(
@@ -757,7 +939,10 @@ class ExportService {
               ),
               pw.Text(
                 'Generated ${_displayDate.format(DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
+                style: const pw.TextStyle(
+                  fontSize: 8,
+                  color: PdfColors.grey600,
+                ),
               ),
             ],
           ),
@@ -805,9 +990,19 @@ class ExportService {
   ) {
     return pw.Row(
       children: [
-        _summaryCard('TOTAL INCOME', '$symbol${_currency.format(summary.totalIncome)}', incomeColor, bg),
+        _summaryCard(
+          'TOTAL INCOME',
+          '$symbol${_currency.format(summary.totalIncome)}',
+          incomeColor,
+          bg,
+        ),
         pw.SizedBox(width: 8),
-        _summaryCard('TOTAL EXPENSES', '$symbol${_currency.format(summary.totalExpenses)}', expenseColor, bg),
+        _summaryCard(
+          'TOTAL EXPENSES',
+          '$symbol${_currency.format(summary.totalExpenses)}',
+          expenseColor,
+          bg,
+        ),
         pw.SizedBox(width: 8),
         _summaryCard(
           'NET BALANCE',
@@ -816,7 +1011,12 @@ class ExportService {
           bg,
         ),
         pw.SizedBox(width: 8),
-        _summaryCard('TRANSACTIONS', '${summary.transactionCount}', primary, bg),
+        _summaryCard(
+          'TRANSACTIONS',
+          '${summary.transactionCount}',
+          primary,
+          bg,
+        ),
       ],
     );
   }
@@ -846,7 +1046,9 @@ class ExportService {
           final entry = chartData[index];
           return pw.PieDataSet(
             value: entry.value,
-            color: index < distinctColors.length ? distinctColors[index] : PdfColors.grey500,
+            color: index < distinctColors.length
+                ? distinctColors[index]
+                : PdfColors.grey500,
             legend: entry.key,
             drawSurface: true,
             drawBorder: true,
@@ -1014,7 +1216,11 @@ class ExportService {
           _cell(tx.category, muted: muted),
           _cell(tx.type.name, color: amountColor),
           _cell(
-            '${isIncome ? '+' : tx.type == TransactionType.expense ? '-' : ''}$symbol${_currency.format(tx.amount)}',
+            '${isIncome
+                ? '+'
+                : tx.type == TransactionType.expense
+                ? '-'
+                : ''}$symbol${_currency.format(tx.amount)}',
             color: amountColor,
             bold: true,
           ),
@@ -1035,7 +1241,9 @@ class ExportService {
       },
       children: [
         pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFF1B5E20)),
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFF1B5E20),
+          ),
           children: [
             _tableHeader('DATE'),
             _tableHeader('TITLE'),
@@ -1059,7 +1267,7 @@ class ExportService {
     ExportFilters filters,
   ) async {
     final excel = xl.Excel.createExcel();
-    
+
     // --- Sheet 1: Summary ---
     final summarySheet = excel['Summary'];
     excel.delete('Sheet1'); // Remove default sheet
@@ -1102,50 +1310,73 @@ class ExportService {
     summarySheet.setColumnWidth(1, 40.0);
 
     // Title Row
-    summarySheet.merge(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0), 
-                      xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0));
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0))
+    summarySheet.merge(
+      xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: 0),
+    );
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 0),
+      )
       ..value = xl.TextCellValue('RootEXP — Financial Summary')
       ..cellStyle = headerStyle;
 
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 1),
+      )
       ..value = xl.TextCellValue('Period')
       ..cellStyle = subHeaderStyle;
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1))
-      .value = xl.TextCellValue('${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}');
+    summarySheet
+        .cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 1))
+        .value = xl.TextCellValue(
+      '${_displayDate.format(filters.startDate)} to ${_displayDate.format(filters.endDate)}',
+    );
 
     // Summary Stats
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 3),
+      )
       ..value = xl.TextCellValue('TOTAL INCOME')
       ..cellStyle = labelStyle;
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 3),
+      )
       ..value = xl.DoubleCellValue(summary.totalIncome)
       ..cellStyle = incomeStyle;
 
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 4))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 4),
+      )
       ..value = xl.TextCellValue('TOTAL EXPENSES')
       ..cellStyle = labelStyle;
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 4))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 4),
+      )
       ..value = xl.DoubleCellValue(summary.totalExpenses)
       ..cellStyle = expenseStyle;
 
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5))
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: 5),
+      )
       ..value = xl.TextCellValue('NET BALANCE')
       ..cellStyle = labelStyle;
-    
+
     final finalNetStyle = xl.CellStyle(
       bold: true,
       horizontalAlign: xl.HorizontalAlign.Right,
-      fontColorHex: xl.ExcelColor.fromHexString(summary.netBalance >= 0 ? '#2E7D32' : '#C62828'),
+      fontColorHex: xl.ExcelColor.fromHexString(
+        summary.netBalance >= 0 ? '#2E7D32' : '#C62828',
+      ),
     );
-        
-    summarySheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 5))
+
+    summarySheet.cell(
+        xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: 5),
+      )
       ..value = xl.DoubleCellValue(summary.netBalance)
       ..cellStyle = finalNetStyle;
 
     // --- Sheet 2: Transactions ---
     final txSheet = excel['Transactions'];
-    
+
     final txHeaderStyle = xl.CellStyle(
       bold: true,
       fontSize: 12,
@@ -1164,33 +1395,79 @@ class ExportService {
     txSheet.setColumnWidth(5, 20.0); // Wallet
     txSheet.setColumnWidth(6, 40.0); // Description
 
-    final headers = ['Date', 'Title', 'Category', 'Type', 'Amount', 'Wallet', 'Description'];
+    final headers = [
+      'Date',
+      'Title',
+      'Category',
+      'Type',
+      'Amount',
+      'Wallet',
+      'Description',
+    ];
     for (int i = 0; i < headers.length; i++) {
       txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0))
         ..value = xl.TextCellValue(headers[i])
         ..cellStyle = txHeaderStyle;
     }
 
-    final amountCellFormat = xl.CellStyle(horizontalAlign: xl.HorizontalAlign.Right);
-    final dateCellFormat = xl.CellStyle(horizontalAlign: xl.HorizontalAlign.Center);
+    final amountCellFormat = xl.CellStyle(
+      horizontalAlign: xl.HorizontalAlign.Right,
+    );
+    final dateCellFormat = xl.CellStyle(
+      horizontalAlign: xl.HorizontalAlign.Center,
+    );
 
     for (int i = 0; i < transactions.length; i++) {
       final tx = transactions[i];
       final wallet = tx.walletKey != null ? walletMap[tx.walletKey] : null;
       final rowIndex = i + 1;
-      
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex))
+
+      txSheet.cell(
+          xl.CellIndex.indexByColumnRow(columnIndex: 0, rowIndex: rowIndex),
+        )
         ..value = xl.TextCellValue(_dateFormat.format(tx.date))
         ..cellStyle = dateCellFormat;
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex)).value = xl.TextCellValue(tx.title);
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex)).value = xl.TextCellValue(tx.category);
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex)).value = xl.TextCellValue(tx.type.name);
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex))
+      txSheet
+          .cell(
+            xl.CellIndex.indexByColumnRow(columnIndex: 1, rowIndex: rowIndex),
+          )
+          .value = xl.TextCellValue(
+        tx.title,
+      );
+      txSheet
+          .cell(
+            xl.CellIndex.indexByColumnRow(columnIndex: 2, rowIndex: rowIndex),
+          )
+          .value = xl.TextCellValue(
+        tx.category,
+      );
+      txSheet
+          .cell(
+            xl.CellIndex.indexByColumnRow(columnIndex: 3, rowIndex: rowIndex),
+          )
+          .value = xl.TextCellValue(
+        tx.type.name,
+      );
+      txSheet.cell(
+          xl.CellIndex.indexByColumnRow(columnIndex: 4, rowIndex: rowIndex),
+        )
         ..value = xl.DoubleCellValue(tx.amount)
         ..cellStyle = amountCellFormat;
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex)).value = xl.TextCellValue(wallet?.name ?? '');
-      txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex)).value = xl.TextCellValue(tx.description);
-      
+      txSheet
+          .cell(
+            xl.CellIndex.indexByColumnRow(columnIndex: 5, rowIndex: rowIndex),
+          )
+          .value = xl.TextCellValue(
+        wallet?.name ?? '',
+      );
+      txSheet
+          .cell(
+            xl.CellIndex.indexByColumnRow(columnIndex: 6, rowIndex: rowIndex),
+          )
+          .value = xl.TextCellValue(
+        tx.description,
+      );
+
       // Zebra striping
       if (rowIndex % 2 == 0) {
         final currentAmountStyle = xl.CellStyle(
@@ -1201,15 +1478,41 @@ class ExportService {
           horizontalAlign: xl.HorizontalAlign.Center,
           backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'),
         );
-        final defaultStripeStyle = xl.CellStyle(backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'));
-        
+        final defaultStripeStyle = xl.CellStyle(
+          backgroundColorHex: xl.ExcelColor.fromHexString('#F8F9FA'),
+        );
+
         for (int col = 0; col < headers.length; col++) {
           if (col == 0) {
-            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = currentDateStyle;
+            txSheet
+                    .cell(
+                      xl.CellIndex.indexByColumnRow(
+                        columnIndex: col,
+                        rowIndex: rowIndex,
+                      ),
+                    )
+                    .cellStyle =
+                currentDateStyle;
           } else if (col == 4) {
-            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = currentAmountStyle;
+            txSheet
+                    .cell(
+                      xl.CellIndex.indexByColumnRow(
+                        columnIndex: col,
+                        rowIndex: rowIndex,
+                      ),
+                    )
+                    .cellStyle =
+                currentAmountStyle;
           } else {
-            txSheet.cell(xl.CellIndex.indexByColumnRow(columnIndex: col, rowIndex: rowIndex)).cellStyle = defaultStripeStyle;
+            txSheet
+                    .cell(
+                      xl.CellIndex.indexByColumnRow(
+                        columnIndex: col,
+                        rowIndex: rowIndex,
+                      ),
+                    )
+                    .cellStyle =
+                defaultStripeStyle;
           }
         }
       }
@@ -1227,11 +1530,16 @@ class ExportService {
     try {
       final file = await _writeTempFile('$fileName.xlsx', excelBytes);
       if (Platform.isAndroid || Platform.isIOS) {
-        final result = await Share.shareXFiles(
-          [XFile(file.path, mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')],
-          subject: fileName,
-        );
-        return result.status == ShareResultStatus.dismissed ? ExportStatus.cancelled : ExportStatus.success;
+        final result = await Share.shareXFiles([
+          XFile(
+            file.path,
+            mimeType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          ),
+        ], subject: fileName);
+        return result.status == ShareResultStatus.dismissed
+            ? ExportStatus.cancelled
+            : ExportStatus.success;
       } else {
         // Desktop (Windows): Launch the file to open it in Excel
         final uri = Uri.file(file.path);
@@ -1258,10 +1566,9 @@ class ExportService {
       final file = await _writeTempFile('$fileName.csv', bytes);
 
       if (Platform.isAndroid || Platform.isIOS) {
-        final result = await Share.shareXFiles(
-          [XFile(file.path, mimeType: 'text/csv')],
-          subject: fileName,
-        );
+        final result = await Share.shareXFiles([
+          XFile(file.path, mimeType: 'text/csv'),
+        ], subject: fileName);
         if (result.status == ShareResultStatus.dismissed) {
           return ExportStatus.cancelled;
         }
@@ -1288,7 +1595,10 @@ class ExportService {
   ) async {
     try {
       if (Platform.isAndroid || Platform.isIOS) {
-        final ok = await Printing.sharePdf(bytes: pdfBytes, filename: '$fileName.pdf');
+        final ok = await Printing.sharePdf(
+          bytes: pdfBytes,
+          filename: '$fileName.pdf',
+        );
         return ok ? ExportStatus.success : ExportStatus.cancelled;
       } else {
         // On Windows/Desktop, Printing.layoutPdf shows the native print preview dialog

@@ -61,3 +61,4 @@ flutter_launcher_icons:
 
 dependency_overrides:
   archive: ^3.6.1
+  archive: ^3.6.1

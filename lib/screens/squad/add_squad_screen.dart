@@ -93,48 +93,48 @@ class _AddSquadScreenState extends State<AddSquadScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Create Squad'),
-        actions: [
-          IconButton(
-            key: _helpKey,
-            icon: const Icon(Icons.help_outline_rounded),
-            onPressed: () => setState(() => _isTutorialActive = true),
-          ),
-        ],
-      ),
-      body: OnboardingOverlay(
-        visible: _isTutorialActive,
-        onFinish: () => setState(() => _isTutorialActive = false),
-        steps: [
-          OnboardingStep(
-            title: 'Start Your Squad',
-            description: 'Set up a group to begin splitting bills and tracking who owes what in RootEXP.',
-          ),
-          OnboardingStep(
-            targetKey: _helpKey,
-            title: 'Help Anytime',
-            description: 'You can tap this icon again if you need to replay this guide.',
-          ),
-          OnboardingStep(
-            targetKey: _nameKey,
-            title: 'Squad Identity',
-            description: 'Give your squad a clear name like "Beach Trip" or "Office Lunch".',
-          ),
-          OnboardingStep(
-            targetKey: _memberKey,
-            title: 'Add Your Friends',
-            description: 'Type a name and tap (+) to add members. Everyone in this list will be able to split bills.',
-          ),
-          OnboardingStep(
-            targetKey: _createKey,
-            title: 'Ready to Launch',
-            description: 'Tap Create Squad when you are ready to start tracking expenses!',
-          ),
-        ],
-        child: SingleChildScrollView(
+    return OnboardingOverlay(
+      visible: _isTutorialActive,
+      onFinish: () => setState(() => _isTutorialActive = false),
+      steps: [
+        OnboardingStep(
+          title: 'Start Your Squad',
+          description: 'Set up a group to begin splitting bills and tracking who owes what in RootEXP.',
+        ),
+        OnboardingStep(
+          targetKey: _helpKey,
+          title: 'Help Anytime',
+          description: 'You can tap this icon again if you need to replay this guide.',
+        ),
+        OnboardingStep(
+          targetKey: _nameKey,
+          title: 'Squad Identity',
+          description: 'Give your squad a clear name like "Beach Trip" or "Office Lunch".',
+        ),
+        OnboardingStep(
+          targetKey: _memberKey,
+          title: 'Add Your Friends',
+          description: 'Type a name and tap (+) to add members. Everyone in this list will be able to split bills.',
+        ),
+        OnboardingStep(
+          targetKey: _createKey,
+          title: 'Ready to Launch',
+          description: 'Tap Create Squad when you are ready to start tracking expenses!',
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Create Squad'),
+          actions: [
+            IconButton(
+              key: _helpKey,
+              icon: const Icon(Icons.help_outline_rounded),
+              onPressed: () => setState(() => _isTutorialActive = true),
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -261,8 +261,7 @@ class _AddSquadScreenState extends State<AddSquadScreen> {
             ],
           ),
         ),
-      ),
-      bottomNavigationBar: Padding(
+        bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24),
         child: ElevatedButton(
           key: _createKey,
@@ -281,6 +280,7 @@ class _AddSquadScreenState extends State<AddSquadScreen> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

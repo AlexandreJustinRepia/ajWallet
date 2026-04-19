@@ -5,6 +5,7 @@ import '../../models/squad_transaction.dart';
 import '../../models/wallet.dart';
 import '../../services/database_service.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/onboarding_overlay.dart';
 
 class AddSquadTransactionScreen extends StatefulWidget {
   final Squad squad;
@@ -33,6 +34,14 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 
   int? _selectedWalletKey;
   List<Wallet> _wallets = [];
+  
+  bool _isTutorialActive = false;
+  final GlobalKey _helpKey = GlobalKey();
+  final GlobalKey _detailsKey = GlobalKey();
+  final GlobalKey _payerRowKey = GlobalKey();
+  final GlobalKey _modeKey = GlobalKey();
+  final GlobalKey _membersKey = GlobalKey();
+  final GlobalKey _saveKey = GlobalKey();
 
   @override
   void initState() {
@@ -124,20 +133,67 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
     final theme = Theme.of(context);
     final payer = _members.firstWhere((m) => m.key == _payerKey);
 
-    return Scaffold(
-      backgroundColor: theme.scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: const Text('Split Bill'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Transaction Details
-            _Section(
-              title: 'DETAILS',
-              child: Column(
+    return OnboardingOverlay(
+      visible: _isTutorialActive,
+      onFinish: () => setState(() => _isTutorialActive = false),
+      steps: [
+        OnboardingStep(
+          title: 'Split the Bill',
+          description: 'Ready to split costs with your squad? This guide will show you how to record every detail.',
+        ),
+        OnboardingStep(
+          targetKey: _helpKey,
+          title: 'Need Help?',
+          description: 'Tap this icon anytime to replay this tutorial and discover all splitting features.',
+        ),
+        OnboardingStep(
+          targetKey: _detailsKey,
+          title: 'What\'s the Occasion?',
+          description: 'Give your transaction a title and enter the total amount spent by the group.',
+        ),
+        OnboardingStep(
+          targetKey: _payerRowKey,
+          title: 'Who Paid Upfront?',
+          description: 'Select the squad member who settled the bill. You can also pick a wallet to automatically deduct the expense.',
+        ),
+        OnboardingStep(
+          targetKey: _modeKey,
+          title: 'Choose Split Mode',
+          description: 'Divide equally among everyone, enter specific amounts, or split by percentage.',
+        ),
+        OnboardingStep(
+          targetKey: _membersKey,
+          title: 'Who\'s Involved?',
+          description: 'Check the members who are part of this bill. Only included members will be part of the split.',
+        ),
+        OnboardingStep(
+          targetKey: _saveKey,
+          title: 'Finish & Save',
+          description: 'Once everything is set, tap Add Transaction to update everyone\'s balances.',
+        ),
+      ],
+      child: Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        appBar: AppBar(
+          title: const Text('Split Bill'),
+          actions: [
+            IconButton(
+              key: _helpKey,
+              icon: const Icon(Icons.help_outline_rounded),
+              onPressed: () => setState(() => _isTutorialActive = true),
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Transaction Details
+              _Section(
+                key: _detailsKey,
+                title: 'DETAILS',
+                child: Column(
                 children: [
                   TextField(
                     controller: _titleController,
@@ -161,6 +217,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 
             // Payer Selection
             _Section(
+              key: _payerRowKey,
               title: 'WHO PAID?',
               child: Container(
                 decoration: _cardDecoration(theme),
@@ -204,6 +261,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 
             // Split Type
             _Section(
+              key: _modeKey,
               title: 'SPLIT MODE',
               child: Row(
                 children: [
@@ -232,6 +290,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 
             // Members List
             _Section(
+              key: _membersKey,
               title: 'SPLIT AMONG',
               child: ListView.builder(
                 shrinkWrap: true,
@@ -317,6 +376,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24),
         child: ElevatedButton(
+          key: _saveKey,
           onPressed: _saveTransaction,
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.primaryColor,
@@ -327,8 +387,9 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
           child: const Text('Add Transaction', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   void _showPayerPicker() {
     showModalBottomSheet(
@@ -403,7 +464,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 class _Section extends StatelessWidget {
   final String title;
   final Widget child;
-  const _Section({required this.title, required this.child});
+  const _Section({super.key, required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {

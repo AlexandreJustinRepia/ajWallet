@@ -119,10 +119,12 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         headerSliverBuilder: (context, innerBoxIsScrolled) {
           return [
             SliverAppBar(
-              expandedHeight: 220,
+              expandedHeight: 280,
               pinned: true,
               stretch: true,
               flexibleSpace: FlexibleSpaceBar(
+                centerTitle: true,
+                titlePadding: const EdgeInsets.only(bottom: 20),
                 title: Text(
                   widget.squad.name,
                   style: TextStyle(
@@ -135,7 +137,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 80),
                       Text(
                         'TOTAL SQUAD NET',
                         style: TextStyle(
@@ -170,6 +172,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                           ),
                         ],
                       ),
+                      const SizedBox(height: 40),
                     ],
                   ),
                 ),
@@ -1678,10 +1681,12 @@ class _SquadSummaryWidget extends StatelessWidget {
           // Squad Identity
           Text(
             squad.name.toUpperCase(),
+            textAlign: TextAlign.center,
             style: const TextStyle(fontSize: 36, fontWeight: FontWeight.w900, color: Colors.black, letterSpacing: -1),
           ),
           Text(
             DateFormat('EEEE, MMMM dd, yyyy').format(DateTime.now()),
+            textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.grey.shade400),
           ),
 

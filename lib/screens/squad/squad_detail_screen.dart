@@ -26,8 +26,9 @@ class SquadDetailScreen extends StatefulWidget {
 class _SquadDetailScreenState extends State<SquadDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final GlobalKey _summaryKey = GlobalKey();
-  final GlobalKey _receiptKey = GlobalKey();
+  final GlobalKey _summaryKey = GlobalKey(); // Button key
+  final GlobalKey _summaryCaptureKey = GlobalKey(); // Capture key
+  final GlobalKey _receiptCaptureKey = GlobalKey(); // Capture key
   final GlobalKey _helpKey = GlobalKey();
   final GlobalKey _settleKey = GlobalKey();
   final GlobalKey _splitKey = GlobalKey();
@@ -63,7 +64,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         Positioned(
           left: -10000,
           child: RepaintBoundary(
-            key: _summaryKey,
+            key: _summaryCaptureKey,
             child: _SquadSummaryWidget(
               squad: widget.squad,
               balances: balances,
@@ -77,13 +78,14 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           Positioned(
             left: -10000,
             child: RepaintBoundary(
-              key: _receiptKey,
+              key: _receiptCaptureKey,
               child: _InvoiceWidget(
                 tx: _txToCapture!,
                 members: DatabaseService.getSquadMembers(squadKey),
                 payerName: DatabaseService.getSquadMembers(squadKey)
                     .firstWhere((m) => m.key == _txToCapture!.payerMemberKey, 
                     orElse: () => DatabaseService.getSquadMembers(squadKey).first).name,
+                billRemaining: _calculateBillRemaining(_txToCapture!, DatabaseService.getSquadMembers(squadKey)),
               ),
             ),
           ),
@@ -94,7 +96,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
           onFinish: () => setState(() => _isTutorialActive = false),
           steps: [
             OnboardingStep(
-              title: 'Welcome to Squad 2.0',
+              title: 'Welcome to Squad',
               description: 'Manage group expenses and share premium RootEXP picture receipts with ease.',
             ),
             OnboardingStep(
@@ -321,7 +323,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     await Future.delayed(const Duration(milliseconds: 100));
 
     try {
-      final boundary = _summaryKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = _summaryCaptureKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) throw 'Could not find summary boundary';
 
       final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
@@ -360,7 +362,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     await Future.delayed(const Duration(milliseconds: 150));
 
     try {
-      final boundary = _receiptKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      final boundary = _receiptCaptureKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
       if (boundary == null) throw 'Could not find receipt boundary';
 
       final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
@@ -387,6 +389,64 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         setState(() => _txToCapture = null);
       }
     }
+  }
+
+  Map<int, double> _calculateBillRemaining(SquadTransaction tx, List<SquadMember> members) {
+    if (tx.isSettlement) return {}; 
+
+    final allTxs = DatabaseService.getSquadTransactions(tx.squadKey);
+    final relatedPayments = allTxs.where((t) => t.isSettlement && t.relatedBillKey == tx.key).toList();
+    final bills = allTxs.where((t) => !t.isSettlement).toList()..sort((a, b) => a.date.compareTo(b.date));
+
+    Map<int, double> remainingMap = {};
+
+    for (var member in members) {
+      final memberKey = member.key as int;
+      if (!tx.memberSplits.containsKey(memberKey)) continue;
+
+      double share = tx.memberSplits[memberKey]!;
+      if (tx.splitType == SplitType.percentage) {
+        share = (share / 100) * tx.amount;
+      } else if (tx.splitType == SplitType.equal) {
+        share = tx.amount / tx.memberSplits.length;
+      }
+
+      if (memberKey == tx.payerMemberKey) {
+        remainingMap[memberKey] = 0.0;
+        continue;
+      }
+
+      final explicit = relatedPayments
+          .where((p) => p.payerMemberKey == memberKey)
+          .map((p) => p.amount)
+          .fold(0.0, (a, b) => a + b);
+
+      double totalP = allTxs
+          .where((t) => t.isSettlement && t.payerMemberKey == memberKey)
+          .map((t) => t.amount)
+          .fold(0.0, (a, b) => a + b);
+      
+      double prevS = 0;
+      for (var b in bills) {
+        if (b.key == tx.key) break;
+        if (b.memberSplits.containsKey(memberKey)) {
+          double s = b.memberSplits[memberKey]!;
+          if (b.splitType == SplitType.percentage) {
+            s = (s / 100) * b.amount;
+          } else if (b.splitType == SplitType.equal) {
+            s = b.amount / b.memberSplits.length;
+          }
+          prevS += s;
+        }
+      }
+
+      final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
+      final attrA = availC.clamp(0.0, (share - explicit).clamp(0.0, double.infinity));
+      
+      remainingMap[memberKey] = (share - explicit - attrA).clamp(0.0, double.infinity);
+    }
+
+    return remainingMap;
   }
 }
 
@@ -1340,11 +1400,13 @@ class _InvoiceWidget extends StatelessWidget {
   final SquadTransaction tx;
   final List<SquadMember> members;
   final String payerName;
+  final Map<int, double>? billRemaining;
 
   const _InvoiceWidget({
     required this.tx,
     required this.members,
     required this.payerName,
+    this.billRemaining,
   });
 
   @override
@@ -1528,7 +1590,55 @@ class _InvoiceWidget extends StatelessWidget {
           }),
 
           const SizedBox(height: 64),
-          
+
+          if (billRemaining != null && billRemaining!.isNotEmpty) ...[
+            // BILL SETTLEMENT STATUS
+            Row(
+              children: [
+                Text(
+                  'SETTLEMENT STATUS',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87, letterSpacing: 1.5),
+                ),
+                const Expanded(child: Padding(padding: EdgeInsets.symmetric(horizontal: 8), child: Divider(color: Colors.black12, thickness: 1))),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ...tx.memberSplits.keys.map((memberKey) {
+              final member = members.firstWhere((m) => m.key == memberKey);
+              final remaining = billRemaining![memberKey] ?? 0;
+              final isFullyPaid = remaining <= 0.01;
+              final isPayer = memberKey == tx.payerMemberKey;
+              
+              final statusColor = (isFullyPaid || isPayer) ? Colors.green.shade700 : Colors.red.shade700;
+              final statusText = isPayer ? 'PAID' : (isFullyPaid ? 'PAID' : '₱${remaining.toStringAsFixed(0)}');
+
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 14),
+                child: Row(
+                  children: [
+                    Text(
+                      member.name + (member.isYou ? ' (You)' : ''),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.black87),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        statusText,
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: statusColor),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 48),
+          ],
+
           // Branding Footer (High Contrast)
           Center(
             child: Column(

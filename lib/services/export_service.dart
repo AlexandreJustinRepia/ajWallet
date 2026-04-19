@@ -172,6 +172,7 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
+    String symbol = '₱';
     try {
       // Robust font loading with fallback
       fontRegular = await PdfGoogleFonts.robotoRegular();
@@ -180,6 +181,7 @@ class ExportService {
       debugPrint('PDF regular fonts failed, falling back to Helvetica: $e');
       fontRegular = pw.Font.helvetica();
       fontBold = pw.Font.helveticaBold();
+      symbol = 'PHP ';
     }
 
     final doc = pw.Document(
@@ -208,7 +210,7 @@ class ExportService {
         build: (ctx) => [
           pw.SizedBox(height: 16),
           // ── Summary cards ──────────────────────────────────────────────
-          _buildSummarySection(summary, incomeColor, expenseColor, primaryColor, bgColor),
+          _buildSummarySection(summary, incomeColor, expenseColor, primaryColor, bgColor, symbol),
           pw.SizedBox(height: 20),
           // ── Expense Chart & Categories ──────────────────────────────────
           if (summary.topCategories.isNotEmpty) ...[
@@ -234,7 +236,7 @@ class ExportService {
                     children: [
                       _buildSectionTitle('Top Spending Categories', primaryColor),
                       pw.SizedBox(height: 8),
-                      _buildCategoryTable(summary.topCategories, summary.totalExpenses, primaryColor, bgColor, cardBg),
+                      _buildCategoryTable(summary.topCategories, summary.totalExpenses, primaryColor, bgColor, cardBg, symbol),
                     ],
                   ),
                 ),
@@ -251,7 +253,7 @@ class ExportService {
               style: pw.TextStyle(color: textMuted, fontSize: 11),
             )
           else
-            _buildTransactionTable(transactions, walletMap, incomeColor, expenseColor, bgColor, cardBg, textMuted),
+            _buildTransactionTable(transactions, walletMap, incomeColor, expenseColor, bgColor, cardBg, textMuted, symbol),
         ],
       ),
     );
@@ -269,12 +271,14 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
+    String symbol = '₱';
     try {
       fontRegular = await PdfGoogleFonts.robotoRegular();
       fontBold = await PdfGoogleFonts.robotoBold();
     } catch (e) {
       fontRegular = pw.Font.helvetica();
       fontBold = pw.Font.helveticaBold();
+      symbol = 'PHP ';
     }
 
     final doc = pw.Document(
@@ -301,12 +305,12 @@ class ExportService {
         build: (ctx) => [
           pw.SizedBox(height: 16),
           // ── Summary sections ──────────────────────────────────────────
-          _buildSquadSummary(balances, incomeColor, expenseColor, primaryColor, bgColor),
+          _buildSquadSummary(balances, incomeColor, expenseColor, primaryColor, bgColor, symbol),
           pw.SizedBox(height: 24),
           // ── Members & Balances ────────────────────────────────────────
           _buildSectionTitle('Member Balances', primaryColor),
           pw.SizedBox(height: 8),
-          _buildMemberBalancesTable(members, balances, incomeColor, expenseColor, bgColor, cardBg),
+          _buildMemberBalancesTable(members, balances, incomeColor, expenseColor, bgColor, cardBg, symbol),
           pw.SizedBox(height: 24),
           // ── Activity History ──────────────────────────────────────────
           _buildSectionTitle('Squad Activity History', primaryColor),
@@ -314,7 +318,7 @@ class ExportService {
           if (transactions.isEmpty)
             pw.Text('No activity recorded yet.', style: pw.TextStyle(color: textMuted, fontSize: 11))
           else
-            _buildSquadTransactionTable(transactions, members, incomeColor, expenseColor, bgColor, cardBg, textMuted),
+            _buildSquadTransactionTable(transactions, members, incomeColor, expenseColor, bgColor, cardBg, textMuted, symbol),
         ],
       ),
     );
@@ -332,12 +336,14 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
+    String symbol = '₱';
     try {
       fontRegular = await PdfGoogleFonts.robotoRegular();
       fontBold = await PdfGoogleFonts.robotoBold();
     } catch (e) {
       fontRegular = pw.Font.helvetica();
       fontBold = pw.Font.helveticaBold();
+      symbol = 'PHP ';
     }
 
     final doc = pw.Document(
@@ -386,7 +392,7 @@ class ExportService {
                 children: [
                   pw.Text(tx.title.toUpperCase(), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
                   pw.SizedBox(height: 8),
-                  pw.Text('₱${_currency.format(tx.amount)}', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor)),
+                  pw.Text('$symbol${_currency.format(tx.amount)}', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold, color: primaryColor)),
                   pw.SizedBox(height: 4),
                   pw.Text('Paid by ${payer.name}', style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey700)),
                 ],
@@ -428,9 +434,9 @@ class ExportService {
                   return pw.TableRow(
                     children: [
                       _cell(member.name + (member.isYou ? ' (You)' : '')),
-                      _cell('₱${_currency.format(share)}', align: pw.TextAlign.right, bold: true),
+                      _cell('$symbol${_currency.format(share)}', align: pw.TextAlign.right, bold: true),
                       _cell(
-                        isPositive ? 'Gets ₱${_currency.format(netBalance)}' : (isNegative ? 'Owes ₱${_currency.format(netBalance.abs())}' : 'Settled'),
+                        isPositive ? 'Gets $symbol${_currency.format(netBalance)}' : (isNegative ? 'Owes $symbol${_currency.format(netBalance.abs())}' : 'Settled'),
                         align: pw.TextAlign.right,
                         color: isPositive ? PdfColors.green : (isNegative ? PdfColors.red : PdfColors.grey700),
                         bold: true,
@@ -513,16 +519,17 @@ class ExportService {
     PdfColor expenseColor,
     PdfColor primary,
     PdfColor bg,
+    String symbol,
   ) {
     return pw.Row(
       children: [
-        _summaryCard('YOU ARE OWED', '₱${_currency.format(balances.youAreOwed)}', incomeColor, bg),
+        _summaryCard('YOU ARE OWED', '$symbol${_currency.format(balances.youAreOwed)}', incomeColor, bg),
         pw.SizedBox(width: 8),
-        _summaryCard('YOU OWE', '₱${_currency.format(balances.youOwe)}', expenseColor, bg),
+        _summaryCard('YOU OWE', '$symbol${_currency.format(balances.youOwe)}', expenseColor, bg),
         pw.SizedBox(width: 8),
         _summaryCard(
           'YOUR NET STATUS',
-          '${balances.net >= 0 ? "+" : ""}₱${_currency.format(balances.net)}',
+          '${balances.net >= 0 ? "+" : ""}$symbol${_currency.format(balances.net)}',
           balances.net >= 0 ? incomeColor : expenseColor,
           bg,
         ),
@@ -537,6 +544,7 @@ class ExportService {
     PdfColor expenseColor,
     PdfColor bg,
     PdfColor cardBg,
+    String symbol,
   ) {
     final rows = members.asMap().entries.map((entry) {
       final i = entry.key;
@@ -576,7 +584,7 @@ class ExportService {
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: pw.Text(
-              '₱${_currency.format(balance.abs())}',
+              '$symbol${_currency.format(balance.abs())}',
               style: pw.TextStyle(color: statusColor, fontSize: 11, fontWeight: pw.FontWeight.bold),
               textAlign: pw.TextAlign.right,
             ),
@@ -614,6 +622,7 @@ class ExportService {
     PdfColor bg,
     PdfColor cardBg,
     PdfColor muted,
+    String symbol,
   ) {
     // Sort transactions by date descending
     final sorted = transactions.toList()..sort((a, b) => b.date.compareTo(a.date));
@@ -632,7 +641,7 @@ class ExportService {
           _cell(payer.name, muted: muted),
           _cell(tx.isSettlement ? 'Settlement' : tx.splitType.name),
           _cell(
-            '₱${_currency.format(tx.amount)}',
+            '$symbol${_currency.format(tx.amount)}',
             bold: true,
             color: tx.isSettlement ? incomeColor : expenseColor,
             align: pw.TextAlign.right,
@@ -748,7 +757,7 @@ class ExportService {
               ),
               pw.Text(
                 'Generated ${_displayDate.format(DateTime.now())}',
-                style: const pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey600),
               ),
             ],
           ),
@@ -757,25 +766,31 @@ class ExportService {
     );
   }
 
-  static pw.Widget _buildFooter(pw.Context ctx, PdfColor muted) {
+  static pw.Widget _buildFooter(pw.Context ctx, PdfColor color) {
     return pw.Container(
       alignment: pw.Alignment.centerRight,
-      margin: const pw.EdgeInsets.only(top: 8),
+      margin: const pw.EdgeInsets.only(top: 10),
       child: pw.Text(
         'Page ${ctx.pageNumber} of ${ctx.pagesCount}',
-        style: pw.TextStyle(fontSize: 9, color: muted),
+        style: pw.TextStyle(color: color, fontSize: 9),
       ),
     );
   }
 
   static pw.Widget _buildSectionTitle(String title, PdfColor color) {
-    return pw.Text(
-      title.toUpperCase(),
-      style: pw.TextStyle(
-        fontSize: 9,
-        fontWeight: pw.FontWeight.bold,
-        letterSpacing: 1.5,
-        color: color,
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      decoration: pw.BoxDecoration(
+        border: pw.Border(bottom: pw.BorderSide(color: color, width: 1)),
+      ),
+      child: pw.Text(
+        title.toUpperCase(),
+        style: pw.TextStyle(
+          fontSize: 10,
+          fontWeight: pw.FontWeight.bold,
+          color: color,
+          letterSpacing: 1,
+        ),
       ),
     );
   }
@@ -786,16 +801,17 @@ class ExportService {
     PdfColor expenseColor,
     PdfColor primary,
     PdfColor bg,
+    String symbol,
   ) {
     return pw.Row(
       children: [
-        _summaryCard('TOTAL INCOME', '₱${_currency.format(summary.totalIncome)}', incomeColor, bg),
+        _summaryCard('TOTAL INCOME', '$symbol${_currency.format(summary.totalIncome)}', incomeColor, bg),
         pw.SizedBox(width: 8),
-        _summaryCard('TOTAL EXPENSES', '₱${_currency.format(summary.totalExpenses)}', expenseColor, bg),
+        _summaryCard('TOTAL EXPENSES', '$symbol${_currency.format(summary.totalExpenses)}', expenseColor, bg),
         pw.SizedBox(width: 8),
         _summaryCard(
           'NET BALANCE',
-          '₱${_currency.format(summary.netBalance)}',
+          '$symbol${_currency.format(summary.netBalance)}',
           summary.netBalance >= 0 ? incomeColor : expenseColor,
           bg,
         ),
@@ -908,6 +924,7 @@ class ExportService {
     PdfColor primary,
     PdfColor bg,
     PdfColor cardBg,
+    String symbol,
   ) {
     final rows = categories.map((e) {
       final pct = totalExpenses > 0 ? (e.value / totalExpenses * 100) : 0.0;
@@ -920,7 +937,7 @@ class ExportService {
           pw.Padding(
             padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
             child: pw.Text(
-              '₱${_currency.format(e.value)}',
+              '$symbol${_currency.format(e.value)}',
               style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
             ),
           ),
@@ -979,6 +996,7 @@ class ExportService {
     PdfColor bg,
     PdfColor cardBg,
     PdfColor muted,
+    String symbol,
   ) {
     final rows = transactions.asMap().entries.map((entry) {
       final i = entry.key;
@@ -996,7 +1014,7 @@ class ExportService {
           _cell(tx.category, muted: muted),
           _cell(tx.type.name, color: amountColor),
           _cell(
-            '${isIncome ? '+' : tx.type == TransactionType.expense ? '-' : ''}₱${_currency.format(tx.amount)}',
+            '${isIncome ? '+' : tx.type == TransactionType.expense ? '-' : ''}$symbol${_currency.format(tx.amount)}',
             color: amountColor,
             bold: true,
           ),

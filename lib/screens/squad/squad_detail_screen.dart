@@ -611,6 +611,7 @@ class _BalancesTab extends StatelessWidget {
         final isPositive = balance > 0;
         final isNegative = balance < 0;
         final txs = DatabaseService.getSquadTransactions(squad.key as int);
+        final hasActivity = txs.any((t) => t.payerMemberKey == member.key || t.memberSplits.containsKey(member.key as int));
 
         return GestureDetector(
           onTap: () {
@@ -683,7 +684,7 @@ class _BalancesTab extends StatelessWidget {
                     Text(
                       isPositive 
                           ? 'gets back ₱${balance.toStringAsFixed(2)}'
-                          : (isNegative ? 'owes ₱${balance.abs().toStringAsFixed(2)}' : 'all settled'),
+                          : (isNegative ? 'owes ₱${balance.abs().toStringAsFixed(2)}' : (hasActivity ? 'all settled' : 'no activity yet')),
                       style: TextStyle(
                         fontSize: 12,
                         color: isPositive 
@@ -771,7 +772,7 @@ class _MemberDetailSheet extends StatelessWidget {
                     Text(
                       isPositive 
                           ? 'GETS BACK ${format.format(netBalance)} TOTAL' 
-                          : (isNegative ? 'OWES ${format.format(netBalance.abs())}' : 'ALL SETTLED'),
+                          : (isNegative ? 'OWES ${format.format(netBalance.abs())}' : (memberHistory.isEmpty ? 'NO ACTIVITY YET' : 'ALL SETTLED')),
                       style: TextStyle(
                         fontSize: 14, 
                         fontWeight: FontWeight.bold,

@@ -1064,17 +1064,24 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
 
     int? selectedWalletKey;
     final wallets = DatabaseService.getAllWallets();
+    final amountController = TextEditingController(text: remainingAmount.toStringAsFixed(0));
 
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Record Remaining Payment?'),
+          title: const Text('Record Payment'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Record ₱${remainingAmount.toStringAsFixed(0)} payment from ${member.name} for this bill?'),
+              Text('Record payment from ${member.name} for this bill.'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                decoration: const InputDecoration(labelText: 'Amount (₱)', hintText: '0.00'),
+              ),
               const SizedBox(height: 20),
               const Text('RECORD TO WALLET (OPTIONAL)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
               const SizedBox(height: 8),
@@ -1106,9 +1113,12 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     );
 
     if (confirmed == true) {
+      final amt = double.tryParse(amountController.text) ?? 0;
+      if (amt <= 0) return;
+
       final payment = SquadTransaction(
         title: 'Payment for ${widget.tx.title}',
-        amount: remainingAmount,
+        amount: amt,
         date: DateTime.now(),
         squadKey: widget.tx.squadKey,
         payerMemberKey: member.key as int,

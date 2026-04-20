@@ -327,7 +327,7 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
     }
 
     if (isExport) {
-      if (!context.mounted) return;
+      if (!currentContext.mounted) return;
       final nameController = TextEditingController();
       final backupName = await showDialog<String?>(
         context: currentContext,
@@ -354,50 +354,122 @@ class _SecuritySettingsScreenState extends State<SecuritySettingsScreen> {
         ),
       );
 
-      final success = await BackupService.exportBackup(
-        pinToUse,
-        _account.key as int,
-        name: backupName,
-      );
-      if (context.mounted) {
-        ScaffoldMessenger.of(currentContext).showSnackBar(
-          SnackBar(
-            content: Text(
-              success ? 'Backup exported successfully' : 'Export failed',
-            ),
-          ),
+      if (!currentContext.mounted) return;
+      _showLoadingDialog('Encrypting & saving backup...');
+
+      try {
+        final success = await BackupService.exportBackup(
+          pinToUse,
+          _account.key as int,
+          name: backupName,
         );
-        _refreshBackupHistory();
-      }
-    } else {
-      final success = await BackupService.importBackup(
-        pinToUse,
-        _account.key as int,
-      );
-      if (context.mounted) {
-        if (success) {
+        
+        if (currentContext.mounted) {
+          Navigator.pop(currentContext); // Close loading dialog
+          
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(
-              content: Text('Data restored successfully into this account.'),
+            SnackBar(
+              content: Text(
+                success ? 'Backup exported successfully' : 'Export failed',
+              ),
+              backgroundColor: success ? Colors.green[800] : Colors.red[900],
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
           );
-          setState(() {
-            _account = SessionService.activeAccount!;
-          });
           _refreshBackupHistory();
-          Navigator.pop(currentContext, true);
-        } else {
-          _refreshBackupHistory();
+        }
+      } catch (e) {
+        if (currentContext.mounted) {
+          Navigator.pop(currentContext); // Close loading dialog
           ScaffoldMessenger.of(currentContext).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'Import failed. Check your PIN or file integrity.',
+            SnackBar(
+              content: Text('Export error: $e'),
+              backgroundColor: Colors.red[900],
+            ),
+          );
+        }
+      }
+    } else {
+      if (!currentContext.mounted) return;
+      _showLoadingDialog('Restoring your data...');
+      
+      try {
+        final success = await BackupService.importBackup(
+          pinToUse,
+          _account.key as int,
+        );
+        
+        if (currentContext.mounted) {
+          Navigator.pop(currentContext); // Close loading dialog
+          
+          if (success) {
+            ScaffoldMessenger.of(currentContext).showSnackBar(
+              SnackBar(
+                content: const Text('Data restored successfully into this account.'),
+                backgroundColor: Colors.green[800],
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
+            );
+            setState(() {
+              _account = SessionService.activeAccount!;
+            });
+            _refreshBackupHistory();
+            Navigator.pop(currentContext, true);
+          } else {
+            _refreshBackupHistory();
+            ScaffoldMessenger.of(currentContext).showSnackBar(
+              SnackBar(
+                content: const Text(
+                  'Import failed. Check your PIN or file integrity.',
+                ),
+                backgroundColor: Colors.red[900],
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        if (currentContext.mounted) {
+          Navigator.pop(currentContext); // Close loading dialog
+          ScaffoldMessenger.of(currentContext).showSnackBar(
+            SnackBar(
+              content: Text('Import error: $e'),
+              backgroundColor: Colors.red[900],
             ),
           );
         }
       }
     }
+  }
+
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 8),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 24),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _refreshBackupHistory() {

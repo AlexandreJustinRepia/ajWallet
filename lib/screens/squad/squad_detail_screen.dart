@@ -14,6 +14,7 @@ import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../../widgets/onboarding_overlay.dart';
+import '../../models/wallet.dart';
 
 class SquadDetailScreen extends StatefulWidget {
   final Squad squad;
@@ -901,7 +902,8 @@ class _MemberDetailSheet extends StatelessWidget {
 
   void _handleSettleUp(BuildContext context) async {
     final theme = Theme.of(context);
-    final wallets = DatabaseService.getAllWallets();
+    final squad = DatabaseService.getSquad(member.squadKey);
+    final wallets = squad != null ? DatabaseService.getWallets(squad.accountKey) : <Wallet>[];
     int? selectedWalletKey;
     final amountController = TextEditingController(text: netBalance.abs().toStringAsFixed(0));
 
@@ -1060,10 +1062,11 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
   }
 
   void _markAsPaid(SquadMember member, double remainingAmount) async {
-    if (remainingAmount <= 0.01) return;
+    if (remainingAmount < 1.0) return;
 
     int? selectedWalletKey;
-    final wallets = DatabaseService.getAllWallets();
+    final squad = DatabaseService.getSquad(widget.tx.squadKey);
+    final wallets = squad != null ? DatabaseService.getWallets(squad.accountKey) : <Wallet>[];
     final amountController = TextEditingController(text: remainingAmount.toStringAsFixed(0));
 
     final confirmed = await showDialog<bool>(
@@ -1169,7 +1172,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
         final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
         final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
 
-        if (attrA > 0.01) {
+        if (attrA >= 1.0) {
           anyPayments = true;
           break;
         }
@@ -1314,14 +1317,14 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(member.name + (member.isYou ? ' (You)' : ''), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                if (remaining > 0.01)
+                                if (remaining >= 1.0)
                                   Text('Owes ${format.format(remaining)}', style: TextStyle(fontSize: 11, color: theme.colorScheme.error)),
-                                if (remaining <= 0.01)
+                                if (remaining < 1.0)
                                   Text(isPayer ? 'Fully Settled (Payer)' : 'Fully Settled', style: const TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
                               ],
                             ),
                           ),
-                          if (remaining > 0.01 && memberKey != widget.tx.payerMemberKey)
+                          if (remaining >= 1.0 && memberKey != widget.tx.payerMemberKey)
                             TextButton(
                               onPressed: () => _markAsPaid(member, remaining),
                               style: TextButton.styleFrom(
@@ -1332,7 +1335,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                               ),
                               child: const Text('Settle', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                             ),
-                          if (remaining <= 0.01 && memberKey != widget.tx.payerMemberKey)
+                          if (remaining < 1.0 && memberKey != widget.tx.payerMemberKey)
                             const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                         ],
                       ),
@@ -1368,7 +1371,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                       final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
                       final attrA = availC.clamp(0.0, (sh - explicit).clamp(0.0, double.infinity));
 
-                      if (attrA <= 0.01) return const SizedBox.shrink();
+                      if (attrA < 1.0) return const SizedBox.shrink();
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
@@ -1376,7 +1379,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                           children: [
                             const Icon(Icons.auto_fix_high_rounded, size: 12, color: Colors.green),
                             const SizedBox(width: 8),
-                            Expanded(child: Text('${member.name} settled ${attrA >= (sh - explicit - 0.01) ? 'share' : 'partially'} (Auto)', style: const TextStyle(fontSize: 12))),
+                            Expanded(child: Text('${member.name} settled ${attrA >= (sh - explicit - 1.0) ? 'share' : 'partially'} (Auto)', style: const TextStyle(fontSize: 12))),
                             Text(format.format(attrA), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green)),
                           ],
                         ),

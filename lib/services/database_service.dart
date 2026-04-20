@@ -563,6 +563,16 @@ class DatabaseService {
       }
     }
 
+    // 2. Cascade delete linked settlements if this was a bill
+    if (!tx.isSettlement) {
+      final linkedSettlements = _squadTxBox.values
+          .where((s) => s.relatedBillKey == tx.key)
+          .toList();
+      for (var s in linkedSettlements) {
+        await deleteSquadTransaction(s);
+      }
+    }
+
     await tx.delete();
   }
 

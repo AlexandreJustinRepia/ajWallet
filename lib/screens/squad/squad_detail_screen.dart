@@ -190,6 +190,10 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                   onPressed: () => setState(() => _isTutorialActive = true),
                 ),
                 IconButton(
+                  icon: const Icon(Icons.edit_outlined),
+                  onPressed: () => _editSquadName(),
+                ),
+                IconButton(
                   key: _summaryKey,
                   icon: const Icon(Icons.share_outlined),
                   onPressed: () => _shareSquadSummaryImage(),
@@ -310,6 +314,55 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         Navigator.pop(context, true);
       }
     }
+  }
+
+  void _editSquadName() {
+    final theme = Theme.of(context);
+    final controller = TextEditingController(text: widget.squad.name);
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: theme.cardColor,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Edit Squad Name', style: TextStyle(fontWeight: FontWeight.bold)),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'Enter new squad name',
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          textCapitalization: TextCapitalization.words,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: theme.dividerColor)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                final newName = controller.text.trim();
+                widget.squad.name = newName;
+                await DatabaseService.updateSquad(widget.squad);
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  setState(() {});
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: theme.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: Text('Save', style: TextStyle(color: theme.scaffoldBackgroundColor, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _shareSquadSummaryImage() async {

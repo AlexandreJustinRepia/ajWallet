@@ -52,6 +52,8 @@ flutter:
     - assets/images/onboarding/
     - assets/images/trees/
     - assets/logo/logo.png
+    - assets/fonts/Roboto-Regular.ttf
+    - assets/fonts/Roboto-Bold.ttf
 
 flutter_launcher_icons:
   android: "launcher_icon"
@@ -60,5 +62,4 @@ flutter_launcher_icons:
   min_sdk_android: 21 # should be same as your minSdk in build.gradle
 
 dependency_overrides:
-  archive: ^3.6.1
   archive: ^3.6.1

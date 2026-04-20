@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -186,17 +187,12 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
-    String symbol = '₱';
-    try {
-      // Robust font loading with fallback
-      fontRegular = await PdfGoogleFonts.robotoRegular();
-      fontBold = await PdfGoogleFonts.robotoBold();
-    } catch (e) {
-      debugPrint('PDF regular fonts failed, falling back to Helvetica: $e');
-      fontRegular = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-      symbol = 'PHP ';
-    }
+    const String symbol = '₱';
+    final fontDataRegular =
+        await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+    final fontDataBold = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+    fontRegular = pw.Font.ttf(fontDataRegular);
+    fontBold = pw.Font.ttf(fontDataBold);
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
@@ -307,15 +303,12 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
-    String symbol = '₱';
-    try {
-      fontRegular = await PdfGoogleFonts.robotoRegular();
-      fontBold = await PdfGoogleFonts.robotoBold();
-    } catch (e) {
-      fontRegular = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-      symbol = 'PHP ';
-    }
+    const String symbol = '₱';
+    final fontDataRegular =
+        await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+    final fontDataBold = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+    fontRegular = pw.Font.ttf(fontDataRegular);
+    fontBold = pw.Font.ttf(fontDataBold);
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),
@@ -399,15 +392,12 @@ class ExportService {
     pw.Font fontRegular;
     pw.Font fontBold;
 
-    String symbol = '₱';
-    try {
-      fontRegular = await PdfGoogleFonts.robotoRegular();
-      fontBold = await PdfGoogleFonts.robotoBold();
-    } catch (e) {
-      fontRegular = pw.Font.helvetica();
-      fontBold = pw.Font.helveticaBold();
-      symbol = 'PHP ';
-    }
+    const String symbol = '₱';
+    final fontDataRegular =
+        await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
+    final fontDataBold = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
+    fontRegular = pw.Font.ttf(fontDataRegular);
+    fontBold = pw.Font.ttf(fontDataBold);
 
     final doc = pw.Document(
       theme: pw.ThemeData.withFont(base: fontRegular, bold: fontBold),

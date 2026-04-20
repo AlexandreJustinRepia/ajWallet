@@ -4,6 +4,7 @@ import 'models/transaction_model.dart';
 import 'services/database_service.dart';
 import 'add_transaction_screen.dart';
 import 'widgets/onboarding_overlay.dart';
+import 'dart:io';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final Transaction transaction;
@@ -242,6 +243,38 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                   ),
                 ],
               ),
+            
+            if (widget.transaction.attachmentPaths != null && widget.transaction.attachmentPaths!.isNotEmpty)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 24),
+                  _InfoLabel(label: 'Attachments', theme: theme),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: widget.transaction.attachmentPaths!.length,
+                      itemBuilder: (context, index) {
+                        final path = widget.transaction.attachmentPaths![index];
+                        return GestureDetector(
+                          onTap: () => _showFullScreenImage(context, path),
+                          child: Container(
+                            width: 120,
+                            margin: const EdgeInsets.only(right: 12),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                              border: Border.all(color: theme.dividerColor, width: 0.5),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
           ],
         ),
       ),
@@ -258,6 +291,28 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
         }
       },
       child: content,
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String path) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog.fullscreen(
+        backgroundColor: Colors.black,
+        child: Stack(
+          children: [
+            Center(child: Image.file(File(path), fit: BoxFit.contain)),
+            Positioned(
+              top: 40,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

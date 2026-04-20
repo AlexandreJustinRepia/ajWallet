@@ -55,7 +55,11 @@ class SquadTransaction extends HiveObject {
     this.isSettlement = false,
     this.walletKey,
     this.relatedBillKey,
+    this.attachmentPaths,
   });
+
+  @HiveField(10)
+  List<String>? attachmentPaths;
 
   Map<String, dynamic> toMap() {
     return {
@@ -69,6 +73,7 @@ class SquadTransaction extends HiveObject {
       'isSettlement': isSettlement,
       'walletKey': walletKey,
       'relatedBillKey': relatedBillKey,
+      'attachmentPaths': attachmentPaths,
     };
   }
 
@@ -84,6 +89,7 @@ class SquadTransaction extends HiveObject {
       isSettlement: map['isSettlement'] ?? false,
       walletKey: map['walletKey'],
       relatedBillKey: map['relatedBillKey'],
+      attachmentPaths: (map['attachmentPaths'] as List?)?.cast<String>(),
     );
   }
 }

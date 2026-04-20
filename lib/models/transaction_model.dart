@@ -69,7 +69,11 @@ class Transaction extends HiveObject {
     this.budgetKey,
     this.debtKey,
     this.squadTxKey,
+    this.attachmentPaths,
   });
+
+  @HiveField(14)
+  List<String>? attachmentPaths;
 
   @HiveField(13)
   int? squadTxKey;
@@ -90,6 +94,7 @@ class Transaction extends HiveObject {
       'budgetKey': budgetKey,
       'debtKey': debtKey,
       'squadTxKey': squadTxKey,
+      'attachmentPaths': attachmentPaths,
     };
   }
 
@@ -109,6 +114,7 @@ class Transaction extends HiveObject {
       budgetKey: map['budgetKey'],
       debtKey: map['debtKey'],
       squadTxKey: map['squadTxKey'],
+      attachmentPaths: (map['attachmentPaths'] as List?)?.cast<String>(),
     );
   }
 

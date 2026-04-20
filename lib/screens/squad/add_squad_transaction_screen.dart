@@ -6,6 +6,9 @@ import '../../models/wallet.dart';
 import '../../services/database_service.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/onboarding_overlay.dart';
+import '../../services/attachment_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class AddSquadTransactionScreen extends StatefulWidget {
   final Squad squad;
@@ -34,6 +37,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
 
   int? _selectedWalletKey;
   List<Wallet> _wallets = [];
+  final List<String> _attachmentPaths = [];
   
   bool _isTutorialActive = false;
   final GlobalKey _helpKey = GlobalKey();
@@ -119,6 +123,7 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
       splitType: _splitType,
       memberSplits: finalSplits,
       walletKey: _selectedWalletKey,
+      attachmentPaths: _attachmentPaths,
     );
 
     await DatabaseService.saveSquadTransaction(tx);
@@ -369,6 +374,61 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
               ),
             ),
 
+            const SizedBox(height: 24),
+
+            // Attachments Section
+            _Section(
+              title: 'ATTACHMENTS (OPTIONAL)',
+              child: SizedBox(
+                height: 100,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: [
+                    ..._attachmentPaths.map((path) => Container(
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                        border: Border.all(color: theme.dividerColor, width: 0.5),
+                      ),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() => _attachmentPaths.remove(path));
+                                AttachmentService.deleteAttachment(path);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                child: const Icon(Icons.close, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )),
+                    GestureDetector(
+                      onTap: () => _pickAttachment(),
+                      child: Container(
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: theme.dividerColor, width: 0.5),
+                        ),
+                        child: Icon(Icons.add_a_photo_rounded, color: theme.primaryColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 40),
           ],
         ),
@@ -440,6 +500,40 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
       lastDate: DateTime.now(),
     );
     if (date != null) setState(() => _selectedDate = date);
+  }
+
+  void _pickAttachment() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          const Text('Pick Attachment', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_rounded),
+            title: const Text('Camera'),
+            onTap: () async {
+              Navigator.pop(context);
+              final path = await AttachmentService.pickAndStoreImage(ImageSource.camera);
+              if (path != null) setState(() => _attachmentPaths.add(path));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded),
+            title: const Text('Gallery'),
+            onTap: () async {
+              Navigator.pop(context);
+              final path = await AttachmentService.pickAndStoreImage(ImageSource.gallery);
+              if (path != null) setState(() => _attachmentPaths.add(path));
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
   }
 
   InputDecoration _inputDecoration(ThemeData theme, String hint) {

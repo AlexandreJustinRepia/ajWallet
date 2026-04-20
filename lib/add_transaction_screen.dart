@@ -8,6 +8,9 @@ import '../models/debt.dart';
 import 'package:hive/hive.dart';
 import 'widgets/calculator_input.dart';
 import 'widgets/onboarding_overlay.dart';
+import 'services/attachment_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -65,6 +68,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   int? _selectedGoalKey;
   int? _selectedBudgetKey;
   int? _selectedDebtKey;
+  List<String> _attachmentPaths = [];
 
   // Tutorial State
   bool _showTutorial = false;
@@ -105,6 +109,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedGoalKey = tx.goalKey;
       _selectedBudgetKey = tx.budgetKey;
       _selectedDebtKey = tx.debtKey;
+      _attachmentPaths = List<String>.from(tx.attachmentPaths ?? []);
     } else {
       final wallets = DatabaseService.getWallets(widget.accountKey);
       try {
@@ -310,6 +315,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         existing.goalKey = _selectedGoalKey;
         existing.budgetKey = _selectedBudgetKey;
         existing.debtKey = _selectedDebtKey;
+        existing.attachmentPaths = _attachmentPaths;
 
         await DatabaseService.updateTransaction(oldTx, existing);
       } else {
@@ -331,6 +337,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           goalKey: _selectedGoalKey,
           budgetKey: _selectedBudgetKey,
           debtKey: _selectedDebtKey,
+          attachmentPaths: _attachmentPaths,
         );
         await DatabaseService.saveTransaction(transaction);
       }
@@ -717,6 +724,58 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   ],
                   const SizedBox(height: 40),
 
+                  // Attachments Section
+                  Text('ATTACHMENTS (OPTIONAL)', style: theme.textTheme.labelLarge?.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 10, color: theme.textTheme.labelLarge?.color?.withValues(alpha: 0.6))),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 100,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        ..._attachmentPaths.map((path) => Container(
+                          width: 100,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                          ),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() => _attachmentPaths.remove(path));
+                                    AttachmentService.deleteAttachment(path);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                        GestureDetector(
+                          onTap: () => _pickAttachment(),
+                          child: Container(
+                            width: 100,
+                            decoration: BoxDecoration(
+                              color: theme.cardColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: theme.dividerColor, width: 0.5),
+                            ),
+                            child: Icon(Icons.add_a_photo_rounded, color: theme.primaryColor),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
                   // Save Button
                   SizedBox(
                     key: _saveKey,
@@ -748,6 +807,39 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     );
   }
 
+  void _pickAttachment() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(height: 16),
+          const Text('Pick Attachment', style: TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          ListTile(
+            leading: const Icon(Icons.camera_alt_rounded),
+            title: const Text('Camera'),
+            onTap: () async {
+              Navigator.pop(context);
+              final path = await AttachmentService.pickAndStoreImage(ImageSource.camera);
+              if (path != null) setState(() => _attachmentPaths.add(path));
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library_rounded),
+            title: const Text('Gallery'),
+            onTap: () async {
+              Navigator.pop(context);
+              final path = await AttachmentService.pickAndStoreImage(ImageSource.gallery);
+              if (path != null) setState(() => _attachmentPaths.add(path));
+            },
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
+    );
+  }
 
   Widget _buildWalletDropdown(
     List<Wallet> wallets,

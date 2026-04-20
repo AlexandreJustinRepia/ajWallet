@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import '../models/transaction_model.dart';
 import '../models/budget.dart';
 import '../models/goal.dart';
+import '../models/debt.dart';
 import 'package:intl/intl.dart';
 import 'database_service.dart';
 import 'user_profile_service.dart';
@@ -96,23 +97,56 @@ class GamificationProfile {
 
 class GamificationService {
   static GamificationProfile generateGlobalProfile() {
-    final transactions = DatabaseService.getAllTransactions();
-    final budgets = DatabaseService.getAllBudgets();
-    final goals = DatabaseService.getAllGoals();
-    final debts = DatabaseService.getAllDebts();
+    // 0. Fetch everything across all accounts
+    final allTransactions = DatabaseService.getAllTransactions();
+    final allBudgets = DatabaseService.getAllBudgets();
+    final allGoals = DatabaseService.getAllGoals();
+    final allDebts = DatabaseService.getAllDebts();
     final spentCoins = UserProfileService.profile.spentCoins;
 
-    // 1. Calculate Base XP and Base Coins
+    // 1. De-duplicate data to prevent "stacking" from imported backups
+    // Transactions: Distinct by Title + Amount + Date + Type + Category
+    final Map<String, Transaction> distinctTxs = {};
+    for (var tx in allTransactions) {
+      final key = "${tx.title}_${tx.amount}_${tx.date.millisecondsSinceEpoch}_${tx.type.index}_${tx.category}";
+      distinctTxs[key] = tx;
+    }
+    final transactions = distinctTxs.values.toList();
+
+    // Budgets: Distinct by Category + Month + Year + Limit
+    final Map<String, Budget> distinctBudgets = {};
+    for (var b in allBudgets) {
+      final key = "${b.category}_${b.month}_${b.year}_${b.amountLimit}";
+      distinctBudgets[key] = b;
+    }
+    final budgets = distinctBudgets.values.toList();
+
+    // Goals: Distinct by Name + Target + TargetDate
+    final Map<String, Goal> distinctGoals = {};
+    for (var g in allGoals) {
+      final key = "${g.name}_${g.targetAmount}_${g.targetDate?.millisecondsSinceEpoch}";
+      distinctGoals[key] = g;
+    }
+    final goals = distinctGoals.values.toList();
+
+    // Debts: Distinct by Amount + Type + Person
+    final Map<String, Debt> distinctDebts = {};
+    for (var d in allDebts) {
+      final key = "${d.totalAmount}_${d.isOwedToMe}_${d.personName}";
+      distinctDebts[key] = d;
+    }
+    final debts = distinctDebts.values.toList();
+
+    // 2. Calculate Base XP and Base Coins
     int txXp = transactions.length * 10;
     int txCoins = transactions.length * 2; // 2 coins per transaction
     int budgetXp = budgets.length * 50;
-    // Coins for budgets will be handled in dynamic quests
 
     int completedGoals = goals
         .where((g) => g.targetAmount > 0 && g.savedAmount >= g.targetAmount)
         .length;
     int goalXp = completedGoals * 100;
-    int goalCoinsMilestone = completedGoals * 50; // 50 coins per completed goal
+    int goalCoinsMilestone = completedGoals * 50; 
 
     int completedDebts = debts
         .where((d) => d.totalAmount > 0 && d.paidAmount >= d.totalAmount)
@@ -125,7 +159,7 @@ class GamificationService {
         .toSet();
     int activeDaysXp = datesActive.length * 20;
     int activeDaysCoins =
-        datesActive.length * 5; // 5 coins per unique day active
+        datesActive.length * 5; 
 
     int totalXp = txXp + budgetXp + goalXp + debtXp + activeDaysXp;
     int totalCoinsEarned =

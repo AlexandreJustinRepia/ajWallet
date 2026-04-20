@@ -10,7 +10,7 @@ class AttachmentService {
   /// Returns the local path of the stored image.
   static Future<String?> pickAndStoreImage(ImageSource source) async {
     try {
-      final XFile? image = await _picker.pickImage(source: source, imageQuality: 70);
+      final XFile? image = await _picker.pickImage(source: source);
       if (image == null) return null;
 
       final Directory appDir = await getApplicationDocumentsDirectory();
@@ -21,7 +21,8 @@ class AttachmentService {
         await attachmentsDir.create(recursive: true);
       }
 
-      final String fileName = '${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}';
+      final String fileName =
+          '${DateTime.now().millisecondsSinceEpoch}${path.extension(image.path)}';
       final String localPath = path.join(attachmentsDirPath, fileName);
 
       final File localFile = await File(image.path).copy(localPath);

@@ -1288,8 +1288,9 @@ class _MemberDetailSheet extends StatelessWidget {
                       } catch (_) {
                         // Error handled silently or with fallback
                       } finally {
-                        if (context.mounted)
+                        if (context.mounted) {
                           setDialogState(() => isSaving = false);
+                        }
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -1519,8 +1520,9 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                       } catch (_) {
                         // Silent fail or fallback
                       } finally {
-                        if (context.mounted)
+                        if (context.mounted) {
                           setDialogState(() => isSaving = false);
+                        }
                       }
                     },
               style: ElevatedButton.styleFrom(
@@ -1862,8 +1864,9 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                     const SizedBox(height: 12),
                     ...widget.tx.memberSplits.entries.map((entry) {
                       final memberKey = entry.key;
-                      if (memberKey == widget.tx.payerMemberKey)
+                      if (memberKey == widget.tx.payerMemberKey) {
                         return const SizedBox.shrink();
+                      }
 
                       final member = widget.members.firstWhere(
                         (m) => m.key == memberKey,
@@ -2042,176 +2045,164 @@ class _InvoiceWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
+    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
 
-    // Receipt design colors (Clean, High Contrast)
-    const bg = Colors.white;
     final primary = theme.primaryColor;
+    final bg = const Color(0xFF0D1117); // Deep premium dark
+    final cardColor = const Color(0xFF161B22);
+    final fg = Colors.white;
+    final fgDim = Colors.white54;
 
-    return Container(
-      width: 400, // Fixed width for consistent high-quality export
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 420,
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: primary.withValues(alpha: 0.15), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: primary.withValues(alpha: 0.1),
+              blurRadius: 40,
+              spreadRadius: -10,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // High Contrast Branding Header
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'RootEXP',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -0.5,
-                        color: primary,
-                      ),
-                    ),
-                    Text(
-                      'VERIFIED DIGITAL RECEIPT',
-                      style: TextStyle(
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.5,
-                        color: Colors.grey.shade800, // Much darker label
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: primary.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(Icons.verified_rounded, size: 24, color: primary),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 32),
-          Divider(color: Colors.black.withValues(alpha: 0.1), thickness: 2),
-          const SizedBox(height: 32),
-
-          // Bill Title (Pure Black)
-          Text(
-            tx.title.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-              letterSpacing: -0.5,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            DateFormat('EEEE, MMMM dd, yyyy • hh:mm a').format(tx.date),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade700,
-            ), // Darker date
-          ),
-
-          const SizedBox(height: 48),
-
-          // Core Info Section
+          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'TOTAL SETTLEMENT',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
-                      letterSpacing: 1,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    format.format(tx.amount),
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'PRIMARY PAYER',
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
-                      letterSpacing: 1,
-                    ),
+                  Row(
+                    children: [
+                      Icon(Icons.blur_on_rounded, color: primary, size: 28),
+                      const SizedBox(width: 6),
+                      Text(
+                        'RootEXP',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                          color: fg,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: Colors.black, // High contrast payer box
+                      color: primary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      payerName.toUpperCase(),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
+                      'VERIFIED DIGITAL RECEIPT',
+                      style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: primary),
                     ),
                   ),
                 ],
               ),
+              Container(
+                height: 54,
+                width: 54,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primary.withValues(alpha: 0.1),
+                  border: Border.all(color: primary.withValues(alpha: 0.3)),
+                ),
+                child: Icon(Icons.check_circle_rounded, color: primary, size: 28),
+              ),
             ],
           ),
 
-          const SizedBox(height: 56),
+          const SizedBox(height: 48),
+          _DashedDivider(color: Colors.white24),
+          const SizedBox(height: 40),
 
-          // Member Breakdown (High Contrast)
+          // Title & Date
+          Text(
+            tx.title.toUpperCase(),
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: fg, letterSpacing: -0.5, height: 1.1),
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
+              Icon(Icons.calendar_today_rounded, size: 12, color: fgDim),
+              const SizedBox(width: 8),
               Text(
-                'MEMBER SPLIT BREAKDOWN',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.black87,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Divider(color: Colors.black12, thickness: 1),
-                ),
+                DateFormat('EEEE, MMM dd, yyyy • hh:mm a').format(tx.date).toUpperCase(),
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: fgDim, letterSpacing: 0.5),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+
+          const SizedBox(height: 48),
+
+          // Total Settlement Card
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [cardColor, primary.withValues(alpha: 0.08)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.white10),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TOTAL AMOUNT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 1.5)),
+                    const SizedBox(height: 6),
+                    Text(format.format(tx.amount), style: TextStyle(fontSize: 38, fontWeight: FontWeight.w900, color: primary, letterSpacing: -1, height: 1.0)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('PRIMARY PAYER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 1.5)),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: fg,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        payerName.toUpperCase(),
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.black),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 48),
+
+          // Breakdown
+          Row(
+            children: [
+              Text('MEMBER BREAKDOWN', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg, letterSpacing: 1.5)),
+              const SizedBox(width: 16),
+              Expanded(child: _DashedDivider(color: Colors.white12)),
+            ],
+          ),
+          const SizedBox(height: 32),
 
           ...tx.memberSplits.entries.map((entry) {
             final member = members.firstWhere((m) => m.key == entry.key);
@@ -2223,179 +2214,150 @@ class _InvoiceWidget extends StatelessWidget {
               share = tx.amount / tx.memberSplits.length;
             }
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(vertical: 4),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 20),
               child: Row(
                 children: [
-                  Container(
-                    width: 32,
-                    height: 32,
-                    decoration: BoxDecoration(
-                      color: isPrimaryPayer ? primary : Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isPrimaryPayer ? primary : cardColor,
                     child: Text(
                       member.name[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isPrimaryPayer ? Colors.white : Colors.black87,
-                      ),
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: isPrimaryPayer ? Colors.white : fg),
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          member.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black,
-                          ),
-                        ),
-                        if (isPrimaryPayer)
-                          Text(
-                            'ORIGINAL PAYER',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              color: primary,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                        Text(member.name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: fg)),
+                        if (isPrimaryPayer) ...[
+                          const SizedBox(height: 2),
+                          Text('ORIGINAL PAYER', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: primary, letterSpacing: 0.5)),
+                        ]
                       ],
                     ),
                   ),
-                  Text(
-                    format.format(share),
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.black,
-                    ),
-                  ),
+                  Text(format.format(share), style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: fg)),
                 ],
               ),
             );
           }),
 
-          const SizedBox(height: 64),
+          const SizedBox(height: 32),
 
           if (billRemaining != null && billRemaining!.isNotEmpty) ...[
-            // BILL SETTLEMENT STATUS
             Row(
               children: [
-                Text(
-                  'SETTLEMENT STATUS',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black87,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8),
-                    child: Divider(color: Colors.black12, thickness: 1),
-                  ),
-                ),
+                Text('SETTLEMENT STATUS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg, letterSpacing: 1.5)),
+                const SizedBox(width: 16),
+                Expanded(child: _DashedDivider(color: Colors.white12)),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 32),
             ...tx.memberSplits.keys.map((memberKey) {
               final member = members.firstWhere((m) => m.key == memberKey);
               final remaining = billRemaining![memberKey] ?? 0;
               final isFullyPaid = remaining <= 0.01;
               final isPayer = memberKey == tx.payerMemberKey;
 
-              final statusColor = (isFullyPaid || isPayer)
-                  ? Colors.green.shade700
-                  : Colors.red.shade700;
-              final statusText = isPayer
-                  ? 'PAID'
-                  : (isFullyPaid ? 'PAID' : '₱${remaining.toStringAsFixed(0)}');
+              final statusColor = (isFullyPaid || isPayer) ? Colors.greenAccent : Colors.orangeAccent;
+              final statusText = isPayer ? 'FULLY PAID' : (isFullyPaid ? 'FULLY PAID' : 'OWES ₱${remaining.toStringAsFixed(0)}');
 
               return Padding(
-                padding: const EdgeInsets.only(bottom: 14),
+                padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
                   children: [
-                    Text(
-                      member.name + (member.isYou ? ' (You)' : ''),
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black87,
-                      ),
-                    ),
+                    Text(member.name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: fgDim)),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(4),
+                        color: statusColor.withValues(alpha: 0.1),
+                        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         statusText,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: statusColor,
-                        ),
+                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: 0.5),
                       ),
                     ),
                   ],
                 ),
               );
             }),
-            const SizedBox(height: 48),
+            const SizedBox(height: 40),
           ],
 
-          // Branding Footer (High Contrast)
+          _DashedDivider(color: Colors.white24),
+          const SizedBox(height: 48),
+
+          // Footer Barcode / Generated Text
           Center(
             child: Column(
               children: [
+                // Faux Barcode
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      height: 1.5,
-                      width: 40,
-                      color: Colors.black.withValues(alpha: 0.05),
-                    ),
-
-                    const SizedBox(width: 16),
-                    Container(
-                      height: 1.5,
-                      width: 40,
-                      color: Colors.black.withValues(alpha: 0.05),
-                    ),
-                  ],
+                  children: List.generate(24, (index) {
+                    final heights = [12.0, 24.0, 16.0, 32.0, 18.0, 20.0, 10.0, 36.0, 14.0, 28.0, 22.0, 16.0];
+                    final width = (index % 3 == 0) ? 3.0 : 1.5;
+                    return Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                      width: width,
+                      height: heights[index % heights.length],
+                      color: Colors.white30,
+                    );
+                  }),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
                 Text(
-                  'GENERATED BY RootEXP',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.grey.shade500,
-                    letterSpacing: 1.5,
-                  ),
+                  'GENERATED SECURELY BY ROOTEXP',
+                  style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 2),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  (tx.key ?? 0).toString().padLeft(12, '0'),
+                  style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 4),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
         ],
       ),
+      ),
+    );
+  }
+}
+
+class _DashedDivider extends StatelessWidget {
+  final Color color;
+  const _DashedDivider({required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final boxWidth = constraints.constrainWidth();
+        const dashWidth = 6.0;
+        const dashHeight = 1.5;
+        final dashCount = (boxWidth / (2 * dashWidth)).floor();
+        return Flex(
+          direction: Axis.horizontal,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: List.generate(dashCount, (_) {
+            return SizedBox(
+              width: dashWidth,
+              height: dashHeight,
+              child: DecoratedBox(
+                decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(1)),
+              ),
+            );
+          }),
+        );
+      },
     );
   }
 }

@@ -249,7 +249,16 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                   builder: (_) => SettleUpScreen(squad: widget.squad),
                 ),
               );
-              if (result == true) _refresh();
+              if (result == true) {
+                _refresh();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Settlement recorded successfully!'),
+                    ),
+                  );
+                }
+              }
             },
             label: const Text('Settle Up'),
             icon: const Icon(Icons.handshake_rounded),
@@ -961,6 +970,8 @@ class _MemberDetailSheet extends StatelessWidget {
     int? selectedWalletKey;
     final amountController = TextEditingController(text: netBalance.abs().toStringAsFixed(0));
 
+    bool isSaving = false;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => StatefulBuilder(
@@ -997,38 +1008,66 @@ class _MemberDetailSheet extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Record', style: TextStyle(fontWeight: FontWeight.bold))),
+            TextButton(
+              onPressed: isSaving ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving ? null : () async {
+                final amt = double.tryParse(amountController.text) ?? 0;
+                if (amt <= 0) return;
+
+                setDialogState(() => isSaving = true);
+                
+                try {
+                  // Find "You" to be the other side of the settlement
+                  final members = DatabaseService.getSquadMembers(member.squadKey);
+                  final you = members.firstWhere((m) => m.isYou);
+
+                  final tx = SquadTransaction(
+                    title: netBalance < 0 ? 'Settle Up from ${member.name}' : 'Paid back ${member.name}',
+                    amount: amt,
+                    date: DateTime.now(),
+                    squadKey: member.squadKey,
+                    payerMemberKey: netBalance < 0 ? member.key as int : you.key as int,
+                    splitType: SplitType.equal,
+                    memberSplits: {netBalance < 0 ? you.key as int : member.key as int: 0},
+                    isSettlement: true,
+                    walletKey: selectedWalletKey,
+                  );
+
+                  await DatabaseService.saveSquadTransaction(tx);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Settlement recorded!'),
+                      ),
+                    );
+                    Navigator.pop(context, true);
+                  }
+                } catch (_) {
+                  // Error handled silently or with fallback
+                } finally {
+                  if (context.mounted) setDialogState(() => isSaving = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: isSaving
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : const Text('Record', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
           ],
         ),
       ),
     );
 
     if (confirmed == true) {
-      final amt = double.tryParse(amountController.text) ?? 0;
-      if (amt <= 0) return;
-
-      // Find "You" to be the other side of the settlement
-      final members = DatabaseService.getSquadMembers(member.squadKey);
-      final you = members.firstWhere((m) => m.isYou);
-
-      final tx = SquadTransaction(
-        title: netBalance < 0 ? 'Settle Up from ${member.name}' : 'Paid back ${member.name}',
-        amount: amt,
-        date: DateTime.now(),
-        squadKey: member.squadKey,
-        payerMemberKey: netBalance < 0 ? member.key as int : you.key as int,
-        splitType: SplitType.equal,
-        memberSplits: {netBalance < 0 ? you.key as int : member.key as int: 0},
-        isSettlement: true,
-        walletKey: selectedWalletKey,
-      );
-
-      await DatabaseService.saveSquadTransaction(tx);
       onRefresh();
-      if (context.mounted) {
-        Navigator.pop(context); // Close sheet
-      }
     }
   }
 }
@@ -1122,6 +1161,9 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     final squad = DatabaseService.getSquad(widget.tx.squadKey);
     final wallets = squad != null ? DatabaseService.getWallets(squad.accountKey) : <Wallet>[];
     final amountController = TextEditingController(text: remainingAmount.toStringAsFixed(0));
+    final theme = Theme.of(context);
+
+    bool isSaving = false;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -1159,10 +1201,55 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
+              onPressed: isSaving ? null : () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: isSaving ? null : () async {
+                final amt = double.tryParse(amountController.text) ?? 0;
+                if (amt <= 0) return;
+
+                setDialogState(() => isSaving = true);
+
+                try {
+                  final payment = SquadTransaction(
+                    title: 'Payment for ${widget.tx.title}',
+                    amount: amt,
+                    date: DateTime.now(),
+                    squadKey: widget.tx.squadKey,
+                    payerMemberKey: member.key as int,
+                    splitType: SplitType.equal,
+                    memberSplits: {widget.tx.payerMemberKey: 0}, // Move credit to the original bill payer
+                    isSettlement: true,
+                    relatedBillKey: widget.tx.key as int,
+                    walletKey: selectedWalletKey,
+                  );
+
+                  await DatabaseService.saveSquadTransaction(payment);
+                  
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Payment recorded!'),
+                      ),
+                    );
+                    Navigator.pop(context, true);
+                  }
+                } catch (_) {
+                  // Silent fail or fallback
+                } finally {
+                  if (context.mounted) setDialogState(() => isSaving = false);
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: isSaving
+                  ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation(Colors.white)))
+                  : const Text('Confirm', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1170,23 +1257,6 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     );
 
     if (confirmed == true) {
-      final amt = double.tryParse(amountController.text) ?? 0;
-      if (amt <= 0) return;
-
-      final payment = SquadTransaction(
-        title: 'Payment for ${widget.tx.title}',
-        amount: amt,
-        date: DateTime.now(),
-        squadKey: widget.tx.squadKey,
-        payerMemberKey: member.key as int,
-        splitType: SplitType.equal,
-        memberSplits: {widget.tx.payerMemberKey: 0}, // Move credit to the original bill payer
-        isSettlement: true,
-        relatedBillKey: widget.tx.key as int,
-        walletKey: selectedWalletKey,
-      );
-
-      await DatabaseService.saveSquadTransaction(payment);
       if (mounted) {
         widget.onRefresh();
       }

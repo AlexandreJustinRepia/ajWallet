@@ -22,6 +22,7 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
   int? _selectedBillKey;
   List<Wallet> _wallets = [];
   List<SquadTransaction> _bills = [];
+  bool _isLoading = false;
 
   @override
   void initState() {
@@ -107,26 +108,40 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
       return;
     }
 
-    final fromMember = _members.firstWhere((m) => m.key == _fromMemberKey);
-    final toMember = _members.firstWhere((m) => m.key == _toMemberKey);
+    setState(() => _isLoading = true);
 
-    final tx = SquadTransaction(
-      title: '${fromMember.name} paid ${toMember.name}',
-      amount: amount,
-      date: DateTime.now(),
-      squadKey: widget.squad.key as int,
-      payerMemberKey: _fromMemberKey!,
-      splitType: SplitType.equal,
-      memberSplits: {_toMemberKey!: 0}, // Equal split among only the payee
-      isSettlement: true,
-      walletKey: _selectedWalletKey,
-      relatedBillKey: _selectedBillKey,
-    );
+    try {
+      final fromMember = _members.firstWhere((m) => m.key == _fromMemberKey);
+      final toMember = _members.firstWhere((m) => m.key == _toMemberKey);
 
-    await DatabaseService.saveSquadTransaction(tx);
+      final tx = SquadTransaction(
+        title: '${fromMember.name} paid ${toMember.name}',
+        amount: amount,
+        date: DateTime.now(),
+        squadKey: widget.squad.key as int,
+        payerMemberKey: _fromMemberKey!,
+        splitType: SplitType.equal,
+        memberSplits: {_toMemberKey!: 0}, // Equal split among only the payee
+        isSettlement: true,
+        walletKey: _selectedWalletKey,
+        relatedBillKey: _selectedBillKey,
+      );
 
-    if (mounted) {
-      Navigator.pop(context, true);
+      await DatabaseService.saveSquadTransaction(tx);
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -329,14 +344,23 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.all(24),
         child: ElevatedButton(
-          onPressed: _saveSettlement,
+          onPressed: _isLoading ? null : _saveSettlement,
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.colorScheme.secondary,
             foregroundColor: Colors.white,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-          child: const Text('Record Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          child: _isLoading
+              ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : const Text('Record Payment', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         ),
       ),
     );

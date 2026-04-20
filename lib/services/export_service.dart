@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -1534,7 +1535,7 @@ class ExportService {
         // Desktop (Windows): Launch the file to open it in Excel
         final uri = Uri.file(file.path);
         if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
+          unawaited(launchUrl(uri));
           return ExportStatus.success;
         } else {
           debugPrint('Excel saved to but could not launch: ${file.path}');
@@ -1567,7 +1568,7 @@ class ExportService {
         // Desktop (Windows): Launch the file to open it in NotePad/Excel
         final uri = Uri.file(file.path);
         if (await canLaunchUrl(uri)) {
-          await launchUrl(uri);
+          unawaited(launchUrl(uri));
         } else {
           debugPrint('CSV saved to: ${file.path}');
         }

@@ -70,6 +70,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             searchBarKey: _keys.activitySearchBarKey,
             calendarTabKey: _keys.activityCalendarTabKey,
             calendarAreaKey: _keys.activityCalendarAreaKey,
+            squadsTabKey: _keys.squadsTabKey,
+            squadsListKey: _keys.squadsListKey,
+            squadsCreateBtnKey: _keys.squadsCreateBtnKey,
+            onTabChanged: _viewModel.setActivityCurrentTabIndex,
             overrideTabIndex: _viewModel.activityTutorialTabIndex,
           ),
           WalletsView(

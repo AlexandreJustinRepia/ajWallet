@@ -20,6 +20,11 @@ class DashboardKeys {
   final GlobalKey activityCalendarTabKey = GlobalKey();
   final GlobalKey activityCalendarAreaKey = GlobalKey();
 
+  // Squads Onboarding Keys
+  final GlobalKey squadsTabKey = GlobalKey();
+  final GlobalKey squadsListKey = GlobalKey();
+  final GlobalKey squadsCreateBtnKey = GlobalKey();
+
   // Wallets Onboarding Keys
   final GlobalKey walletsTabKey = GlobalKey();
   final GlobalKey walletsFabKey = GlobalKey();

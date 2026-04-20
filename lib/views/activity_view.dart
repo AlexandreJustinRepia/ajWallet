@@ -22,6 +22,10 @@ class ActivityView extends StatefulWidget {
   final GlobalKey? searchBarKey;
   final GlobalKey? calendarTabKey;
   final GlobalKey? calendarAreaKey;
+  final GlobalKey? squadsTabKey;
+  final GlobalKey? squadsListKey;
+  final GlobalKey? squadsCreateBtnKey;
+  final ValueChanged<int>? onTabChanged;
   final int? overrideTabIndex;
 
   const ActivityView({
@@ -36,6 +40,10 @@ class ActivityView extends StatefulWidget {
     this.searchBarKey,
     this.calendarTabKey,
     this.calendarAreaKey,
+    this.squadsTabKey,
+    this.squadsListKey,
+    this.squadsCreateBtnKey,
+    this.onTabChanged,
     this.overrideTabIndex,
   });
 
@@ -55,6 +63,10 @@ class _ActivityViewState extends State<ActivityView>
     _tabController = TabController(length: 3, vsync: this, initialIndex: widget.overrideTabIndex ?? 0);
     _tabController.addListener(() {
       if (!mounted) return;
+      if (!_tabController.indexIsChanging) {
+        // Report tab completion (e.g., after swipe) or tap
+        widget.onTabChanged?.call(_tabController.index);
+      }
       setState(() {}); // Rebuild to hide/show search & filters based on index
     });
     _viewModel = ActivityViewModel(isTutorialActive: widget.isTutorialActive);
@@ -116,7 +128,7 @@ class _ActivityViewState extends State<ActivityView>
                         tabs: [
                           const Tab(text: 'List'),
                           Tab(key: widget.calendarTabKey, text: 'Calendar'),
-                          const Tab(text: 'Squads'),
+                          Tab(key: widget.squadsTabKey, text: 'Squads'),
                         ],
                       ),
                     ),
@@ -231,6 +243,8 @@ class _ActivityViewState extends State<ActivityView>
                   ),
                   SquadsTabView(
                     onRefresh: widget.onRefresh,
+                    squadsListKey: widget.squadsListKey,
+                    squadsCreateBtnKey: widget.squadsCreateBtnKey,
                   ),
                 ],
               ),

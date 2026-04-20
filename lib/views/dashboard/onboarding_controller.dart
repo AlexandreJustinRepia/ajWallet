@@ -22,6 +22,9 @@ class OnboardingController {
       case 0:
         return _getHomeSteps(context);
       case 1:
+        if (viewModel.activityCurrentTabIndex == 2) {
+          return _getSquadSteps(context);
+        }
         return _getActivitySteps(context);
       case 2:
         return _getWalletsSteps(context);
@@ -95,6 +98,25 @@ class OnboardingController {
         description:
             'Each entry here gives you a quick snapshot of your transaction. For full management tools, you can tap on these items.',
         scrollAlignment: 0.6,
+      ),
+    ];
+  }
+
+  List<OnboardingStep> _getSquadSteps(BuildContext context) {
+    return [
+      OnboardingStep(
+        targetKey: keys.squadsListKey,
+        title: 'Squads',
+        description: 'Here you can manage expenses shared with your friends or family.',
+        onStepEnter: () {
+          viewModel.setOverlayState(DashboardOverlayState.none);
+          viewModel.setActivityTutorialTabIndex(2);
+        },
+      ),
+      OnboardingStep(
+        targetKey: keys.squadsCreateBtnKey,
+        title: 'Create a Squad',
+        description: 'Start by creating your first squad to keep track of shared bills and group debts.',
       ),
     ];
   }

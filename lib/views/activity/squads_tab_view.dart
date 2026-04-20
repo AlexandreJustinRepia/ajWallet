@@ -8,7 +8,15 @@ import '../../screens/squad/squad_detail_screen.dart';
 
 class SquadsTabView extends StatefulWidget {
   final VoidCallback onRefresh;
-  const SquadsTabView({super.key, required this.onRefresh});
+  final GlobalKey? squadsListKey;
+  final GlobalKey? squadsCreateBtnKey;
+
+  const SquadsTabView({
+    super.key,
+    required this.onRefresh,
+    this.squadsListKey,
+    this.squadsCreateBtnKey,
+  });
 
   @override
   State<SquadsTabView> createState() => _SquadsTabViewState();
@@ -58,12 +66,14 @@ class _SquadsTabViewState extends State<SquadsTabView> {
         }
 
         return ListView(
+          key: widget.squadsListKey,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           children: [
             // New Squad Button at the top
             Padding(
               padding: const EdgeInsets.only(bottom: 16),
               child: OutlinedButton.icon(
+                key: widget.squadsCreateBtnKey,
                 onPressed: () => _createNewSquad(context, accountKey),
                 icon: const Icon(Icons.group_add_rounded),
                 label: const Text('Create New Squad'),

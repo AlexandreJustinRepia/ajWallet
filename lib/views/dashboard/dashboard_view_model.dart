@@ -10,6 +10,7 @@ class DashboardViewModel extends ChangeNotifier {
   bool _showTutorial = false;
   DashboardOverlayState _overlayState = DashboardOverlayState.none;
   int _activityTutorialTabIndex = 0;
+  int _activityCurrentTabIndex = 0;
   bool _hasShownEditTutorial = false;
 
   DashboardViewModel({int initialIndex = 0}) : _selectedIndex = initialIndex;
@@ -18,6 +19,7 @@ class DashboardViewModel extends ChangeNotifier {
   bool get showTutorial => _showTutorial;
   DashboardOverlayState get overlayState => _overlayState;
   int get activityTutorialTabIndex => _activityTutorialTabIndex;
+  int get activityCurrentTabIndex => _activityCurrentTabIndex;
   bool get hasShownEditTutorial => _hasShownEditTutorial;
 
   void setSelectedIndex(int index) {
@@ -41,6 +43,11 @@ class DashboardViewModel extends ChangeNotifier {
   void setActivityTutorialTabIndex(int index) {
     _activityTutorialTabIndex = index;
     notifyListeners();
+  }
+
+  void setActivityCurrentTabIndex(int index) {
+    _activityCurrentTabIndex = index;
+    // Don't necessarily need to notifyListeners if it's just state tracking for getSteps
   }
 
   void markEditTutorialAsShown() {

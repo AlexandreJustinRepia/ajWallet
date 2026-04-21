@@ -12,7 +12,11 @@ import '../screens/fund_goal_screen.dart';
 import '../models/debt.dart';
 import '../widgets/financial_health_strip.dart';
 import '../widgets/card_decorator.dart';
-import 'planning_view_model.dart'; // Import newly created ViewModel
+import '../widgets/shopping/shopping_lists_dashboard.dart';
+
+import '../services/shopping_service.dart';
+import 'planning_view_model.dart';
+
 
 class PlanningView extends StatefulWidget {
   final VoidCallback onRefresh;
@@ -195,6 +199,56 @@ class _PlanningViewState extends State<PlanningView> {
                           }),
                         ],
                       ),
+              ),
+            ),
+
+            // Shopping List Section
+            SliverToBoxAdapter(
+              child: _SectionCard(
+                title: 'Smart Shopping List',
+                icon: Icons.shopping_cart_outlined,
+                color: theme.primaryColor,
+                count: ShoppingService.getShoppingItems(accountKey).where((i) => !i.isBought).length,
+                onAdd: () async {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                      ),
+                    );
+
+                  setState(() {}); // Refresh local state for count
+                },
+
+                child: Builder(
+                  builder: (context) {
+                    final pending = ShoppingService.getShoppingItems(accountKey).where((i) => !i.isBought).toList();
+                    if (pending.isEmpty) {
+                      return const _EmptyState(
+                        icon: Icons.shopping_basket_outlined,
+                        message: 'List is empty',
+                      );
+                    }
+                    final total = pending.fold(0.0, (sum, i) => sum + i.total);
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                      leading: Icon(Icons.shopping_bag_outlined, color: theme.primaryColor),
+                      title: Text('${pending.length} items to buy', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('Estimated Total: ₱${total.toStringAsFixed(0)}'),
+                      trailing: const Icon(Icons.chevron_right_rounded),
+                      onTap: () async {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                            ),
+                          );
+
+                        setState(() {});
+                      },
+                    );
+                  }
+                ),
               ),
             ),
 
@@ -821,12 +875,14 @@ class _BudgetTotalSummary extends StatelessWidget {
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
                   color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: barColor.withValues(alpha: 0.1),
+
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(

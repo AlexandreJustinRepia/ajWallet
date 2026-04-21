@@ -1,0 +1,38 @@
+import 'package:hive/hive.dart';
+
+part 'shopping_list.g.dart';
+
+@HiveType(typeId: 16)
+class ShoppingList extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String name;
+
+  @HiveField(2)
+  int accountKey;
+
+  @HiveField(3)
+  DateTime createdAt;
+
+  @HiveField(4)
+  bool isSettled;
+
+  @HiveField(5)
+  double totalAmount;
+
+  @HiveField(6)
+  int? linkedTransactionKey;
+
+  ShoppingList({
+    required this.id,
+    required this.name,
+    required this.accountKey,
+    required this.createdAt,
+    this.isSettled = false,
+    this.totalAmount = 0.0,
+    this.linkedTransactionKey,
+  });
+}
+

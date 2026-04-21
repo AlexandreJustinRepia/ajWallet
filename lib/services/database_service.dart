@@ -14,6 +14,11 @@ import '../models/squad.dart';
 import '../models/squad_member.dart';
 import '../models/squad_transaction.dart';
 import '../models/category.dart';
+import '../models/shopping_item.dart';
+import '../models/product.dart';
+import '../models/shopping_list.dart';
+
+
 
 
 class DatabaseService {
@@ -28,6 +33,11 @@ class DatabaseService {
   static const String _squadMemberBoxName = 'squad_members';
   static const String _squadTransactionBoxName = 'squad_transactions';
   static const String _categoryBoxName = 'categories';
+  static const String _shoppingItemBoxName = 'shopping_items';
+  static const String _productBoxName = 'product_catalog';
+  static const String _shoppingListBoxName = 'shopping_lists';
+
+
 
 
   static Future<void> init() async {
@@ -73,6 +83,17 @@ class DatabaseService {
     if (!Hive.isAdapterRegistered(13)) {
       Hive.registerAdapter(CategoryAdapter());
     }
+    if (!Hive.isAdapterRegistered(14)) {
+      Hive.registerAdapter(ShoppingItemAdapter());
+    }
+    if (!Hive.isAdapterRegistered(15)) {
+      Hive.registerAdapter(ProductAdapter());
+    }
+    if (!Hive.isAdapterRegistered(16)) {
+      Hive.registerAdapter(ShoppingListAdapter());
+    }
+
+
 
 
     await _openTypedBox<Account>(_boxName);
@@ -86,7 +107,11 @@ class DatabaseService {
     await _openTypedBox<SquadMember>(_squadMemberBoxName);
     await _openTypedBox<SquadTransaction>(_squadTransactionBoxName);
     await _openTypedBox<Category>(_categoryBoxName);
+    await _openTypedBox<ShoppingItem>(_shoppingItemBoxName);
+    await _openTypedBox<Product>(_productBoxName);
+    await _openTypedBox<ShoppingList>(_shoppingListBoxName);
     await _openUntypedBox(_backupHistoryBoxName);
+
 
     // Seed categories if empty
     await _initDefaultCategories();
@@ -105,8 +130,10 @@ class DatabaseService {
       Hive.box<SquadMember>(_squadMemberBoxName);
   static Box<SquadTransaction> get _squadTxBox =>
       Hive.box<SquadTransaction>(_squadTransactionBoxName);
-  static Box<Category> get _categoryBox =>
-      Hive.box<Category>(_categoryBoxName);
+  static Box<Category> get _categoryBox => Hive.box<Category>(_categoryBoxName);
+  static Box<ShoppingItem> get shoppingItemBox => Hive.box<ShoppingItem>(_shoppingItemBoxName);
+  static Box<Product> get productCatalogBox => Hive.box<Product>(_productBoxName);
+
 
 
   // Watchers for reactive UI
@@ -120,6 +147,8 @@ class DatabaseService {
   static Stream<BoxEvent> get squadTxWatcher => _squadTxBox.watch();
   static Stream<BoxEvent> get categoryWatcher => _categoryBox.watch();
   static ValueListenable<Box<SquadTransaction>> get squadTxListenable => _squadTxBox.listenable();
+  static ValueListenable<Box<ShoppingList>> get shoppingListListenable => _shoppingListBox.listenable();
+
 
 
   static Future<void> _openTypedBox<T>(String boxName) async {
@@ -253,6 +282,14 @@ class DatabaseService {
     await _applyTransactionEffect(transaction, isReversing: true);
     await transaction.delete();
   }
+
+  static Future<void> deleteTransactionByKey(int key) async {
+    final tx = _transactionBox.get(key);
+    if (tx != null) {
+      await deleteTransaction(tx);
+    }
+  }
+
 
   static Future<void> updateTransaction(
     Transaction oldTx,
@@ -771,7 +808,10 @@ class DatabaseService {
     await _squadTxBox.clear();
   }
 
+  static Box<ShoppingList> get _shoppingListBox => Hive.box<ShoppingList>(_shoppingListBoxName);
+
   static Wallet? getWalletByKey(int key) {
+
     final box = Hive.box<Wallet>(_walletBoxName);
     return box.get(key);
   }

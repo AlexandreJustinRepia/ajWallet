@@ -12,6 +12,8 @@ import 'services/attachment_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'models/category.dart';
+import 'services/auto_categorization_service.dart';
+
 
 
 class AddTransactionScreen extends StatefulWidget {
@@ -55,6 +57,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _noteKey = GlobalKey();
   final _dateKey = GlobalKey();
   final _saveKey = GlobalKey();
+  final _manageCategoriesKey = GlobalKey();
+  final _attachmentsKey = GlobalKey();
+
+  bool _userManuallySelectedCategory = false;
+
+
+
 
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
@@ -80,6 +89,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   @override
   void initState() {
     super.initState();
+    _descriptionController.addListener(_onDescriptionChanged);
+
     _budgets = DatabaseService.getBudgets(widget.accountKey);
     _transactions = DatabaseService.getTransactions(widget.accountKey);
     _debts = DatabaseService.getDebts(widget.accountKey);
@@ -166,6 +177,25 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
     });
   }
+
+  void _onDescriptionChanged() {
+    if (_userManuallySelectedCategory) return;
+    if (_descriptionController.text.length < 3) return;
+
+    final prediction = AutoCategorizationService.predictCategory(
+      _descriptionController.text,
+      _selectedType,
+    );
+
+    if (prediction != null && prediction != _selectedCategory) {
+      if (_availableCategories.any((c) => c.name == prediction)) {
+        setState(() {
+          _selectedCategory = prediction;
+        });
+      }
+    }
+  }
+
 
   void _checkTutorial() async {
     final box = await Hive.openBox('settings');
@@ -366,6 +396,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   @override
   void dispose() {
+    _descriptionController.removeListener(_onDescriptionChanged);
     _amountController.dispose();
     _descriptionController.dispose();
     _chargeController.dispose();
@@ -382,6 +413,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         title: 'Transaction Type',
         description: 'Choose if this is an Expense, Income, or Transfer.',
       ),
+      OnboardingStep(
+        targetKey: _manageCategoriesKey,
+        title: 'Manage Categories',
+        description: 'Customize your categories! Add new ones, edit icons, or drag them into your favorite order.',
+      ),
+
       OnboardingStep(
         targetKey: _amountKey,
         title: 'Amount',
@@ -408,10 +445,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         description: 'You can change the date if this happened in the past.',
       ),
       OnboardingStep(
+        targetKey: _attachmentsKey,
+        title: 'Attachments',
+        description: 'Attach photos, receipts, or documents to your transaction for better record keeping.',
+      ),
+      OnboardingStep(
         targetKey: _saveKey,
         title: 'Save Transaction',
         description: 'Tap Save to record your transaction!',
       ),
+
     ];
 
     return OnboardingOverlay(
@@ -487,7 +530,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
+                        key: _manageCategoriesKey,
                         onPressed: () async {
+
                           await Navigator.pushNamed(context, '/category_settings');
                           _refreshCategories();
                         },
@@ -628,7 +673,10 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           }).toList(),
                           onChanged: (String? newValue) {
                             if (newValue != null) {
-                              setState(() => _selectedCategory = newValue);
+                              setState(() {
+                                _selectedCategory = newValue;
+                                _userManuallySelectedCategory = true;
+                              });
                             }
                           },
                         ),
@@ -756,8 +804,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   const SizedBox(height: 40),
 
                   // Attachments Section
-                  Text('ATTACHMENTS (OPTIONAL)', style: theme.textTheme.labelLarge?.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 10, color: theme.textTheme.labelLarge?.color?.withValues(alpha: 0.6))),
+                  Text('ATTACHMENTS (OPTIONAL)', 
+                    key: _attachmentsKey,
+                    style: theme.textTheme.labelLarge?.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, fontSize: 10, color: theme.textTheme.labelLarge?.color?.withValues(alpha: 0.6))),
                   const SizedBox(height: 12),
+
                   SizedBox(
                     height: 100,
                     child: ListView(

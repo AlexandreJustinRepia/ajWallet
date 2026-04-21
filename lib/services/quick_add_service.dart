@@ -1,7 +1,7 @@
 import '../models/transaction_model.dart';
 import 'database_service.dart';
 import 'package:flutter/material.dart';
-
+import 'auto_categorization_service.dart';
 
 class QuickAddResult {
   final double amount;
@@ -24,25 +24,6 @@ class QuickAddResult {
 }
 
 class QuickAddService {
-  static final Map<String, List<String>> _categoryKeywords = {
-    // Expense Categories
-    'Food & Drinks': ['food', 'eat', 'coffee', 'starbucks', 'dinner', 'lunch', 'breakfast', 'snack', 'restaurant', 'pizza', 'burger', 'drink', 'grocery', 'market', 'mcdo', 'jollibee', 'kfc', 'boba', 'milk', 'juice', 'energen', 'milo', 'water', 'rice', 'ulam', 'viand', 'noodle', 'merienda', 'siomai', 'siopao', 'pandesal', 'bread', 'cake', 'dessert', 'tea', 'ice cream'],
-    'Transportation': ['taxi', 'uber', 'grab', 'bus', 'train', 'gas', 'fuel', 'oil', 'parking', 'toll', 'ticket', 'flight', 'travel', 'car', 'jeep', 'jeepney', 'tricycle', 'tric', 'e-tric', 'etric', 'joyride', 'angkas', 'motorcycle', 'bike', 'commute', 'fare'],
-    'Shopping': ['shop', 'clothe', 'shirt', 'shoe', 'mall', 'amazon', 'lazada', 'shopee', 'gift', 'buy', 'purchase', 'gadget', 'phone'],
-    'Entertainment': ['movie', 'netflix', 'game', 'party', 'concert', 'club', 'spotify', 'subscription', 'fun'],
-    'Health': ['doctor', 'med', 'pharmacy', 'hospital', 'dentist', 'clinic', 'gym', 'workout', 'fitness', 'health', 'medicine'],
-    'Utilities': ['rent', 'bill', 'electric', 'internet', 'wifi', 'cleaning', 'maintenance', 'repair', 'meralco', 'globe', 'smart', 'pldt'],
-    'Education': ['school', 'course', 'book', 'tuition', 'class', 'study'],
-    'Pet Food': ['pet', 'dog', 'cat', 'dogfood', 'catfood', 'pedigree', 'whiskas', 'purina', 'alpo', 'pet food', 'petfood', 'kibble', 'treats', 'pet treat'],
-    
-    // Income Categories
-    'Salary': ['salary', 'paycheck', 'work', 'freelance', 'job', 'wage'],
-    'Bonus': ['bonus', 'extra'],
-    'Dividend': ['dividend', 'stock', 'share'],
-    'Gift': ['gift', 'present'],
-    'Investment': ['investment', 'crypto', 'bitcoin', 'profit', 'trade'],
-  };
-
   static QuickAddResult parse(String input) {
     if (input.isEmpty) {
       return QuickAddResult(
@@ -54,7 +35,6 @@ class QuickAddService {
     }
 
     final lowerInput = input.toLowerCase();
-    final words = lowerInput.split(RegExp(r'\s+'));
     double amount = 0;
     String category = 'Others';
     TransactionType type = TransactionType.expense;
@@ -97,27 +77,17 @@ class QuickAddService {
 
     // 3. Detect category and type using keywords (if not transfer)
     if (type != TransactionType.transfer) {
-      bool categoryFound = false;
-      for (var word in words) {
-        final cleanWord = word.replaceAll(RegExp(r'[^\w]'), '');
-        if (cleanWord.isEmpty) continue;
-
-        for (var entry in _categoryKeywords.entries) {
-          if (entry.value.contains(cleanWord)) {
-            category = entry.key;
-            categoryFound = true;
-            
-            // Check if it's an income category
-            final incomeCategories = ['Salary', 'Bonus', 'Dividend', 'Gift', 'Investment'];
-            if (incomeCategories.contains(category)) {
-              type = TransactionType.income;
-            }
-            break;
-          }
+      final predictedCategory = AutoCategorizationService.predictCategory(input.replaceAll(amountRegex, '').trim(), type);
+      if (predictedCategory != null) {
+        category = predictedCategory;
+        // Verify if it's an income category to adjust type
+        final dbCat = DatabaseService.getCategoryByName(category);
+        if (dbCat != null) {
+          type = dbCat.type;
         }
-        if (categoryFound) break;
       }
-      title = categoryFound ? category : (input.replaceAll(amountRegex, '').trim().isEmpty ? 'Quick Transaction' : input.replaceAll(amountRegex, '').trim());
+      
+      title = input.replaceAll(amountRegex, '').trim().isEmpty ? 'Quick Transaction' : input.replaceAll(amountRegex, '').trim();
     } else {
       title = 'Transfer';
       category = 'Others';
@@ -143,7 +113,6 @@ class QuickAddService {
 
     // 2. Fallback to hardcoded defaults for safety
     switch (category) {
-
       // Expense
       case 'Food & Drinks': return Icons.fastfood;
       case 'Transportation': return Icons.directions_car;
@@ -161,15 +130,18 @@ class QuickAddService {
       case 'Gift': return Icons.redeem;
       case 'Investment': return Icons.trending_up;
       
-      default: return Icons.more_horiz;
+      default: return Icons.category;
     }
   }
 
   static Color getTypeColor(TransactionType type) {
     switch (type) {
-      case TransactionType.income: return const Color(0xFF2E7D32);
-      case TransactionType.expense: return const Color(0xFFC62828);
-      case TransactionType.transfer: return const Color(0xFF00796B);
+      case TransactionType.income:
+        return const Color(0xFF2E7D32);
+      case TransactionType.expense:
+        return const Color(0xFFB71C1C);
+      case TransactionType.transfer:
+        return const Color(0xFF00695C);
     }
   }
 }

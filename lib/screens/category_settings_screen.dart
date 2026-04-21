@@ -63,6 +63,7 @@ class _CategorySettingsScreenState extends State<CategorySettingsScreen> with Si
       category.name = newName;
       category.iconCode = updatedCategory.iconCode;
       category.type = updatedCategory.type;
+      category.keywords = updatedCategory.keywords;
       
       await DatabaseService.updateCategory(category);
 

@@ -20,14 +20,20 @@ class CategoryFormDialog extends StatefulWidget {
 class _CategoryFormDialogState extends State<CategoryFormDialog> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _keywordsController;
   late TransactionType _selectedType;
+
   late IconData _selectedIcon;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existingCategory?.name ?? '');
+    _keywordsController = TextEditingController(
+      text: widget.existingCategory?.keywords?.join(', ') ?? '',
+    );
     _selectedType = widget.existingCategory?.type ?? widget.initialType;
+
     _selectedIcon = widget.existingCategory != null
         ? widget.existingCategory!.icon
         : Icons.category;
@@ -113,6 +119,23 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                   ),
                 ],
               ),
+              const SizedBox(height: 20),
+
+              // Keywords Input
+              TextFormField(
+                controller: _keywordsController,
+                decoration: InputDecoration(
+                  labelText: 'Auto-Categorize Keywords',
+                  hintText: 'e.g. jollibee, mcdo, burger (comma separated)',
+                  helperText: 'Descriptions containing these words will auto-select this category.',
+                  alignLabelWithHint: true,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                maxLines: 2,
+              ),
+
             ],
           ),
         ),
@@ -130,8 +153,14 @@ class _CategoryFormDialogState extends State<CategoryFormDialog> {
                 iconCode: _selectedIcon.codePoint,
                 type: _selectedType,
                 isDefault: widget.existingCategory?.isDefault ?? false,
+                keywords: _keywordsController.text
+                    .split(',')
+                    .map((s) => s.trim())
+                    .where((s) => s.isNotEmpty)
+                    .toList(),
               );
               Navigator.pop(context, category);
+
             }
           },
           style: ElevatedButton.styleFrom(

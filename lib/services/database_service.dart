@@ -382,6 +382,35 @@ class DatabaseService {
     return _transactionBox.values.toList();
   }
 
+  static String? getFrequentCategoryForDescription(String description, TransactionType type) {
+    if (description.isEmpty) return null;
+    
+    final lowerDesc = description.toLowerCase();
+    final transactions = _transactionBox.values.where((t) => 
+      t.type == type && t.description.toLowerCase().contains(lowerDesc)
+    );
+
+    if (transactions.isEmpty) return null;
+
+    final counts = <String, int>{};
+    for (var tx in transactions) {
+      counts[tx.category] = (counts[tx.category] ?? 0) + 1;
+    }
+
+    var bestCategory = counts.entries.first.key;
+    var maxCount = counts.entries.first.value;
+
+    for (var entry in counts.entries) {
+      if (entry.value > maxCount) {
+        maxCount = entry.value;
+        bestCategory = entry.key;
+      }
+    }
+
+    return bestCategory;
+  }
+
+
   static List<Transaction> getWalletTransactions(int walletKey) {
     return _transactionBox.values
         .where((t) => t.walletKey == walletKey || t.toWalletKey == walletKey)

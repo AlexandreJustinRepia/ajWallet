@@ -2705,7 +2705,7 @@ class _SquadSummaryWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'SQUAD FINANCIAL ANALYTICS • VERSION 2.0',
+                  'SQUAD FINANCIAL ANALYTICS • VERSION 3.0',
                   style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.bold,

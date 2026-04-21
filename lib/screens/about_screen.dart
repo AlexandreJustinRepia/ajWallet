@@ -80,7 +80,7 @@ class AboutScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      'v0.2.0',
+                      'v0.3.0',
                       style: TextStyle(
                         color: primaryColor,
                         fontWeight: FontWeight.bold,

@@ -1,5 +1,7 @@
 import '../models/transaction_model.dart';
+import 'database_service.dart';
 import 'package:flutter/material.dart';
+
 
 class QuickAddResult {
   final double amount;
@@ -133,7 +135,15 @@ class QuickAddService {
   }
 
   static IconData getCategoryIcon(String category) {
+    // 1. Check database for custom icon
+    final dbCategory = DatabaseService.getCategoryByName(category);
+    if (dbCategory != null) {
+      return dbCategory.icon;
+    }
+
+    // 2. Fallback to hardcoded defaults for safety
     switch (category) {
+
       // Expense
       case 'Food & Drinks': return Icons.fastfood;
       case 'Transportation': return Icons.directions_car;

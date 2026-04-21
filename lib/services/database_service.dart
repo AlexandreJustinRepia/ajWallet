@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
+import 'package:flutter/material.dart';
+
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/account.dart';
 import '../models/app_theme.dart';
@@ -11,6 +13,8 @@ import '../models/backup_history.dart';
 import '../models/squad.dart';
 import '../models/squad_member.dart';
 import '../models/squad_transaction.dart';
+import '../models/category.dart';
+
 
 class DatabaseService {
   static const String _boxName = 'accounts';
@@ -23,6 +27,8 @@ class DatabaseService {
   static const String _squadBoxName = 'squads';
   static const String _squadMemberBoxName = 'squad_members';
   static const String _squadTransactionBoxName = 'squad_transactions';
+  static const String _categoryBoxName = 'categories';
+
 
   static Future<void> init() async {
     await Hive.initFlutter();
@@ -61,9 +67,13 @@ class DatabaseService {
     if (!Hive.isAdapterRegistered(11)) {
       Hive.registerAdapter(SquadTransactionAdapter());
     }
-    if (!Hive.isAdapterRegistered(12)) {
+    if (Hive.isAdapterRegistered(12) == false) {
       Hive.registerAdapter(SplitTypeAdapter());
     }
+    if (!Hive.isAdapterRegistered(13)) {
+      Hive.registerAdapter(CategoryAdapter());
+    }
+
 
     await _openTypedBox<Account>(_boxName);
 
@@ -75,8 +85,13 @@ class DatabaseService {
     await _openTypedBox<Squad>(_squadBoxName);
     await _openTypedBox<SquadMember>(_squadMemberBoxName);
     await _openTypedBox<SquadTransaction>(_squadTransactionBoxName);
+    await _openTypedBox<Category>(_categoryBoxName);
     await _openUntypedBox(_backupHistoryBoxName);
+
+    // Seed categories if empty
+    await _initDefaultCategories();
   }
+
 
   static Box<Account> get _box => Hive.box<Account>(_boxName);
   static Box<Transaction> get _transactionBox =>
@@ -90,6 +105,9 @@ class DatabaseService {
       Hive.box<SquadMember>(_squadMemberBoxName);
   static Box<SquadTransaction> get _squadTxBox =>
       Hive.box<SquadTransaction>(_squadTransactionBoxName);
+  static Box<Category> get _categoryBox =>
+      Hive.box<Category>(_categoryBoxName);
+
 
   // Watchers for reactive UI
   static Stream<BoxEvent> get transactionWatcher => _transactionBox.watch();
@@ -100,7 +118,9 @@ class DatabaseService {
   static Stream<BoxEvent> get squadWatcher => _squadBox.watch();
   static Stream<BoxEvent> get memberWatcher => _memberBox.watch();
   static Stream<BoxEvent> get squadTxWatcher => _squadTxBox.watch();
+  static Stream<BoxEvent> get categoryWatcher => _categoryBox.watch();
   static ValueListenable<Box<SquadTransaction>> get squadTxListenable => _squadTxBox.listenable();
+
 
   static Future<void> _openTypedBox<T>(String boxName) async {
     try {
@@ -428,6 +448,82 @@ class DatabaseService {
       return null;
     }
   }
+
+  // Category Operations
+  static Future<int> saveCategory(Category category) async {
+    // Set orderIndex to the end of its type list
+    final existing = getCategories(category.type);
+    category.orderIndex = existing.length;
+    return await _categoryBox.add(category);
+  }
+
+
+  static Future<void> updateCategory(Category category) async {
+    await category.save();
+  }
+
+  static Future<void> deleteCategory(Category category) async {
+    await category.delete();
+  }
+
+  static List<Category> getCategories(TransactionType? type) {
+    List<Category> list;
+    if (type == null) {
+      list = _categoryBox.values.cast<Category>().toList();
+    } else {
+      list = _categoryBox.values.cast<Category>().where((c) => c.type == type).toList();
+    }
+    
+    // Sort by orderIndex
+    list.sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    return list;
+  }
+
+  static Future<void> updateCategoriesOrder(List<Category> categories) async {
+    for (int i = 0; i < categories.length; i++) {
+      categories[i].orderIndex = i;
+      await categories[i].save();
+    }
+  }
+
+
+  static Category? getCategoryByName(String name) {
+    try {
+      return _categoryBox.values.cast<Category>().firstWhere((c) => c.name == name);
+    } catch (_) {
+      return null;
+    }
+  }
+
+
+  static Future<void> _initDefaultCategories() async {
+    if (_categoryBox.isNotEmpty) return;
+
+    final defaults = [
+      // Expense Categories (index 0-8)
+      Category(name: 'Food & Drinks', iconCode: Icons.fastfood.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 0),
+      Category(name: 'Transportation', iconCode: Icons.directions_car.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 1),
+      Category(name: 'Shopping', iconCode: Icons.shopping_bag.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 2),
+      Category(name: 'Entertainment', iconCode: Icons.movie.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 3),
+      Category(name: 'Health', iconCode: Icons.medical_services.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 4),
+      Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
+      Category(name: 'Education', iconCode: Icons.school.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
+      Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
+      
+      // Income Categories (index 0-5)
+      Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 0),
+      Category(name: 'Bonus', iconCode: Icons.card_giftcard.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 1),
+      Category(name: 'Dividend', iconCode: Icons.pie_chart.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 2),
+      Category(name: 'Gift', iconCode: Icons.redeem.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 3),
+      Category(name: 'Investment', iconCode: Icons.trending_up.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 4),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
+    ];
+
+
+    await _categoryBox.addAll(defaults);
+  }
+
 
   // Debt Operations
   static Future<int> saveDebt(Debt debt) async {

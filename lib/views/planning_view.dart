@@ -131,7 +131,13 @@ class _PlanningViewState extends State<PlanningView> {
                     widget.onRefresh();
                   }
                 },
+                onSettings: () async {
+                  await Navigator.pushNamed(context, '/category_settings');
+                  _viewModel.refresh();
+                  widget.onRefresh();
+                },
                 summary: _viewModel.budgets.any((b) => b.month == DateTime.now().month)
+
                     ? _BudgetTotalSummary(
                         viewModel: _viewModel,
                       )
@@ -911,8 +917,10 @@ class _SectionCard extends StatelessWidget {
   final VoidCallback onAdd;
   final Widget child;
   final Widget? summary;
+  final VoidCallback? onSettings;
 
   const _SectionCard({
+
     this.sectionKey,
     this.addKey,
     required this.title,
@@ -922,7 +930,9 @@ class _SectionCard extends StatelessWidget {
     required this.onAdd,
     required this.child,
     this.summary,
+    this.onSettings,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -975,6 +985,12 @@ class _SectionCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onSettings != null)
+                    IconButton(
+                      icon: const Icon(Icons.settings_outlined, size: 20),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                      onPressed: onSettings,
+                    ),
                   IconButton(
                     key: addKey,
                     icon: const Icon(Icons.add_circle_outline_rounded),
@@ -983,6 +999,7 @@ class _SectionCard extends StatelessWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 16),
               summary ?? const SizedBox.shrink(),
               child,

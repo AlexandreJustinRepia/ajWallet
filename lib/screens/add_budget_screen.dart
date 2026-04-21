@@ -3,7 +3,9 @@ import '../services/database_service.dart';
 import '../services/financial_insights_service.dart';
 import '../models/budget.dart';
 import '../models/transaction_model.dart';
+import '../models/category.dart';
 import '../widgets/calculator_input.dart';
+
 import 'package:hive/hive.dart';
 
 import '../widgets/onboarding_overlay.dart';
@@ -20,8 +22,10 @@ class AddBudgetScreen extends StatefulWidget {
 class _AddBudgetScreenState extends State<AddBudgetScreen> {
   final _formKey = GlobalKey<FormState>();
   final _amountController = TextEditingController();
-  String _selectedCategory = 'Food & Drinks';
+  String _selectedCategory = 'Others';
+  List<Category> _availableCategories = [];
   double _suggestedBudget = 0.0;
+
   List<Transaction> _transactions = [];
 
   final GlobalKey _categoryKey = GlobalKey();
@@ -38,7 +42,9 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
       _selectedCategory = 'Food & Drinks';
       _amountController.text = '2000';
     }
+    _refreshCategories();
     _updateSuggestion();
+
     _checkTutorial();
   }
 
@@ -61,16 +67,21 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
     });
   }
 
-  final List<String> _categories = [
-    'Food & Drinks',
-    'Transportation',
-    'Shopping',
-    'Entertainment',
-    'Health',
-    'Utilities',
-    'Education',
-    'Others',
-  ];
+  void _refreshCategories() {
+    final categories = DatabaseService.getCategories(TransactionType.expense);
+    setState(() {
+      _availableCategories = categories;
+      if (_availableCategories.isNotEmpty && !_availableCategories.any((c) => c.name == _selectedCategory)) {
+        _selectedCategory = _availableCategories.any((c) => c.name == 'Food & Drinks') 
+            ? 'Food & Drinks' 
+            : _availableCategories.first.name;
+      }
+    });
+  }
+
+
+  // Removed hardcoded list
+
 
   void _saveBudget() async {
     if (_formKey.currentState!.validate()) {
@@ -152,7 +163,16 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                   child: DropdownButton<String>(
                     value: _selectedCategory,
                     isExpanded: true,
-                    items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                    items: _availableCategories.map((cat) => DropdownMenuItem(
+                      value: cat.name, 
+                      child: Row(
+                        children: [
+                          Icon(cat.icon, size: 20, color: theme.primaryColor),
+                          const SizedBox(width: 12),
+                          Text(cat.name),
+                        ],
+                      )
+                    )).toList(),
                     onChanged: (val) {
                       if (val != null) {
                         _selectedCategory = val;
@@ -160,6 +180,7 @@ class _AddBudgetScreenState extends State<AddBudgetScreen> {
                       }
                     },
                   ),
+
                 ),
               ),
               if (_suggestedBudget > 0)

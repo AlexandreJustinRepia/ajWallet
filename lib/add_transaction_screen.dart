@@ -11,6 +11,8 @@ import 'widgets/onboarding_overlay.dart';
 import 'services/attachment_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import 'models/category.dart';
+
 
 class AddTransactionScreen extends StatefulWidget {
   final int accountKey;
@@ -57,7 +59,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   TransactionType _selectedType = TransactionType.expense;
   DateTime _selectedDate = DateTime.now();
   bool _isManualDate = false;
-  String _selectedCategory = 'Food & Drinks';
+  String _selectedCategory = 'Others';
+  List<Category> _availableCategories = [];
+
   int? _selectedWalletKey;
   int? _selectedToWalletKey; // For Transfers
 
@@ -79,13 +83,17 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _budgets = DatabaseService.getBudgets(widget.accountKey);
     _transactions = DatabaseService.getTransactions(widget.accountKey);
     _debts = DatabaseService.getDebts(widget.accountKey);
+    _refreshCategories();
+
     
     if (widget.isTutorialMode) {
       _showTutorial = true;
       _selectedType = TransactionType.expense;
       _amountController.text = '250.00';
       _selectedCategory = 'Food & Drinks';
+      _refreshCategories();
       _descriptionController.text = 'Grocery Run';
+
       _selectedDate = DateTime.now();
       _isManualDate = true;
       _checkTutorial(); // still call this just in case, but rely on isTutorialMode mostly.
@@ -121,12 +129,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Use initial values if provided
       if (widget.initialType != null) {
         _selectedType = widget.initialType!;
-        _selectedCategory = _selectedType == TransactionType.income ? 'Salary' : 'Food & Drinks';
+        _refreshCategories();
+        if (_availableCategories.isNotEmpty) {
+           _selectedCategory = _availableCategories.any((c) => c.name == 'Salary') && _selectedType == TransactionType.income 
+               ? 'Salary' 
+               : _availableCategories.any((c) => c.name == 'Food & Drinks') && _selectedType == TransactionType.expense
+                   ? 'Food & Drinks'
+                   : _availableCategories.first.name;
+        }
       }
+
       _selectedGoalKey = widget.initialGoalKey;
       _selectedBudgetKey = widget.initialBudgetKey;
       _selectedDebtKey = widget.initialDebtKey;
     }
+  }
+
+  void _refreshCategories() {
+    setState(() {
+      _availableCategories = DatabaseService.getCategories(_selectedType);
+      
+      // Ensure selected category is valid for the current type
+      if (!_availableCategories.any((c) => c.name == _selectedCategory)) {
+        if (_availableCategories.isNotEmpty) {
+           // Try to find a sensible default
+           if (_selectedType == TransactionType.income && _availableCategories.any((c) => c.name == 'Salary')) {
+             _selectedCategory = 'Salary';
+           } else if (_selectedType == TransactionType.expense && _availableCategories.any((c) => c.name == 'Food & Drinks')) {
+             _selectedCategory = 'Food & Drinks';
+           } else {
+             _selectedCategory = _availableCategories.first.name;
+           }
+        } else {
+          _selectedCategory = 'Others';
+        }
+      }
+    });
   }
 
   void _checkTutorial() async {
@@ -147,29 +185,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _markTutorialSeen();
   }
 
-  final Map<String, IconData> _expenseCategories = {
-    'Food & Drinks': Icons.fastfood,
-    'Transportation': Icons.directions_car,
-    'Shopping': Icons.shopping_bag,
-    'Entertainment': Icons.movie,
-    'Health': Icons.medical_services,
-    'Utilities': Icons.home,
-    'Education': Icons.school,
-    'Pet Food': Icons.pets,
-    'Others': Icons.more_horiz,
-  };
+  // Removed hardcoded maps in favor of DatabaseService.getCategories
 
-  final Map<String, IconData> _incomeCategories = {
-    'Salary': Icons.work,
-    'Bonus': Icons.card_giftcard,
-    'Dividend': Icons.pie_chart,
-    'Gift': Icons.redeem,
-    'Investment': Icons.trending_up,
-    'Others': Icons.more_horiz,
-  };
-
-  Map<String, IconData> get _currentCategories => 
-    _selectedType == TransactionType.income ? _incomeCategories : _expenseCategories;
 
   String? _getBudgetStatus(String category) {
     if (_selectedType != TransactionType.expense) return null;
@@ -465,7 +482,21 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 4),
+                  if (_selectedType != TransactionType.transfer)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton.icon(
+                        onPressed: () async {
+                          await Navigator.pushNamed(context, '/category_settings');
+                          _refreshCategories();
+                        },
+                        icon: const Icon(Icons.settings_outlined, size: 14),
+                        label: const Text('Manage Categories', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                
+                  const SizedBox(height: 16),
 
                   // Wallet Selector (Source)
                   Text(
@@ -557,19 +588,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
-                          value: _currentCategories.containsKey(_selectedCategory) 
-                              ? _selectedCategory 
-                              : _currentCategories.keys.first,
+                          value: _selectedCategory,
                           isExpanded: true,
                           dropdownColor: theme.cardColor,
-                          items: _currentCategories.keys.map((String category) {
+                          items: _availableCategories.map((Category cat) {
+                            final category = cat.name;
                             final budgetStat = _getBudgetStatus(category);
                             return DropdownMenuItem<String>(
                               value: category,
                               child: Row(
                                 children: [
-                                  Icon(_currentCategories[category], size: 20, color: theme.primaryColor),
+                                  Icon(cat.icon, size: 20, color: theme.primaryColor),
                                   const SizedBox(width: 12),
+
                                   Expanded(
                                     child: Row(
                                       children: [
@@ -873,13 +904,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   }
 
   Widget _typeButton(String label, TransactionType type, Color color) {
-    bool isSelected = _selectedType == type;
+    final isSelected = _selectedType == type;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() {
-          _selectedType = type;
-          _selectedCategory = type == TransactionType.income ? 'Salary' : 'Food & Drinks';
-        }),
+        onTap: () {
+          setState(() {
+            _selectedType = type;
+            _refreshCategories();
+          });
+        },
+        borderRadius: BorderRadius.circular(12),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(

@@ -808,6 +808,18 @@ class DatabaseService {
     for (var s in squads) {
       await deleteSquad(s);
     }
+
+    // Delete shopping lists and items
+    final shoppingLists =
+        _shoppingListBox.values.where((l) => l.accountKey == accountKey).toList();
+    for (var list in shoppingLists) {
+      final items =
+          shoppingItemBox.values.where((i) => i.listId == list.id).toList();
+      for (var item in items) {
+        await item.delete();
+      }
+      await list.delete();
+    }
   }
 
   static Future<void> wipeAllData() async {
@@ -820,6 +832,10 @@ class DatabaseService {
     await _squadBox.clear();
     await _memberBox.clear();
     await _squadTxBox.clear();
+    await _categoryBox.clear();
+    await _shoppingListBox.clear();
+    await shoppingItemBox.clear();
+    await productCatalogBox.clear();
   }
 
   static Box<ShoppingList> get _shoppingListBox => Hive.box<ShoppingList>(_shoppingListBoxName);

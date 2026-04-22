@@ -89,10 +89,16 @@ class ShoppingService {
 
   // --- Product Catalog Operations ---
 
-  static List<Product> getProductCatalog(int accountKey) {
-    return DatabaseService.productCatalogBox.values
-        .where((p) => p.accountKey == accountKey)
-        .toList();
+  static List<Product> getProductCatalog([int? accountKey]) {
+    var query = DatabaseService.productCatalogBox.values.cast<Product>();
+    if (accountKey != null) {
+      query = query.where((p) => p.accountKey == accountKey);
+    }
+    return query.toList();
+  }
+
+  static Future<void> saveProduct(Product product) async {
+    await DatabaseService.productCatalogBox.add(product);
   }
 
   static Future<void> _updateProductCatalog(ShoppingItem item) async {

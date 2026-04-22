@@ -38,5 +38,31 @@ class ShoppingList extends HiveObject {
     this.linkedTransactionKey,
     this.storeName,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'accountKey': accountKey,
+      'createdAt': createdAt.toIso8601String(),
+      'isSettled': isSettled,
+      'totalAmount': totalAmount,
+      'linkedTransactionKey': linkedTransactionKey,
+      'storeName': storeName,
+    };
+  }
+
+  factory ShoppingList.fromMap(Map<String, dynamic> map) {
+    return ShoppingList(
+      id: map['id'],
+      name: map['name'],
+      accountKey: map['accountKey'],
+      createdAt: DateTime.parse(map['createdAt']),
+      isSettled: map['isSettled'] ?? false,
+      totalAmount: map['totalAmount'] ?? 0.0,
+      linkedTransactionKey: map['linkedTransactionKey'],
+      storeName: map['storeName'],
+    );
+  }
 }
 

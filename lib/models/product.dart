@@ -22,4 +22,22 @@ class Product extends HiveObject {
     required this.defaultCategory,
     required this.accountKey,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'lastPrice': lastPrice,
+      'defaultCategory': defaultCategory,
+      'accountKey': accountKey,
+    };
+  }
+
+  factory Product.fromMap(Map<String, dynamic> map) {
+    return Product(
+      name: map['name'],
+      lastPrice: map['lastPrice'],
+      defaultCategory: map['defaultCategory'],
+      accountKey: map['accountKey'],
+    );
+  }
 }

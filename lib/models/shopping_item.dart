@@ -54,4 +54,36 @@ class ShoppingItem extends HiveObject {
 
 
   double get total => price * quantity;
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'price': price,
+      'quantity': quantity,
+      'category': category,
+      'isBought': isBought,
+      'accountKey': accountKey,
+      'createdAt': createdAt.toIso8601String(),
+      'listId': listId,
+      'linkedTransactionKey': linkedTransactionKey,
+      'imagePath': imagePath,
+    };
+  }
+
+  factory ShoppingItem.fromMap(Map<String, dynamic> map) {
+    return ShoppingItem(
+      id: map['id'],
+      name: map['name'],
+      price: map['price'],
+      quantity: map['quantity'],
+      category: map['category'],
+      isBought: map['isBought'],
+      accountKey: map['accountKey'],
+      createdAt: DateTime.parse(map['createdAt']),
+      listId: map['listId'],
+      linkedTransactionKey: map['linkedTransactionKey'],
+      imagePath: map['imagePath'],
+    );
+  }
 }

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/foundation.dart' hide Category;
 import 'dart:typed_data';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:file_picker/file_picker.dart';
@@ -14,7 +14,12 @@ import '../models/squad.dart';
 import '../models/squad_member.dart';
 import '../models/squad_transaction.dart';
 import '../models/backup_history.dart';
+import '../models/category.dart';
+import '../models/shopping_item.dart';
+import '../models/product.dart';
+import '../models/shopping_list.dart';
 import 'database_service.dart';
+import 'shopping_service.dart';
 
 class BackupService {
   static const String _magicHeader = "AJ_BACKUP_V1";
@@ -30,8 +35,12 @@ class BackupService {
       final budgets = DatabaseService.getBudgets(accountKey);
       final debts = DatabaseService.getDebts(accountKey);
       final squads = DatabaseService.getSquads(accountKey);
+      final categories = DatabaseService.getCategories(null);
+      final shoppingLists = ShoppingService.getShoppingLists(accountKey);
+      final products = ShoppingService.getProductCatalog(accountKey);
       final squadMembers = <SquadMember>[];
       final squadTransactions = <SquadTransaction>[];
+      final shoppingItems = <ShoppingItem>[];
 
       for (var squad in squads) {
         final sk = squad.key as int;
@@ -39,20 +48,28 @@ class BackupService {
         squadTransactions.addAll(DatabaseService.getSquadTransactions(sk));
       }
 
+      for (var list in shoppingLists) {
+        shoppingItems.addAll(ShoppingService.getShoppingItems(accountKey, listId: list.id));
+      }
+
       final dataMap = {
         'header': _magicHeader,
         'timestamp': DateTime.now().toIso8601String(),
         'accounts': [
-          {...account.toMap(), 'key': account.key as int}
+          {...account.toMap(), 'key': account.key}
         ],
-        'wallets': wallets.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'transactions': transactions.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'goals': goals.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'budgets': budgets.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'debts': debts.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'squads': squads.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'squadMembers': squadMembers.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
-        'squadTransactions': squadTransactions.map((e) => {...e.toMap(), 'key': e.key as int}).toList(),
+        'wallets': wallets.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'transactions': transactions.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'goals': goals.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'budgets': budgets.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'debts': debts.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'squads': squads.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'squadMembers': squadMembers.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'squadTransactions': squadTransactions.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'categories': categories.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'shoppingLists': shoppingLists.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'shoppingItems': shoppingItems.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'products': products.map((e) => {...e.toMap(), 'key': e.key}).toList(),
       };
 
       final jsonString = jsonEncode(dataMap);
@@ -308,6 +325,47 @@ class BackupService {
         }
       }
       
+      // Stage 3.8: Categories (Restore custom ones, keep defaults)
+      if (dataMap.containsKey('categories')) {
+        final categoriesJson = dataMap['categories'] as List;
+        for (var cMap in categoriesJson) {
+          final category = Category.fromMap(cMap);
+          // Check if category already exists by name
+          if (DatabaseService.getCategoryByName(category.name) == null) {
+            await DatabaseService.saveCategory(category);
+          }
+        }
+      }
+
+      // Stage 3.9: Products (Product Catalog)
+      if (dataMap.containsKey('products')) {
+        final productsJson = dataMap['products'] as List;
+        for (var pMap in productsJson) {
+          final product = Product.fromMap(pMap);
+          await ShoppingService.saveProduct(product);
+        }
+      }
+
+      // Stage 3.10: Shopping Lists
+      if (dataMap.containsKey('shoppingLists')) {
+        final listsJson = dataMap['shoppingLists'] as List;
+        for (var lMap in listsJson) {
+          final list = ShoppingList.fromMap(lMap);
+          list.accountKey = targetAccountKey;
+          await ShoppingService.saveShoppingList(list);
+        }
+      }
+
+      // Stage 3.11: Shopping Items
+      if (dataMap.containsKey('shoppingItems')) {
+        final itemsJson = dataMap['shoppingItems'] as List;
+        for (var iMap in itemsJson) {
+          final item = ShoppingItem.fromMap(iMap);
+          // Items are linked to lists by listId, which is preserved in fromMap/toMap
+          await ShoppingService.saveShoppingItem(item);
+        }
+      }
+
       // Stage 4: Transactions
       final transactionsJson = dataMap['transactions'] as List;
       for (var tMap in transactionsJson) {

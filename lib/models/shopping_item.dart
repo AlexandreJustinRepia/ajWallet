@@ -37,6 +37,17 @@ class ShoppingItem extends HiveObject {
   @HiveField(10)
   String? imagePath;
 
+  static const List<String> categories = [
+    'Food & Drinks',
+    'Groceries',
+    'Health',
+    'Personal Care',
+    'Home',
+    'Electronics',
+    'Clothing',
+    'Other',
+  ];
+
 
   ShoppingItem({
     required this.id,

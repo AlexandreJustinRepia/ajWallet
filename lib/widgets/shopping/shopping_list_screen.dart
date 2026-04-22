@@ -8,6 +8,7 @@ import 'add_item_dialog.dart';
 import '../../models/store.dart';
 import 'package:intl/intl.dart';
 import '../../transaction_details_screen.dart';
+import 'bulk_add_screen.dart';
 
 
 class ShoppingListScreen extends StatefulWidget {
@@ -552,11 +553,14 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   void _addItem() async {
-    final result = await showDialog(
-      context: context,
-      builder: (context) => AddShoppingItemDialog(
-        accountKey: widget.accountKey,
-        listId: widget.shoppingList.id,
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BulkAddItemsScreen(
+          accountKey: widget.shoppingList.accountKey,
+          listId: widget.shoppingList.id,
+          listName: widget.shoppingList.name,
+        ),
       ),
     );
     if (result == true) _loadItems();

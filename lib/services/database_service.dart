@@ -36,6 +36,7 @@ class DatabaseService {
   static const String _shoppingItemBoxName = 'shopping_items';
   static const String _productBoxName = 'product_catalog';
   static const String _shoppingListBoxName = 'shopping_lists';
+  static const String _shoppingDraftBoxName = 'shopping_drafts';
 
 
 
@@ -110,6 +111,7 @@ class DatabaseService {
     await _openTypedBox<ShoppingItem>(_shoppingItemBoxName);
     await _openTypedBox<Product>(_productBoxName);
     await _openTypedBox<ShoppingList>(_shoppingListBoxName);
+    await _openTypedBox<ShoppingItem>(_shoppingDraftBoxName);
     await _openUntypedBox(_backupHistoryBoxName);
 
 
@@ -133,6 +135,7 @@ class DatabaseService {
   static Box<Category> get _categoryBox => Hive.box<Category>(_categoryBoxName);
   static Box<ShoppingItem> get shoppingItemBox => Hive.box<ShoppingItem>(_shoppingItemBoxName);
   static Box<Product> get productCatalogBox => Hive.box<Product>(_productBoxName);
+  static Box<ShoppingItem> get shoppingDraftBox => Hive.box<ShoppingItem>(_shoppingDraftBoxName);
 
 
 

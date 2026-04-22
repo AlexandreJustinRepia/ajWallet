@@ -8,6 +8,7 @@ import '../../models/squad_transaction.dart';
 import 'add_squad_transaction_screen.dart';
 import 'settle_up_screen.dart';
 import 'package:intl/intl.dart';
+import '../../widgets/image_gallery_viewer.dart';
 import 'dart:ui' as ui;
 import 'dart:io';
 import 'package:flutter/rendering.dart';
@@ -2044,7 +2045,11 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                 itemBuilder: (context, index) {
                   final path = widget.tx.attachmentPaths![index];
                   return GestureDetector(
-                    onTap: () => _showFullScreenImage(context, path),
+                    onTap: () => ImageGalleryViewer.show(
+                      context,
+                      widget.tx.attachmentPaths!,
+                      index,
+                    ),
                     child: Container(
                       width: 100,
                       margin: const EdgeInsets.only(right: 12),
@@ -2070,27 +2075,6 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     );
   }
 
-  void _showFullScreenImage(BuildContext context, String path) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            Center(child: Image.file(File(path), fit: BoxFit.contain)),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }
 
 class _InvoiceWidget extends StatelessWidget {

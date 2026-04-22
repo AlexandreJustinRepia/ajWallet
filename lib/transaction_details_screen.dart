@@ -7,6 +7,7 @@ import 'widgets/onboarding_overlay.dart';
 import 'dart:io';
 import 'services/shopping_service.dart';
 import 'models/shopping_item.dart';
+import 'widgets/image_gallery_viewer.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final Transaction transaction;
@@ -394,7 +395,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                       itemBuilder: (context, index) {
                         final path = widget.transaction.attachmentPaths![index];
                         return GestureDetector(
-                          onTap: () => _showFullScreenImage(context, path),
+                          onTap: () => ImageGalleryViewer.show(context, widget.transaction.attachmentPaths!, index),
                           child: Container(
                             width: 120,
                             margin: const EdgeInsets.only(right: 12),
@@ -429,27 +430,6 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     );
   }
 
-  void _showFullScreenImage(BuildContext context, String path) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog.fullscreen(
-        backgroundColor: Colors.black,
-        child: Stack(
-          children: [
-            Center(child: Image.file(File(path), fit: BoxFit.contain)),
-            Positioned(
-              top: 40,
-              right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   String _getWalletName(int? key) {
     if (key == null) return 'Unknown';

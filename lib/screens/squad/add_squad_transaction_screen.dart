@@ -9,6 +9,7 @@ import '../../widgets/onboarding_overlay.dart';
 import '../../services/attachment_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../widgets/image_gallery_viewer.dart';
 
 class AddSquadTransactionScreen extends StatefulWidget {
   final Squad squad;
@@ -384,34 +385,41 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
                 child: ListView(
                   scrollDirection: Axis.horizontal,
                   children: [
-                    ..._attachmentPaths.map((path) => Container(
-                      width: 100,
-                      margin: const EdgeInsets.only(right: 12),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
-                        border: Border.all(color: theme.dividerColor, width: 0.5),
-                      ),
-                      child: Stack(
-                        children: [
-                          Positioned(
-                            right: 4,
-                            top: 4,
-                            child: GestureDetector(
-                              onTap: () {
-                                setState(() => _attachmentPaths.remove(path));
-                                AttachmentService.deleteAttachment(path);
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                                child: const Icon(Icons.close, size: 16, color: Colors.white),
-                              ),
-                            ),
+                    ..._attachmentPaths.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final path = entry.value;
+                      return GestureDetector(
+                        onTap: () => ImageGalleryViewer.show(context, _attachmentPaths, index),
+                        child: Container(
+                          width: 100,
+                          margin: const EdgeInsets.only(right: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                            border: Border.all(color: theme.dividerColor, width: 0.5),
                           ),
-                        ],
-                      ),
-                    )),
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                right: 4,
+                                top: 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() => _attachmentPaths.remove(path));
+                                    AttachmentService.deleteAttachment(path);
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }),
                     GestureDetector(
                       onTap: () => _pickAttachment(),
                       child: Container(

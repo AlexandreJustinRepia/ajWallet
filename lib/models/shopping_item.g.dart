@@ -27,13 +27,14 @@ class ShoppingItemAdapter extends TypeAdapter<ShoppingItem> {
       createdAt: fields[7] as DateTime,
       listId: fields[8] as String?,
       linkedTransactionKey: fields[9] as int?,
+      imagePath: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ShoppingItem obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -53,7 +54,9 @@ class ShoppingItemAdapter extends TypeAdapter<ShoppingItem> {
       ..writeByte(8)
       ..write(obj.listId)
       ..writeByte(9)
-      ..write(obj.linkedTransactionKey);
+      ..write(obj.linkedTransactionKey)
+      ..writeByte(10)
+      ..write(obj.imagePath);
   }
 
   @override

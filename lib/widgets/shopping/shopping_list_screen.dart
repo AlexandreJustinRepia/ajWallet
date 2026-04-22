@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import '../../models/shopping_item.dart';
 import '../../models/shopping_list.dart';
@@ -310,19 +311,58 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        leading: GestureDetector(
-          onTap: () => _toggleItem(item),
-          child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isBought ? Colors.green.withValues(alpha: 0.1) : theme.dividerColor.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              isBought ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
-              color: isBought ? Colors.green : theme.dividerColor,
-              size: 24,
-            ),
+        onTap: () => _editItem(item),
+        leading: InkWell(
+          onTap: item.imagePath != null ? () => _viewFullImage(item) : () => _toggleItem(item),
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isBought ? Colors.green.withValues(alpha: 0.1) : theme.dividerColor.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  image: (item.imagePath != null && File(item.imagePath!).existsSync())
+                      ? DecorationImage(
+                          image: FileImage(File(item.imagePath!)),
+                          fit: BoxFit.cover,
+                          colorFilter: isBought ? ColorFilter.mode(Colors.white.withValues(alpha: 0.5), BlendMode.dstIn) : null,
+                        )
+                      : null,
+                ),
+                child: (item.imagePath == null || !File(item.imagePath!).existsSync())
+                    ? Icon(
+                        isBought ? Icons.check_rounded : Icons.add_rounded,
+                        color: isBought ? Colors.green : theme.dividerColor,
+                        size: 20,
+                      )
+                    : null,
+              ),
+              if (item.imagePath != null && File(item.imagePath!).existsSync())
+                Positioned(
+                  right: -2,
+                  bottom: -2,
+                  child: GestureDetector(
+                    onTap: () => _toggleItem(item),
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: theme.scaffoldBackgroundColor,
+                        shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
+                      ),
+                      child: Icon(
+                        isBought ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+                        color: isBought ? Colors.green : theme.dividerColor,
+                        size: 18,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
         title: Text(
@@ -333,9 +373,25 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
             color: isBought ? theme.textTheme.bodySmall?.color : null,
           ),
         ),
-        subtitle: Text(
-          '${item.quantity} x ₱${item.price.toStringAsFixed(2)} • ${item.category}',
-          style: theme.textTheme.bodySmall,
+        subtitle: Row(
+          children: [
+            Text(
+              '${item.quantity} × ₱${item.price.toStringAsFixed(0)}',
+              style: theme.textTheme.bodySmall?.copyWith(fontSize: 11),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                item.category,
+                style: TextStyle(fontSize: 9, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6)),
+              ),
+            ),
+          ],
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
@@ -344,12 +400,15 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
               '₱${item.total.toStringAsFixed(0)}',
               style: TextStyle(
                 fontWeight: FontWeight.w900,
-                color: isBought ? theme.textTheme.bodySmall?.color : theme.primaryColor,
+                color: isBought ? theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5) : theme.primaryColor,
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.more_vert_rounded, size: 20),
+              icon: const Icon(Icons.more_vert_rounded, size: 18),
               onPressed: () => _showItemActions(item),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              visualDensity: VisualDensity.compact,
             ),
           ],
         ),
@@ -481,6 +540,72 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
      await ShoppingService.toggleBought(item);
      _loadItems();
+  }
+
+  void _viewFullImage(ShoppingItem item) {
+    if (item.imagePath == null) return;
+    final file = File(item.imagePath!);
+    if (!file.existsSync()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image file not found')),
+      );
+      return;
+    }
+    
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close',
+      barrierColor: Colors.black.withValues(alpha: 0.9),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, anim1, anim2) => Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Center(
+                child: InteractiveViewer(
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Hero(
+                    tag: item.id,
+                    child: Image.file(file, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: CircleAvatar(
+                    backgroundColor: Colors.black.withValues(alpha: 0.5),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _editItem(ShoppingItem item) async {
+    final result = await showDialog(
+      context: context,
+      builder: (context) => AddShoppingItemDialog(
+        accountKey: widget.accountKey,
+        listId: widget.shoppingList.id,
+        existingItem: item,
+      ),
+    );
+    if (result == true) _loadItems();
   }
 
   void _showItemActions(ShoppingItem item) {

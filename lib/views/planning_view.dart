@@ -208,7 +208,7 @@ class _PlanningViewState extends State<PlanningView> {
                 title: 'Smart Shopping List',
                 icon: Icons.shopping_cart_outlined,
                 color: theme.primaryColor,
-                count: _viewModel.pendingShoppingItemsCount > 0 ? _viewModel.pendingShoppingItemsCount : _viewModel.activeShoppingListsCount,
+                count: _viewModel.activeShoppingListsCount,
                 onAdd: () async {
                     await Navigator.push(
                       context,
@@ -216,56 +216,70 @@ class _PlanningViewState extends State<PlanningView> {
                         builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
                       ),
                     );
-
-                  setState(() {}); // Refresh local state for count
+                  _viewModel.refresh();
+                  setState(() {});
                 },
-
                 child: Builder(
                   builder: (context) {
-                    final pending = ShoppingService.getShoppingItems(accountKey).where((i) => !i.isBought).toList();
-                    final lists = ShoppingService.getShoppingLists(accountKey).where((l) => !l.isSettled).toList();
+                    final activeLists = ShoppingService.getShoppingLists(accountKey).where((l) => !l.isSettled).toList();
                     
-                    if (pending.isEmpty && lists.isEmpty) {
+                    if (activeLists.isEmpty) {
                       return const _EmptyState(
                         icon: Icons.shopping_basket_outlined,
                         message: 'No active shopping lists',
                       );
                     }
 
-                    if (pending.isEmpty && lists.isNotEmpty) {
-                      final latestList = lists.first;
-                      return ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                        leading: Icon(Icons.shopping_bag_outlined, color: theme.primaryColor),
-                        title: Text(latestList.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(latestList.storeName != null ? 'At ${latestList.storeName} • 0 items' : '0 items'),
-                        trailing: const Icon(Icons.chevron_right_rounded),
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
-                            ),
+                    return Column(
+                      children: [
+                        ...activeLists.take(3).map((list) {
+                          final items = ShoppingService.getShoppingItems(accountKey, listId: list.id);
+                          final boughtCount = items.where((i) => i.isBought).length;
+                          final totalItems = items.length;
+                          final progress = totalItems > 0 ? boughtCount / totalItems : 0.0;
+                          
+                          return _PlanningItem(
+                            title: list.name.isEmpty ? 'Shopping List' : list.name,
+                            subtitle: list.storeName ?? 'Any Store',
+                            trailingText: '$boughtCount/$totalItems items',
+                            progress: progress,
+                            progressColor: theme.primaryColor,
+                            onPrimaryAction: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                                ),
+                              );
+                              _viewModel.refresh();
+                              setState(() {});
+                            },
+                            primaryActionLabel: 'Open',
+                            onDelete: () async {
+                              await ShoppingService.deleteShoppingList(list);
+                              _viewModel.refresh();
+                              setState(() {});
+                            },
                           );
-                        },
-                      );
-                    }
-
-                    final total = pending.fold(0.0, (sum, i) => sum + i.total);
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                      leading: Icon(Icons.shopping_bag_outlined, color: theme.primaryColor),
-                      title: Text('${pending.length} items to buy', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text('Estimated Total: ₱${total.toStringAsFixed(0)}'),
-                      trailing: const Icon(Icons.chevron_right_rounded),
-                      onTap: () async {
-                        await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                        }),
+                        if (activeLists.length > 3)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: TextButton(
+                              onPressed: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                                  ),
+                                );
+                                _viewModel.refresh();
+                                setState(() {});
+                              },
+                              child: Text('View all ${activeLists.length} lists', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                            ),
                           ),
-                        );
-                      },
+                      ],
                     );
                   },
                 ),

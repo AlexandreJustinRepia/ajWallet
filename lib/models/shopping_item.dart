@@ -32,7 +32,10 @@ class ShoppingItem extends HiveObject {
   String? listId; // New field for multi-list support
 
   @HiveField(9)
-  int? linkedTransactionKey; // New field for transaction sync
+  int? linkedTransactionKey;
+
+  @HiveField(10)
+  String? imagePath;
 
 
   ShoppingItem({
@@ -46,6 +49,7 @@ class ShoppingItem extends HiveObject {
     required this.createdAt,
     this.listId,
     this.linkedTransactionKey,
+    this.imagePath,
   });
 
 

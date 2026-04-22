@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'database_service.dart';
 import '../models/shopping_item.dart';
 import '../models/product.dart';
@@ -23,7 +25,7 @@ class ShoppingService {
     // Also delete all items in this list
     final items = DatabaseService.shoppingItemBox.values.where((i) => i.listId == list.id).toList();
     for (var item in items) {
-      await item.delete();
+      await deleteShoppingItem(item); // Use our delete method to clean up images
     }
     await list.delete();
   }
@@ -51,11 +53,32 @@ class ShoppingService {
   }
 
   static Future<void> updateShoppingItem(ShoppingItem item) async {
-    await item.save();
+    if (item.isInBox) {
+      await item.save();
+    } else {
+      final box = DatabaseService.shoppingItemBox;
+      final existingIndex = box.values.toList().indexWhere((i) => i.id == item.id);
+      if (existingIndex != -1) {
+        await box.putAt(existingIndex, item);
+      } else {
+        await box.add(item);
+      }
+    }
     await _updateProductCatalog(item);
   }
 
   static Future<void> deleteShoppingItem(ShoppingItem item) async {
+    // Delete image file if exists
+    if (item.imagePath != null) {
+      try {
+        final file = File(item.imagePath!);
+        if (await file.exists()) {
+          await file.delete();
+        }
+      } catch (e) {
+        debugPrint('Error deleting image file: $e');
+      }
+    }
     await item.delete();
   }
 

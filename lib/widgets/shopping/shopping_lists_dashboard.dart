@@ -34,7 +34,9 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => AlertDialog(
+        builder: (context, setModalState) {
+          final theme = Theme.of(context);
+          return AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
           title: const Text('New Shopping List', style: TextStyle(fontWeight: FontWeight.bold)),
           content: SingleChildScrollView(
@@ -97,7 +99,13 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                           const Text('Select Store (Optional)', style: TextStyle(color: Colors.grey)),
                         ],
                         const Spacer(),
-                        const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                        if (selectedStoreName != null)
+                          GestureDetector(
+                            onTap: () => setModalState(() => selectedStoreName = null),
+                            child: Icon(Icons.cancel_rounded, color: Colors.red.withValues(alpha: 0.7), size: 22),
+                          )
+                        else
+                          const Icon(Icons.chevron_right_rounded, color: Colors.grey),
                       ],
                     ),
                   ),
@@ -106,9 +114,15 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel', style: TextStyle(color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5))),
+            ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
+                backgroundColor: theme.primaryColor,
+                foregroundColor: Colors.white,
+                elevation: 0,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -116,12 +130,13 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                 'name': nameController.text,
                 'store': selectedStoreName,
               }),
-              child: const Text('Create'),
+              child: const Text('Create', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
-        ),
-      ),
-    );
+        );
+      },
+    ),
+  );
 
     if (result != null && result['name'].isNotEmpty) {
       final newList = ShoppingList(
@@ -193,9 +208,34 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                   mainAxisSpacing: 16,
                   childAspectRatio: 0.8,
                 ),
-                itemCount: Store.convenienceStores.length,
+                itemCount: Store.convenienceStores.length + 1,
                 itemBuilder: (context, index) {
-                  final store = Store.convenienceStores[index];
+                  if (index == 0) {
+                    return InkWell(
+                      onTap: () => Navigator.pop(context, null),
+                      borderRadius: BorderRadius.circular(20),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: theme.cardColor,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.not_interested_rounded, size: 40, color: theme.dividerColor),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'No Store',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  final store = Store.convenienceStores[index - 1];
                   return InkWell(
                     onTap: () => Navigator.pop(context, store),
                     borderRadius: BorderRadius.circular(20),

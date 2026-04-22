@@ -423,7 +423,8 @@ class _AddShoppingItemDialogState extends State<AddShoppingItemDialog> {
           onPressed: _submit,
           style: ElevatedButton.styleFrom(
             backgroundColor: theme.primaryColor,
-            foregroundColor: theme.scaffoldBackgroundColor,
+            foregroundColor: Colors.white,
+            elevation: 0,
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),

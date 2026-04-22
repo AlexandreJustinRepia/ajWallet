@@ -30,16 +30,14 @@ class SquadDetailScreen extends StatefulWidget {
 class _SquadDetailScreenState extends State<SquadDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  final GlobalKey _summaryKey = GlobalKey(); // Button key
-  final GlobalKey _summaryCaptureKey = GlobalKey(); // Capture key
-  final GlobalKey _receiptCaptureKey = GlobalKey(); // Capture key
+  final GlobalKey _summaryKey = GlobalKey();
+  final GlobalKey _summaryCaptureKey = GlobalKey();
+  final GlobalKey _receiptCaptureKey = GlobalKey();
   final GlobalKey _helpKey = GlobalKey();
   final GlobalKey _settleKey = GlobalKey();
   final GlobalKey _splitKey = GlobalKey();
   final GlobalKey _activityTabKey = GlobalKey();
 
-  bool _isSharingSummary = false;
-  bool _isSavingSummary = false;
   bool _isTutorialActive = false;
   SquadTransaction? _txToCapture;
   SquadTransaction? _txToSave;
@@ -138,112 +136,138 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
             body: NestedScrollView(
               headerSliverBuilder: (context, innerBoxIsScrolled) {
                 return [
-                  SliverAppBar(
-                    expandedHeight: 280,
-                    pinned: true,
-                    stretch: true,
-                    flexibleSpace: FlexibleSpaceBar(
-                      centerTitle: true,
-                      titlePadding: const EdgeInsets.only(bottom: 20),
-                      title: Text(
-                        widget.squad.name,
-                        style: TextStyle(
-                          color: theme.textTheme.bodyLarge?.color,
-                          fontWeight: FontWeight.bold,
+                  SliverOverlapAbsorber(
+                    handle:
+                        NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+                    sliver: SliverAppBar(
+                      expandedHeight: 280,
+                      pinned: true,
+                      stretch: true,
+                      backgroundColor: theme.scaffoldBackgroundColor,
+                      elevation: 0,
+                      flexibleSpace: FlexibleSpaceBar(
+                        centerTitle: true,
+                        titlePadding: const EdgeInsets.only(bottom: 16),
+                        title: Text(
+                          widget.squad.name,
+                          style: TextStyle(
+                            color: theme.textTheme.bodyLarge?.color,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 18,
+                            letterSpacing: -0.5,
+                          ),
                         ),
-                      ),
-                      background: Container(
-                        color: theme.scaffoldBackgroundColor,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 80),
-                            Text(
-                              'TOTAL SQUAD NET',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.5,
-                                color: theme.textTheme.bodyMedium?.color
-                                    ?.withValues(alpha: 0.5),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${balances.net >= 0 ? "+" : ""}₱${balances.net.toStringAsFixed(2)}',
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                _StatChip(
-                                  label: 'Owed to you',
-                                  amount: balances.youAreOwed,
-                                  color: theme.colorScheme.tertiary,
-                                ),
-                                const SizedBox(width: 12),
-                                _StatChip(
-                                  label: 'You owe',
-                                  amount: balances.youOwe,
-                                  color: theme.colorScheme.error,
-                                ),
+                        background: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                theme.primaryColor.withValues(alpha: 0.05),
+                                theme.scaffoldBackgroundColor,
                               ],
                             ),
-                            const SizedBox(height: 40),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const SizedBox(height: 40),
+                              Text(
+                                'TOTAL SQUAD NET',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 2.5,
+                                  color: theme.primaryColor.withValues(alpha: 0.7),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                '${balances.net >= 0 ? "+" : ""}₱${balances.net.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontSize: 42,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  _StatChip(
+                                    label: 'Owed to you',
+                                    amount: balances.youAreOwed,
+                                    color: theme.colorScheme.tertiary,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  _StatChip(
+                                    label: 'You owe',
+                                    amount: balances.youOwe,
+                                    color: theme.colorScheme.error,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 60),
+                            ],
+                          ),
+                        ),
+                      ),
+                      actions: [
+                        IconButton(
+                          key: _helpKey,
+                          icon: const Icon(Icons.help_outline_rounded),
+                          onPressed: () =>
+                              setState(() => _isTutorialActive = true),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => _editSquadName(),
+                        ),
+                        PopupMenuButton<String>(
+                          key: _summaryKey,
+                          icon: const Icon(Icons.more_vert_rounded),
+                          onSelected: (value) {
+                            switch (value) {
+                              case 'save':
+                                _saveSquadSummaryImage();
+                                break;
+                              case 'share':
+                                _shareSquadSummaryImage();
+                                break;
+                              case 'delete':
+                                _confirmDeleteSquad();
+                                break;
+                            }
+                          },
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              value: 'save',
+                              child: ListTile(
+                                leading: Icon(Icons.download_rounded, color: theme.primaryColor),
+                                title: const Text('Save Summary'),
+                                dense: true,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'share',
+                              child: ListTile(
+                                leading: Icon(Icons.share_outlined, color: theme.primaryColor),
+                                title: const Text('Share Summary'),
+                                dense: true,
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: ListTile(
+                                leading: Icon(Icons.delete_outline_rounded, color: theme.colorScheme.error),
+                                title: Text('Delete Squad', style: TextStyle(color: theme.colorScheme.error)),
+                                dense: true,
+                              ),
+                            ),
                           ],
                         ),
-                      ),
+                      ],
                     ),
-                    actions: [
-                      IconButton(
-                        key: _helpKey,
-                        icon: const Icon(Icons.help_outline_rounded),
-                        onPressed: () =>
-                            setState(() => _isTutorialActive = true),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => _editSquadName(),
-                      ),
-                      if (_isSavingSummary)
-                        const IconButton(
-                          onPressed: null,
-                          icon: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      if (!_isSavingSummary)
-                        IconButton(
-                          icon: const Icon(Icons.download_rounded),
-                          onPressed: () => _saveSquadSummaryImage(),
-                        ),
-                      if (_isSharingSummary)
-                        const IconButton(
-                          onPressed: null,
-                          icon: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                        ),
-                      if (!_isSharingSummary)
-                        IconButton(
-                          key: _summaryKey,
-                          icon: const Icon(Icons.share_outlined),
-                          onPressed: () => _shareSquadSummaryImage(),
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline_rounded),
-                        color: theme.colorScheme.error,
-                        onPressed: () => _confirmDeleteSquad(),
-                      ),
-                    ],
                   ),
                   SliverPersistentHeader(
                     pinned: true,
@@ -429,7 +453,6 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
   }
 
   void _shareSquadSummaryImage() async {
-    setState(() => _isSharingSummary = true);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     scaffoldMessenger.showSnackBar(
@@ -472,12 +495,11 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         ),
       );
     } finally {
-      if (mounted) setState(() => _isSharingSummary = false);
+      // Done
     }
   }
 
   void _saveSquadSummaryImage() async {
-    setState(() => _isSavingSummary = true);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
     // Give it a frame to render
@@ -508,7 +530,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         SnackBar(content: Text('Failed to save summary: $e'), backgroundColor: Colors.red),
       );
     } finally {
-      if (mounted) setState(() => _isSavingSummary = false);
+      // Done
     }
   }
 
@@ -650,129 +672,145 @@ class _ActivityTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final txs = DatabaseService.getSquadTransactions(squad.key as int);
     final members = DatabaseService.getSquadMembers(squad.key as int);
-
-    if (txs.isEmpty) {
-      return Center(
-        child: Text(
-          'No transactions yet',
-          style: TextStyle(color: theme.dividerColor),
-        ),
-      );
-    }
+    final txs = DatabaseService.getSquadTransactions(squad.key as int);
 
     // Only show bills (non-settlements) in the main activity tab
     final sortedTxs = txs.where((tx) => !tx.isSettlement).toList()
       ..sort((a, b) => b.date.compareTo(a.date));
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: sortedTxs.length,
-      itemBuilder: (context, index) {
-        final tx = sortedTxs[index];
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 12),
-          decoration: BoxDecoration(
-            color: theme.cardColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.dividerColor, width: 0.5),
+    return CustomScrollView(
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        if (sortedTxs.isEmpty)
+          SliverFillRemaining(
+            child: Center(
+              child: Text(
+                'No transactions yet',
+                style: TextStyle(color: theme.dividerColor),
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.all(24),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final tx = sortedTxs[index];
+                  return _buildTransactionItem(context, theme, tx, members);
+                },
+                childCount: sortedTxs.length,
+              ),
+            ),
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 8,
+      ],
+    );
+  }
+
+  Widget _buildTransactionItem(BuildContext context, ThemeData theme,
+      SquadTransaction tx, List<SquadMember> members) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor, width: 0.5),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 8,
+        ),
+        leading: CircleAvatar(
+          backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+          child: Icon(
+            Icons.receipt_long_rounded,
+            color: theme.primaryColor,
+            size: 20,
+          ),
+        ),
+        title: Text(
+          tx.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          DateFormat('MMMM dd, yyyy').format(tx.date),
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.textTheme.bodyMedium?.color?.withValues(
+              alpha: 0.6,
             ),
-            leading: CircleAvatar(
-              backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
-              child: Icon(
-                Icons.receipt_long_rounded,
-                color: theme.primaryColor,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: Icon(
+                Icons.download_rounded,
                 size: 20,
+                color: theme.primaryColor,
               ),
+              onPressed: () => onSave(tx),
             ),
-            title: Text(
-              tx.title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Text(
-              DateFormat('MMMM dd, yyyy').format(tx.date),
-              style: TextStyle(
-                fontSize: 12,
-                color: theme.textTheme.bodyMedium?.color?.withValues(
-                  alpha: 0.6,
-                ),
+            IconButton(
+              icon: Icon(
+                Icons.share_outlined,
+                size: 20,
+                color: theme.primaryColor,
               ),
+              onPressed: () => onShare(tx),
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    Icons.download_rounded,
-                    size: 20,
-                    color: theme.primaryColor,
-                  ),
-                  onPressed: () => onSave(tx),
+            Text(
+              '₱${tx.amount.toStringAsFixed(0)}',
+              style: const TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => _ActivityDetailSheet(
+              tx: tx,
+              members: members,
+              onRefresh: onRefresh,
+              onShare: onShare,
+              onSave: onSave,
+            ),
+          );
+        },
+        onLongPress: () async {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Delete Transaction?'),
+              content: const Text('This will undo the balance effect.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
                 ),
-                IconButton(
-                  icon: Icon(
-                    Icons.share_outlined,
-                    size: 20,
-                    color: theme.primaryColor,
+                TextButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text(
+                    'Delete',
+                    style: TextStyle(color: Colors.red),
                   ),
-                  onPressed: () => onShare(tx),
-                ),
-                Text(
-                  '₱${tx.amount.toStringAsFixed(0)}',
-                  style: const TextStyle(fontWeight: FontWeight.w900),
                 ),
               ],
             ),
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => _ActivityDetailSheet(
-                  tx: tx,
-                  members: members,
-                  onRefresh: onRefresh,
-                  onShare: onShare,
-                  onSave: onSave,
-                ),
-              );
-            },
-            onLongPress: () async {
-              final confirm = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Delete Transaction?'),
-                  content: const Text('This will undo the balance effect.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
-                        'Delete',
-                        style: TextStyle(color: Colors.red),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-              if (confirm == true) {
-                await DatabaseService.deleteSquadTransaction(tx);
-                onRefresh();
-              }
-            },
-          ),
-        );
-      },
+          );
+          if (confirm == true) {
+            await DatabaseService.deleteSquadTransaction(tx);
+            onRefresh();
+          }
+        },
+      ),
     );
   }
 }
@@ -789,144 +827,171 @@ class _BalancesTab extends StatelessWidget {
     final members = DatabaseService.getSquadMembers(squad.key as int);
     final balances = SquadService.calculateBalances(squad.key as int);
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(24),
-      itemCount: members.length,
-      itemBuilder: (context, index) {
-        final member = members[index];
-        final balance = balances.memberNetBalances[member.key as int] ?? 0.0;
-        final isPositive = balance > 0;
-        final isNegative = balance < 0;
-        final txs = DatabaseService.getSquadTransactions(squad.key as int);
-        final hasActivity = txs.any(
-          (t) =>
-              t.payerMemberKey == member.key ||
-              t.memberSplits.containsKey(member.key as int),
-        );
+    return CustomScrollView(
+      slivers: [
+        SliverOverlapInjector(
+          handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.all(24),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final member = members[index];
+                final balance =
+                    balances.memberNetBalances[member.key as int] ?? 0.0;
+                final isPositive = balance > 0;
+                final isNegative = balance < 0;
+                final txs =
+                    DatabaseService.getSquadTransactions(squad.key as int);
+                final hasActivity = txs.any(
+                  (t) =>
+                      t.payerMemberKey == member.key ||
+                      t.memberSplits.containsKey(member.key as int),
+                );
 
-        return GestureDetector(
-          onTap: () {
-            showModalBottomSheet(
-              context: context,
-              isScrollControlled: true,
-              backgroundColor: Colors.transparent,
-              builder: (context) => _MemberDetailSheet(
-                member: member,
-                allTransactions: txs,
-                netBalance: balance,
-                onRefresh: onRefresh,
-              ),
-            );
-          },
-          child: Container(
-            margin: const EdgeInsets.only(bottom: 12),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: isPositive
-                    ? theme.colorScheme.tertiary.withValues(alpha: 0.3)
-                    : (isNegative
-                          ? theme.colorScheme.error.withValues(alpha: 0.3)
-                          : theme.dividerColor),
-                width: 0.5,
-              ),
+                return _buildMemberItem(context, theme, member, balance,
+                    isPositive, isNegative, txs, hasActivity);
+              },
+              childCount: members.length,
             ),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 18,
-                  backgroundColor: isPositive
-                      ? theme.colorScheme.tertiary.withValues(alpha: 0.1)
-                      : (isNegative
-                            ? theme.colorScheme.error.withValues(alpha: 0.1)
-                            : theme.dividerColor.withValues(alpha: 0.1)),
-                  child: Text(
-                    member.name[0].toUpperCase(),
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: isPositive
-                          ? theme.colorScheme.tertiary
-                          : (isNegative
-                                ? theme.colorScheme.error
-                                : theme.textTheme.bodyMedium?.color),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            member.name,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          if (member.isYou) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.primaryColor.withValues(
-                                  alpha: 0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'YOU',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      Text(
-                        isPositive
-                            ? 'gets back ₱${balance.toStringAsFixed(2)}'
-                            : (isNegative
-                                  ? 'owes ₱${balance.abs().toStringAsFixed(2)}'
-                                  : (hasActivity
-                                        ? 'all settled'
-                                        : 'no activity yet')),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: isPositive
-                              ? theme.colorScheme.tertiary
-                              : (isNegative
-                                    ? theme.colorScheme.error
-                                    : theme.dividerColor),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (isNegative)
-                  Icon(
-                    Icons.arrow_downward_rounded,
-                    color: theme.colorScheme.error,
-                    size: 16,
-                  ),
-                if (isPositive)
-                  Icon(
-                    Icons.arrow_upward_rounded,
-                    color: theme.colorScheme.tertiary,
-                    size: 16,
-                  ),
-              ],
-            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMemberItem(
+    BuildContext context,
+    ThemeData theme,
+    SquadMember member,
+    double balance,
+    bool isPositive,
+    bool isNegative,
+    List<SquadTransaction> txs,
+    bool hasActivity,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => _MemberDetailSheet(
+            member: member,
+            allTransactions: txs,
+            netBalance: balance,
+            onRefresh: onRefresh,
           ),
         );
       },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isPositive
+                ? theme.colorScheme.tertiary.withValues(alpha: 0.3)
+                : (isNegative
+                    ? theme.colorScheme.error.withValues(alpha: 0.3)
+                    : theme.dividerColor),
+            width: 0.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: isPositive
+                  ? theme.colorScheme.tertiary.withValues(alpha: 0.1)
+                  : (isNegative
+                      ? theme.colorScheme.error.withValues(alpha: 0.1)
+                      : theme.dividerColor.withValues(alpha: 0.1)),
+              child: Text(
+                member.name[0].toUpperCase(),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isPositive
+                      ? theme.colorScheme.tertiary
+                      : (isNegative
+                          ? theme.colorScheme.error
+                          : theme.textTheme.bodyMedium?.color),
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        member.name,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      if (member.isYou) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.primaryColor.withValues(
+                              alpha: 0.1,
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'YOU',
+                            style: TextStyle(
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  Text(
+                    isPositive
+                        ? 'gets back ₱${balance.toStringAsFixed(2)}'
+                        : (isNegative
+                            ? 'owes ₱${balance.abs().toStringAsFixed(2)}'
+                            : (hasActivity
+                                ? 'all settled'
+                                : 'no activity yet')),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isPositive
+                          ? theme.colorScheme.tertiary
+                          : (isNegative
+                              ? theme.colorScheme.error
+                              : theme.dividerColor),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isNegative)
+              Icon(
+                Icons.arrow_downward_rounded,
+                color: theme.colorScheme.error,
+                size: 16,
+              ),
+            if (isPositive)
+              Icon(
+                Icons.arrow_upward_rounded,
+                color: theme.colorScheme.tertiary,
+                size: 16,
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

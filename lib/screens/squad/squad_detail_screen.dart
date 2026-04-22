@@ -90,9 +90,10 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                           DatabaseService.getSquadMembers(squadKey).first,
                     )
                     .name,
-                billRemaining: _calculateBillRemaining(
+                billRemaining: SquadService.calculateBillRemaining(
                   _txToCapture!,
                   DatabaseService.getSquadMembers(squadKey),
+                  DatabaseService.getSquadTransactions(squadKey),
                 ),
               ),
             ),
@@ -193,30 +194,31 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                       ),
                     ),
                     actions: [
+                      IconButton(
+                        key: _helpKey,
+                        icon: const Icon(Icons.help_outline_rounded),
+                        onPressed: () =>
+                            setState(() => _isTutorialActive = true),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined),
+                        onPressed: () => _editSquadName(),
+                      ),
                       if (_isSharingSummary)
-                        const Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
+                        const IconButton(
+                          onPressed: null,
+                          icon: SizedBox(
+                            width: 20,
+                            height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
                       if (!_isSharingSummary)
                         IconButton(
-                          key: _helpKey,
-                          icon: const Icon(Icons.help_outline_rounded),
-                          onPressed: () =>
-                              setState(() => _isTutorialActive = true),
+                          key: _summaryKey,
+                          icon: const Icon(Icons.share_outlined),
+                          onPressed: () => _shareSquadSummaryImage(),
                         ),
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined),
-                        onPressed: () => _editSquadName(),
-                      ),
-                      IconButton(
-                        key: _summaryKey,
-                        icon: const Icon(Icons.share_outlined),
-                        onPressed: () => _shareSquadSummaryImage(),
-                      ),
                       IconButton(
                         icon: const Icon(Icons.delete_outline_rounded),
                         color: theme.colorScheme.error,
@@ -504,75 +506,6 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     }
   }
 
-  Map<int, double> _calculateBillRemaining(
-    SquadTransaction tx,
-    List<SquadMember> members,
-  ) {
-    if (tx.isSettlement) return {};
-
-    final allTxs = DatabaseService.getSquadTransactions(tx.squadKey);
-    final relatedPayments = allTxs
-        .where((t) => t.isSettlement && t.relatedBillKey == tx.key)
-        .toList();
-    final bills = allTxs.where((t) => !t.isSettlement).toList()
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    Map<int, double> remainingMap = {};
-
-    for (var member in members) {
-      final memberKey = member.key as int;
-      if (!tx.memberSplits.containsKey(memberKey)) continue;
-
-      double share = tx.memberSplits[memberKey]!;
-      if (tx.splitType == SplitType.percentage) {
-        share = (share / 100) * tx.amount;
-      } else if (tx.splitType == SplitType.equal) {
-        share = tx.amount / tx.memberSplits.length;
-      }
-
-      if (memberKey == tx.payerMemberKey) {
-        remainingMap[memberKey] = 0.0;
-        continue;
-      }
-
-      final explicit = relatedPayments
-          .where((p) => p.payerMemberKey == memberKey)
-          .map((p) => p.amount)
-          .fold(0.0, (a, b) => a + b);
-
-      double totalP = allTxs
-          .where((t) => t.isSettlement && t.payerMemberKey == memberKey)
-          .map((t) => t.amount)
-          .fold(0.0, (a, b) => a + b);
-
-      double prevS = 0;
-      for (var b in bills) {
-        if (b.key == tx.key) break;
-        if (b.memberSplits.containsKey(memberKey)) {
-          double s = b.memberSplits[memberKey]!;
-          if (b.splitType == SplitType.percentage) {
-            s = (s / 100) * b.amount;
-          } else if (b.splitType == SplitType.equal) {
-            s = b.amount / b.memberSplits.length;
-          }
-          prevS += s;
-        }
-      }
-
-      final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
-      final attrA = availC.clamp(
-        0.0,
-        (share - explicit).clamp(0.0, double.infinity),
-      );
-
-      remainingMap[memberKey] = (share - explicit - attrA).clamp(
-        0.0,
-        double.infinity,
-      );
-    }
-
-    return remainingMap;
-  }
 }
 
 class _StatChip extends StatelessWidget {
@@ -2431,293 +2364,305 @@ class _SquadSummaryWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 0);
-    const bg = Colors.white;
+    final format = NumberFormat.currency(symbol: '₱', decimalDigits: 2);
     final primary = theme.primaryColor;
+    const bg = Color(0xFF0D1117); // Premium Dark
+    const cardColor = Color(0xFF161B22);
+    const fg = Colors.white;
+    const fgDim = Colors.white54;
 
-    // Calculate total spending manually
-    final transactions = DatabaseService.getSquadTransactions(squad.key as int);
-    final totalSpending = transactions
-        .where((tx) => !tx.isSettlement)
-        .map((tx) => tx.amount)
-        .fold(0.0, (a, b) => a + b);
+    final allTxs = DatabaseService.getSquadTransactions(squad.key as int);
+    final bills = allTxs.where((tx) => !tx.isSettlement).toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
+    final totalSpending = bills.map((tx) => tx.amount).fold(0.0, (a, b) => a + b);
 
-    return Container(
-      width: 450,
-      padding: const EdgeInsets.all(40),
-      decoration: const BoxDecoration(color: bg),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Branding Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'RootEXP',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1,
-                      color: primary,
-                    ),
-                  ),
-                  Text(
-                    'SQUAD STATUS',
-                    style: TextStyle(
-                      fontSize: 8,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 2,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                ],
-              ),
-              Icon(
-                Icons.query_stats_rounded,
-                size: 28,
-                color: primary.withValues(alpha: 0.1),
-              ),
-            ],
-          ),
-          const SizedBox(height: 32),
-
-          // Squad Identity
-          Text(
-            squad.name.toUpperCase(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              color: Colors.black,
-              letterSpacing: -1,
-            ),
-          ),
-          Text(
-            DateFormat('EEEE, MMMM dd, yyyy').format(DateTime.now()),
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey.shade400,
-            ),
-          ),
-
-          const SizedBox(height: 40),
-
-          // High Level Stat Card
-          Container(
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  primary.withValues(alpha: 0.08),
-                  primary.withValues(alpha: 0.02),
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: primary.withValues(alpha: 0.1),
-                width: 2,
-              ),
-            ),
-            child: Column(
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 450,
+        padding: const EdgeInsets.all(40),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(32),
+          border: Border.all(color: primary.withValues(alpha: 0.15), width: 1.5),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header (Matching Receipt)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'TOTAL SQUAD SPENDING',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: primary,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  format.format(totalSpending),
-                  style: const TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.black,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 48),
-
-          // Member Standings
-          Row(
-            children: [
-              Text(
-                'MEMBER STANDINGS',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.grey.shade400,
-                  letterSpacing: 1.5,
-                ),
-              ),
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8),
-                  child: Divider(),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
-          ...members.map((member) {
-            final bal = balances.memberNetBalances[member.key] ?? 0;
-            final isCredit = bal >= 0;
-            final statusColor = isCredit
-                ? Colors.green.shade600
-                : Colors.red.shade600;
-
-            return Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: statusColor.withValues(alpha: 0.03),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: statusColor.withValues(alpha: 0.08),
-                  width: 1.5,
-                ),
-              ),
-              child: Row(
-                children: [
-                  CircleAvatar(
-                    radius: 20,
-                    backgroundColor: statusColor.withValues(alpha: 0.1),
-                    child: Text(
-                      member.name[0].toUpperCase(),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: statusColor,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 20),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Text(
-                          member.name + (member.isYou ? ' (You)' : ''),
-                          style: const TextStyle(
-                            fontSize: 17,
+                        Icon(Icons.blur_on_rounded, color: primary, size: 24),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'RootEXP',
+                          style: TextStyle(
+                            fontSize: 20,
                             fontWeight: FontWeight.w900,
-                            color: Colors.black,
+                            letterSpacing: -0.5,
+                            color: fg,
                           ),
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          children: [
-                            Icon(
-                              isCredit
-                                  ? Icons.check_circle_outline_rounded
-                                  : Icons.info_outline_rounded,
-                              size: 10,
-                              color: statusColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              isCredit ? 'PAYER' : 'CURRENTLY OWES',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: statusColor,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                          ],
                         ),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        format.format(bal.abs()),
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w900,
-                          color: statusColor,
-                        ),
-                      ),
-                      Text(
-                        'GROSS',
-                        style: TextStyle(
-                          fontSize: 8,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor.withValues(alpha: 0.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }),
-
-          const SizedBox(height: 48),
-
-          // Branding Footer
-          Center(
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
+                    const SizedBox(height: 6),
                     Container(
-                      height: 1,
-                      width: 30,
-                      color: Colors.grey.shade200,
-                    ),
-                    const SizedBox(width: 16),
-                    Text(
-                      'Generated by RootEXP',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.grey.shade300,
-                        letterSpacing: 1.5,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: primary.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Container(
-                      height: 1,
-                      width: 30,
-                      color: Colors.grey.shade200,
+                      child: Text(
+                        'SQUAD FINANCIAL ANALYTICS',
+                        style: TextStyle(fontSize: 7, fontWeight: FontWeight.w900, letterSpacing: 1.5, color: primary),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'SQUAD FINANCIAL ANALYTICS • VERSION 3.0',
-                  style: TextStyle(
-                    fontSize: 8,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.grey.shade200,
-                    letterSpacing: 1.5,
+                Container(
+                  height: 48,
+                  width: 48,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: primary.withValues(alpha: 0.1),
+                    border: Border.all(color: primary.withValues(alpha: 0.3)),
                   ),
+                  child: Icon(Icons.analytics_rounded, color: primary, size: 24),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 32),
-        ],
+
+            const SizedBox(height: 40),
+            _DashedDivider(color: Colors.white24),
+            const SizedBox(height: 32),
+
+            // Squad Name
+            Text(
+              squad.name.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: fg, letterSpacing: -1, height: 1.1),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              DateFormat('EEEE, MMM dd, yyyy').format(DateTime.now()).toUpperCase(),
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: fgDim, letterSpacing: 1),
+            ),
+
+            const SizedBox(height: 40),
+
+            // High Level Stat Card
+            Container(
+              padding: const EdgeInsets.all(28),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cardColor, primary.withValues(alpha: 0.08)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.white10),
+              ),
+              child: Column(
+                children: [
+                  const Text('TOTAL SQUAD SPENDING', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 1.5)),
+                  const SizedBox(height: 12),
+                  Text(format.format(totalSpending), style: TextStyle(fontSize: 42, fontWeight: FontWeight.w900, color: primary, letterSpacing: -1, height: 1.0)),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 48),
+
+            // Member Standings
+            Row(
+              children: [
+                const Text('MEMBER STANDINGS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg, letterSpacing: 1.5)),
+                const SizedBox(width: 16),
+                Expanded(child: _DashedDivider(color: Colors.white12)),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            ...members.map((member) {
+              final bal = balances.memberNetBalances[member.key] ?? 0;
+              final isCredit = bal >= 0;
+              final statusColor = isCredit ? Colors.greenAccent : Colors.orangeAccent;
+
+              return Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: cardColor,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: statusColor.withValues(alpha: 0.1),
+                      child: Text(
+                        member.name[0].toUpperCase(),
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: statusColor),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            member.name + (member.isYou ? ' (YOU)' : ''),
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: fg),
+                          ),
+                          Text(
+                            isCredit ? 'SETTLED / PAID EXTRA' : 'OWES SQUAD',
+                            style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: statusColor, letterSpacing: 0.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          format.format(bal.abs()),
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: statusColor),
+                        ),
+                        Text(
+                          'GROSS',
+                          style: TextStyle(fontSize: 7, fontWeight: FontWeight.bold, color: statusColor.withValues(alpha: 0.4)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+
+            const SizedBox(height: 48),
+
+            // Bill Debt Tracker (The New Section)
+            if (bills.isNotEmpty) ...[
+              Row(
+                children: [
+                  const Text('BILL DEBT TRACKER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: fg, letterSpacing: 1.5)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _DashedDivider(color: Colors.white12)),
+                ],
+              ),
+              const SizedBox(height: 24),
+              ...bills.take(10).map((tx) {
+                final remainingMap = SquadService.calculateBillRemaining(tx, members, allTxs);
+                final openDebts = remainingMap.entries.where((e) => e.value > 0.01).toList();
+
+                if (openDebts.isEmpty) return const SizedBox.shrink();
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 20),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              tx.title.toUpperCase(),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: fg, letterSpacing: 0.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            format.format(tx.amount),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: primary),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _DashedDivider(color: Colors.white12),
+                      const SizedBox(height: 12),
+                      ...openDebts.map((entry) {
+                        final member = members.firstWhere((m) => m.key == entry.key);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(member.name, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: fgDim)),
+                              Text(
+                                'OWES ₱${entry.value.toStringAsFixed(0)}',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.orangeAccent),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ),
+                );
+              }),
+              if (bills.length > 10)
+                Center(
+                  child: Text(
+                    '+ ${bills.length - 10} MORE BILLS',
+                    style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 1),
+                  ),
+                ),
+            ],
+
+            const SizedBox(height: 48),
+            _DashedDivider(color: Colors.white24),
+            const SizedBox(height: 48),
+
+            // Footer (Matching Receipt)
+            Center(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(24, (index) {
+                      final heights = [12.0, 24.0, 16.0, 32.0, 18.0, 20.0, 10.0, 36.0, 14.0, 28.0, 22.0, 16.0];
+                      final width = (index % 3 == 0) ? 3.0 : 1.5;
+                      return Container(
+                        margin: const EdgeInsets.symmetric(horizontal: 1.5),
+                        width: width,
+                        height: heights[index % heights.length],
+                        color: Colors.white30,
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 20),
+                  const Text(
+                    'GENERATED SECURELY BY ROOTEXP',
+                    style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: fgDim, letterSpacing: 2),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'SQUAD SUMMARY VERSION 3.0',
+                    style: const TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Colors.white24, letterSpacing: 4),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

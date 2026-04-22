@@ -158,4 +158,74 @@ class SquadService {
     
     return debts;
   }
+
+  static Map<int, double> calculateBillRemaining(
+    SquadTransaction tx,
+    List<SquadMember> members,
+    List<SquadTransaction> allTxs,
+  ) {
+    if (tx.isSettlement) return {};
+
+    final relatedPayments = allTxs
+        .where((t) => t.isSettlement && t.relatedBillKey == tx.key)
+        .toList();
+    final bills = allTxs.where((t) => !t.isSettlement).toList()
+      ..sort((a, b) => a.date.compareTo(b.date));
+
+    Map<int, double> remainingMap = {};
+
+    for (var member in members) {
+      final memberKey = member.key as int;
+      if (!tx.memberSplits.containsKey(memberKey)) continue;
+
+      double share = tx.memberSplits[memberKey]!;
+      if (tx.splitType == SplitType.percentage) {
+        share = (share / 100) * tx.amount;
+      } else if (tx.splitType == SplitType.equal) {
+        share = tx.amount / tx.memberSplits.length;
+      }
+
+      if (memberKey == tx.payerMemberKey) {
+        remainingMap[memberKey] = 0.0;
+        continue;
+      }
+
+      final explicit = relatedPayments
+          .where((p) => p.payerMemberKey == memberKey)
+          .map((p) => p.amount)
+          .fold(0.0, (a, b) => a + b);
+
+      double totalP = allTxs
+          .where((t) => t.isSettlement && t.payerMemberKey == memberKey)
+          .map((t) => t.amount)
+          .fold(0.0, (a, b) => a + b);
+
+      double prevS = 0;
+      for (var b in bills) {
+        if (b.key == tx.key) break;
+        if (b.memberSplits.containsKey(memberKey)) {
+          double s = b.memberSplits[memberKey]!;
+          if (b.splitType == SplitType.percentage) {
+            s = (s / 100) * b.amount;
+          } else if (b.splitType == SplitType.equal) {
+            s = b.amount / b.memberSplits.length;
+          }
+          prevS += s;
+        }
+      }
+
+      final availC = (totalP - prevS - explicit).clamp(0.0, double.infinity);
+      final attrA = availC.clamp(
+        0.0,
+        (share - explicit).clamp(0.0, double.infinity),
+      );
+
+      remainingMap[memberKey] = (share - explicit - attrA).clamp(
+        0.0,
+        double.infinity,
+      );
+    }
+
+    return remainingMap;
+  }
 }

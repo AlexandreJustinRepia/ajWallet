@@ -603,6 +603,18 @@ class DatabaseService {
   }
 
   static Future<void> deleteDebt(Debt debt) async {
+    final debtKey = debt.key as int;
+    // 1. Delete all transactions linked to this debt
+    // We use deleteTransaction so it also reverses balance effects
+    final linkedTxs = _transactionBox.values
+        .where((t) => t.debtKey == debtKey)
+        .toList();
+
+    for (var tx in linkedTxs) {
+      await deleteTransaction(tx);
+    }
+
+    // 2. Delete the debt itself
     await debt.delete();
   }
 

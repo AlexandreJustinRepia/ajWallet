@@ -55,6 +55,7 @@ flutter:
     - assets/images/e-wallets/
     - assets/images/onboarding/
     - assets/images/trees/
+    - assets/images/stores/
     - assets/logo/logo.png
     - assets/fonts/Roboto-Regular.ttf
     - assets/fonts/Roboto-Bold.ttf

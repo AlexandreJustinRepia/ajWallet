@@ -4,6 +4,7 @@ import '../../models/shopping_list.dart';
 import '../../services/shopping_service.dart';
 import '../../services/database_service.dart';
 import 'add_item_dialog.dart';
+import '../../models/store.dart';
 import 'package:intl/intl.dart';
 
 
@@ -52,7 +53,22 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.shoppingList.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.shoppingList.storeName != null) ...[
+              Image.asset(
+                Store.getLogoForStore(widget.shoppingList.storeName) ?? '',
+                height: 24,
+                width: 24,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Text(widget.shoppingList.name, style: const TextStyle(fontWeight: FontWeight.w900)),
+          ],
+        ),
         centerTitle: true,
         actions: [
           if (widget.shoppingList.isSettled)
@@ -174,9 +190,26 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Total Estimated',
-            style: TextStyle(color: theme.scaffoldBackgroundColor.withValues(alpha: 0.7), fontSize: 13),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Total Estimated',
+                style: TextStyle(color: theme.scaffoldBackgroundColor.withValues(alpha: 0.7), fontSize: 13),
+              ),
+              if (widget.shoppingList.storeName != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    widget.shoppingList.storeName!,
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(height: 4),
           Text(

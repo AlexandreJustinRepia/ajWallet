@@ -160,7 +160,9 @@ class ShoppingService {
     double total = itemsToSettle.fold(0.0, (sum, item) => sum + item.total);
     
     final transaction = Transaction(
-      title: 'Shopping: ${list.name}',
+      title: list.storeName != null 
+          ? 'Shopping at ${list.storeName}: ${list.name}'
+          : 'Shopping: ${list.name}',
       amount: total,
       date: DateTime.now(),
       category: itemsToSettle.first.category, // Use first item's category as primary

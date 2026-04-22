@@ -3,6 +3,7 @@ import '../../models/shopping_list.dart';
 import '../../services/shopping_service.dart';
 import '../../services/database_service.dart';
 import 'shopping_list_screen.dart';
+import '../../models/store.dart';
 import 'package:intl/intl.dart';
 
 class ShoppingListsDashboard extends StatefulWidget {
@@ -29,37 +30,109 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
 
   void _createNewList() async {
     final nameController = TextEditingController();
-    final result = await showDialog<String>(
+    String? selectedStoreName;
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New Shopping List'),
-        content: TextField(
-          controller: nameController,
-          autofocus: true,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Weekly Groceries, Party Supplies',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: const Text('New Shopping List'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: nameController,
+                  autofocus: true,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'List Name',
+                    hintText: 'e.g. Weekly Groceries',
+                    prefixIcon: Icon(Icons.edit_note_rounded),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('STORE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 1.2, color: Colors.grey)),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () async {
+                    final store = await _showStorePicker(context);
+                    if (store != null) {
+                      setModalState(() => selectedStoreName = store.name);
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Theme.of(context).dividerColor.withValues(alpha: 0.1)),
+                    ),
+                    child: Row(
+                      children: [
+                        if (selectedStoreName != null) ...[
+                          Image.asset(
+                            Store.getLogoForStore(selectedStoreName) ?? '',
+                            height: 24,
+                            width: 24,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            selectedStoreName!,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ] else ...[
+                          const Icon(Icons.store_rounded, size: 24, color: Colors.grey),
+                          const SizedBox(width: 12),
+                          const Text('Select Store (Optional)', style: TextStyle(color: Colors.grey)),
+                        ],
+                        const Spacer(),
+                        const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                      ],
+                    ),
+                  ),
+                ),
+                if (selectedStoreName != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: TextButton.icon(
+                      onPressed: () => setModalState(() => selectedStoreName = null),
+                      icon: const Icon(Icons.close_rounded, size: 14),
+                      label: const Text('Clear Store', style: TextStyle(fontSize: 12)),
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                    ),
+                  ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, {
+                'name': nameController.text,
+                'store': selectedStoreName,
+              }),
+              child: const Text('Create'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, nameController.text),
-            child: const Text('Create'),
-          ),
-        ],
       ),
     );
 
-    if (result != null && result.isNotEmpty) {
+    if (result != null && result['name'].isNotEmpty) {
       final newList = ShoppingList(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: result,
+        name: result['name'],
         accountKey: widget.accountKey,
         createdAt: DateTime.now(),
+        storeName: result['store'],
       );
       await ShoppingService.saveShoppingList(newList);
       _loadLists();
-      
+
       // Navigate immediately
       if (mounted) {
         Navigator.push(
@@ -73,6 +146,86 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
         ).then((_) => _loadLists());
       }
     }
+  }
+
+  Future<Store?> _showStorePicker(BuildContext context) {
+    final theme = Theme.of(context);
+    return showModalBottomSheet<Store>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.6,
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: theme.dividerColor.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  const Icon(Icons.store_rounded, size: 28),
+                  const SizedBox(width: 16),
+                  Text(
+                    'Select Store',
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  childAspectRatio: 0.8,
+                ),
+                itemCount: Store.convenienceStores.length,
+                itemBuilder: (context, index) {
+                  final store = Store.convenienceStores[index];
+                  return InkWell(
+                    onTap: () => Navigator.pop(context, store),
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: theme.cardColor,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.1)),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(store.logoPath, height: 50, width: 50, fit: BoxFit.contain),
+                          const SizedBox(height: 12),
+                          Text(
+                            store.name,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -162,20 +315,41 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          list.name,
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      if (list.storeName != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Image.asset(
+                            Store.getLogoForStore(list.storeName) ?? '',
+                            height: 24,
+                            width: 24,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+                          ),
                         ),
-                        Text(
-                          DateFormat('MMM dd, yyyy').format(list.createdAt),
-                          style: theme.textTheme.bodySmall,
-                        ),
+                        const SizedBox(width: 12),
                       ],
-                    ),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              list.name,
+                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            Text(
+                              DateFormat('MMM dd, yyyy').format(list.createdAt),
+                              style: theme.textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (list.isSettled)
                     Container(

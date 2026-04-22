@@ -25,6 +25,9 @@ class ShoppingList extends HiveObject {
   @HiveField(6)
   int? linkedTransactionKey;
 
+  @HiveField(7)
+  String? storeName;
+
   ShoppingList({
     required this.id,
     required this.name,
@@ -33,6 +36,7 @@ class ShoppingList extends HiveObject {
     this.isSettled = false,
     this.totalAmount = 0.0,
     this.linkedTransactionKey,
+    this.storeName,
   });
 }
 

@@ -24,13 +24,14 @@ class ShoppingListAdapter extends TypeAdapter<ShoppingList> {
       isSettled: fields[4] as bool,
       totalAmount: fields[5] as double,
       linkedTransactionKey: fields[6] as int?,
+      storeName: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ShoppingList obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +45,9 @@ class ShoppingListAdapter extends TypeAdapter<ShoppingList> {
       ..writeByte(5)
       ..write(obj.totalAmount)
       ..writeByte(6)
-      ..write(obj.linkedTransactionKey);
+      ..write(obj.linkedTransactionKey)
+      ..writeByte(7)
+      ..write(obj.storeName);
   }
 
   @override

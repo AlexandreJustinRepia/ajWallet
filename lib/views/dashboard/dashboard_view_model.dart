@@ -12,6 +12,7 @@ class DashboardViewModel extends ChangeNotifier {
   int _activityTutorialTabIndex = 0;
   int _activityCurrentTabIndex = 0;
   bool _hasShownEditTutorial = false;
+  String? _planTutorialSection;
 
   DashboardViewModel({int initialIndex = 0}) : _selectedIndex = initialIndex;
 
@@ -21,6 +22,16 @@ class DashboardViewModel extends ChangeNotifier {
   int get activityTutorialTabIndex => _activityTutorialTabIndex;
   int get activityCurrentTabIndex => _activityCurrentTabIndex;
   bool get hasShownEditTutorial => _hasShownEditTutorial;
+  String? get planTutorialSection => _planTutorialSection;
+
+  void startPlanSectionTutorial(String section) {
+    _planTutorialSection = section;
+    setShowTutorial(true);
+  }
+
+  void clearPlanSectionTutorial() {
+    _planTutorialSection = null;
+  }
 
   void setSelectedIndex(int index) {
     if (_selectedIndex != index) {
@@ -83,6 +94,7 @@ class DashboardViewModel extends ChangeNotifier {
 
   Future<void> finishTutorial() async {
     setShowTutorial(false);
+    clearPlanSectionTutorial();
     final box = await Hive.openBox('settings');
     switch (_selectedIndex) {
       case 0:

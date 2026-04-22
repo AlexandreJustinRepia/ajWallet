@@ -30,6 +30,8 @@ class PlanningView extends StatefulWidget {
   final GlobalKey? goalWithdrawKey;
   final GlobalKey? debtSectionKey;
   final GlobalKey? debtAddKey;
+  final GlobalKey? shoppingSectionKey;
+  final GlobalKey? shoppingAddKey;
 
   const PlanningView({
     super.key,
@@ -44,7 +46,12 @@ class PlanningView extends StatefulWidget {
     this.goalWithdrawKey,
     this.debtSectionKey,
     this.debtAddKey,
+    this.shoppingSectionKey,
+    this.shoppingAddKey,
+    this.onReplaySection,
   });
+
+  final Function(String)? onReplaySection;
 
   @override
   State<PlanningView> createState() => _PlanningViewState();
@@ -205,10 +212,13 @@ class _PlanningViewState extends State<PlanningView> {
             // Shopping List Section
             SliverToBoxAdapter(
               child: _SectionCard(
+                sectionKey: widget.shoppingSectionKey,
+                addKey: widget.shoppingAddKey,
                 title: 'Smart Shopping List',
                 icon: Icons.shopping_cart_outlined,
                 color: theme.primaryColor,
                 count: _viewModel.activeShoppingListsCount,
+                onHelp: () => widget.onReplaySection?.call('shopping'),
                 onAdd: () async {
                     await Navigator.push(
                       context,
@@ -1008,9 +1018,9 @@ class _SectionCard extends StatelessWidget {
   final Widget child;
   final Widget? summary;
   final VoidCallback? onSettings;
+  final VoidCallback? onHelp;
 
   const _SectionCard({
-
     this.sectionKey,
     this.addKey,
     required this.title,
@@ -1021,6 +1031,7 @@ class _SectionCard extends StatelessWidget {
     required this.child,
     this.summary,
     this.onSettings,
+    this.onHelp,
   });
 
 
@@ -1075,6 +1086,12 @@ class _SectionCard extends StatelessWidget {
                       ],
                     ),
                   ),
+                  if (onHelp != null)
+                    IconButton(
+                      icon: const Icon(Icons.help_outline_rounded, size: 20),
+                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                      onPressed: onHelp,
+                    ),
                   if (onSettings != null)
                     IconButton(
                       icon: const Icon(Icons.settings_outlined, size: 20),

@@ -43,6 +43,8 @@ class DashboardKeys {
   final GlobalKey planGoalWithdrawKey = GlobalKey();
   final GlobalKey planDebtSectionKey = GlobalKey();
   final GlobalKey planDebtAddKey = GlobalKey();
+  final GlobalKey planShoppingSectionKey = GlobalKey();
+  final GlobalKey planShoppingAddKey = GlobalKey();
 
   // Real Details Keys
   final GlobalKey detailsEditKey = GlobalKey();

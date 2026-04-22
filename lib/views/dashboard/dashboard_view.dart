@@ -94,6 +94,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             goalWithdrawKey: _keys.planGoalWithdrawKey,
             debtSectionKey: _keys.planDebtSectionKey,
             debtAddKey: _keys.planDebtAddKey,
+            shoppingSectionKey: _keys.planShoppingSectionKey,
+            shoppingAddKey: _keys.planShoppingAddKey,
+            onReplaySection: _viewModel.startPlanSectionTutorial,
           ),
           const AIAssistantView(),
         ];

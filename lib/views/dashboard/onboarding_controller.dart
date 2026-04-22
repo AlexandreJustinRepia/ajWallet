@@ -289,7 +289,8 @@ class OnboardingController {
 
   List<OnboardingStep> _getPlanSteps(BuildContext context) {
     final accountKey = SessionService.activeAccount?.key as int?;
-    return [
+    
+    final allSteps = [
       OnboardingStep(
         title: 'Financial Planning',
         description:
@@ -384,6 +385,22 @@ class OnboardingController {
         },
       ),
       OnboardingStep(
+        targetKey: keys.planShoppingSectionKey,
+        title: 'Smart Shopping List',
+        description: 'Organize your grocery runs and shopping trips with ease.',
+        scrollAlignment: 0.3,
+      ),
+      OnboardingStep(
+        targetKey: keys.planShoppingAddKey,
+        title: 'Create a List',
+        description: 'Tap here to create a new shopping list. You can specify a store and even track your progress as you buy!',
+      ),
+      OnboardingStep(
+        targetKey: keys.planShoppingSectionKey,
+        title: 'Visual Items',
+        description: 'Inside each list, you can add items with photos to create a visual and intuitive planning environment.',
+      ),
+      OnboardingStep(
         title: 'Balance Reflections',
         description:
             'Giving money deducts from your wallet. Borrowing adds to your wallet.',
@@ -393,5 +410,11 @@ class OnboardingController {
         description: 'Now you can budget, save, and track debts easily!',
       ),
     ];
+
+    if (viewModel.planTutorialSection == 'shopping') {
+      return allSteps.where((s) => s.targetKey == keys.planShoppingSectionKey || s.targetKey == keys.planShoppingAddKey).toList();
+    }
+
+    return allSteps;
   }
 }

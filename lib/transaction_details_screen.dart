@@ -5,6 +5,8 @@ import 'services/database_service.dart';
 import 'add_transaction_screen.dart';
 import 'widgets/onboarding_overlay.dart';
 import 'dart:io';
+import 'services/shopping_service.dart';
+import 'models/shopping_item.dart';
 
 class TransactionDetailsScreen extends StatefulWidget {
   final Transaction transaction;
@@ -243,6 +245,139 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                   ),
                 ],
               ),
+            
+            // --- Bill Details (for Shopping Transactions) ---
+            if (widget.transaction.key != null)
+              ...[
+                FutureBuilder<List<ShoppingItem>>(
+                  future: Future.value(ShoppingService.getItemsByTransaction(widget.transaction.key as int)),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) return const SizedBox.shrink();
+                    final shoppingItems = snapshot.data!;
+                    
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 24),
+                        _InfoLabel(label: 'Bill Details', theme: theme),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(color: theme.dividerColor, width: 0.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.05),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              ...shoppingItems.map((item) => Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: theme.primaryColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Text(
+                                        '${item.quantity}x',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: theme.primaryColor,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 14),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            item.name,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                          Text(
+                                            item.category,
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          '₱${item.total.toStringAsFixed(2)}',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                        if (item.quantity > 1)
+                                          Text(
+                                            '₱${item.price.toStringAsFixed(2)} ea',
+                                            style: TextStyle(
+                                              fontSize: 9,
+                                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.3),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              )),
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 12),
+                                child: Divider(height: 1),
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'TOTAL BILL',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 10,
+                                      letterSpacing: 2,
+                                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                  Text(
+                                    '₱${widget.transaction.amount.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 20,
+                                      color: theme.primaryColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             
             if (widget.transaction.attachmentPaths != null && widget.transaction.attachmentPaths!.isNotEmpty)
               Column(

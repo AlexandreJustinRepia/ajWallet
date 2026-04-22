@@ -44,6 +44,12 @@ class ShoppingService {
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
+  static List<ShoppingItem> getItemsByTransaction(int txKey) {
+    return DatabaseService.shoppingItemBox.values
+        .where((item) => item.linkedTransactionKey == txKey)
+        .toList();
+  }
+
 
   static Future<void> saveShoppingItem(ShoppingItem item) async {
     await DatabaseService.shoppingItemBox.add(item);

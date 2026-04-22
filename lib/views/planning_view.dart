@@ -208,9 +208,9 @@ class _PlanningViewState extends State<PlanningView> {
                 title: 'Smart Shopping List',
                 icon: Icons.shopping_cart_outlined,
                 color: theme.primaryColor,
-                count: ShoppingService.getShoppingItems(accountKey).where((i) => !i.isBought).length,
+                count: _viewModel.pendingShoppingItemsCount > 0 ? _viewModel.pendingShoppingItemsCount : _viewModel.activeShoppingListsCount,
                 onAdd: () async {
-                    Navigator.push(
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
@@ -223,12 +223,34 @@ class _PlanningViewState extends State<PlanningView> {
                 child: Builder(
                   builder: (context) {
                     final pending = ShoppingService.getShoppingItems(accountKey).where((i) => !i.isBought).toList();
-                    if (pending.isEmpty) {
+                    final lists = ShoppingService.getShoppingLists(accountKey).where((l) => !l.isSettled).toList();
+                    
+                    if (pending.isEmpty && lists.isEmpty) {
                       return const _EmptyState(
                         icon: Icons.shopping_basket_outlined,
-                        message: 'List is empty',
+                        message: 'No active shopping lists',
                       );
                     }
+
+                    if (pending.isEmpty && lists.isNotEmpty) {
+                      final latestList = lists.first;
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+                        leading: Icon(Icons.shopping_bag_outlined, color: theme.primaryColor),
+                        title: Text(latestList.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text(latestList.storeName != null ? 'At ${latestList.storeName} • 0 items' : '0 items'),
+                        trailing: const Icon(Icons.chevron_right_rounded),
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
                     final total = pending.fold(0.0, (sum, i) => sum + i.total);
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16),
@@ -237,17 +259,15 @@ class _PlanningViewState extends State<PlanningView> {
                       subtitle: Text('Estimated Total: ₱${total.toStringAsFixed(0)}'),
                       trailing: const Icon(Icons.chevron_right_rounded),
                       onTap: () async {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
-                            ),
-                          );
-
-                        setState(() {});
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
+                          ),
+                        );
                       },
                     );
-                  }
+                  },
                 ),
               ),
             ),

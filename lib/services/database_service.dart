@@ -145,6 +145,8 @@ class DatabaseService {
   static Stream<BoxEvent> get squadWatcher => _squadBox.watch();
   static Stream<BoxEvent> get memberWatcher => _memberBox.watch();
   static Stream<BoxEvent> get squadTxWatcher => _squadTxBox.watch();
+  static Stream<BoxEvent> get shoppingListWatcher => _shoppingListBox.watch();
+  static Stream<BoxEvent> get shoppingItemWatcher => shoppingItemBox.watch();
   static Stream<BoxEvent> get categoryWatcher => _categoryBox.watch();
   static ValueListenable<Box<SquadTransaction>> get squadTxListenable => _squadTxBox.listenable();
   static ValueListenable<Box<ShoppingList>> get shoppingListListenable => _shoppingListBox.listenable();

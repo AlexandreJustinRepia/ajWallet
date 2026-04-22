@@ -7,6 +7,7 @@ import '../models/budget.dart';
 import '../models/goal.dart';
 import '../models/debt.dart';
 import '../models/wallet.dart';
+import '../services/shopping_service.dart';
 
 class PlanningViewModel extends ChangeNotifier {
   int? _accountKey;
@@ -18,6 +19,8 @@ class PlanningViewModel extends ChangeNotifier {
   StreamSubscription? _budgetSubscription;
   StreamSubscription? _goalSubscription;
   StreamSubscription? _debtSubscription;
+  StreamSubscription? _shoppingListSubscription;
+  StreamSubscription? _shoppingItemSubscription;
 
   List<Budget> _budgets = [];
   List<Goal> _goals = [];
@@ -37,6 +40,8 @@ class PlanningViewModel extends ChangeNotifier {
   final Map<String, double> _categorySpendingMap = {}; // Key: "category_month_year"
   List<Debt> _youOweDebts = [];
   List<Debt> _owedToYouDebts = [];
+  int _pendingShoppingItemsCount = 0;
+  int _activeShoppingListsCount = 0;
 
   // Getters
   bool get isLoading => _isLoading;
@@ -53,6 +58,8 @@ class PlanningViewModel extends ChangeNotifier {
   
   List<Debt> get youOweDebts => _youOweDebts;
   List<Debt> get owedToYouDebts => _owedToYouDebts;
+  int get pendingShoppingItemsCount => _pendingShoppingItemsCount;
+  int get activeShoppingListsCount => _activeShoppingListsCount;
 
   void init(int accountKey) {
     if (_accountKey == accountKey) return;
@@ -73,6 +80,8 @@ class PlanningViewModel extends ChangeNotifier {
     _budgetSubscription = DatabaseService.budgetWatcher.listen((_) => refresh());
     _goalSubscription = DatabaseService.goalWatcher.listen((_) => refresh());
     _debtSubscription = DatabaseService.debtWatcher.listen((_) => refresh());
+    _shoppingListSubscription = DatabaseService.shoppingListWatcher.listen((_) => refresh());
+    _shoppingItemSubscription = DatabaseService.shoppingItemWatcher.listen((_) => refresh());
   }
 
   Future<void> refresh() async {
@@ -89,6 +98,10 @@ class PlanningViewModel extends ChangeNotifier {
       _debts = DatabaseService.getDebts(key);
       _transactions = DatabaseService.getTransactions(key);
       _wallets = DatabaseService.getWallets(key);
+
+      // Shopping data
+      _pendingShoppingItemsCount = ShoppingService.getShoppingItems(key).where((i) => !i.isBought).length;
+      _activeShoppingListsCount = ShoppingService.getShoppingLists(key).where((l) => !l.isSettled).length;
 
       // 2. Perform Grouping & Pre-computations (Single Pass)
       _calculateMetrics(key);
@@ -172,6 +185,8 @@ class PlanningViewModel extends ChangeNotifier {
     _budgetSubscription?.cancel();
     _goalSubscription?.cancel();
     _debtSubscription?.cancel();
+    _shoppingListSubscription?.cancel();
+    _shoppingItemSubscription?.cancel();
     super.dispose();
   }
 }

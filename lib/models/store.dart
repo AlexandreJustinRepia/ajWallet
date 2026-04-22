@@ -9,9 +9,16 @@ class Store {
     Store(name: 'Alfamart', logoPath: 'assets/images/stores/alfamart-logo.png'),
     Store(name: 'Dali', logoPath: 'assets/images/stores/dali-logo.webp'),
     Store(name: 'OSave', logoPath: 'assets/images/stores/osave-logo.png'),
-    Store(name: 'Puregold', logoPath: 'assets/images/stores/puregold-logo.webp'),
+    Store(
+      name: 'Puregold',
+      logoPath: 'assets/images/stores/puregold-logo.webp',
+    ),
     Store(name: 'Super8', logoPath: 'assets/images/stores/Super8-logo.jpg'),
     Store(name: 'S&R', logoPath: 'assets/images/stores/snr-logo.png'),
+    Store(
+      name: 'SM Hypermarket',
+      logoPath: 'assets/images/stores/sm-hypermarket-logo.png',
+    ),
   ];
 
   static String? getLogoForStore(String? storeName) {

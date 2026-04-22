@@ -16,7 +16,7 @@ class ShoppingService {
   }
 
   static Future<void> saveShoppingList(ShoppingList list) async {
-    await DatabaseService.shoppingListListenable.value.add(list);
+    await DatabaseService.shoppingListListenable.value.put(list.id, list);
   }
 
   static Future<void> deleteShoppingList(ShoppingList list) async {

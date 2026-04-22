@@ -57,12 +57,18 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.shoppingList.storeName != null) ...[
-              Image.asset(
-                Store.getLogoForStore(widget.shoppingList.storeName) ?? '',
-                height: 24,
-                width: 24,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+              Builder(
+                builder: (context) {
+                  final logoPath = Store.getLogoForStore(widget.shoppingList.storeName);
+                  if (logoPath == null) return const Icon(Icons.store_rounded, size: 24);
+                  return Image.asset(
+                    logoPath,
+                    height: 24,
+                    width: 24,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+                  );
+                },
               ),
               const SizedBox(width: 12),
             ],

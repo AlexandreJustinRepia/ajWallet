@@ -24,7 +24,7 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
   }
 
   void _loadLists() {
-    // Relying on ValueListenableBuilder for UI updates
+    setState(() {});
   }
 
 
@@ -73,11 +73,17 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                     child: Row(
                       children: [
                         if (selectedStoreName != null) ...[
-                          Image.asset(
-                            Store.getLogoForStore(selectedStoreName) ?? '',
-                            height: 24,
-                            width: 24,
-                            fit: BoxFit.contain,
+                          Builder(
+                            builder: (context) {
+                              final logoPath = Store.getLogoForStore(selectedStoreName);
+                              if (logoPath == null) return const Icon(Icons.store_rounded, size: 24);
+                              return Image.asset(
+                                logoPath,
+                                height: 24,
+                                width: 24,
+                                fit: BoxFit.contain,
+                              );
+                            },
                           ),
                           const SizedBox(width: 12),
                           Text(
@@ -315,41 +321,51 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      if (list.storeName != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: theme.dividerColor.withValues(alpha: 0.05),
-                            borderRadius: BorderRadius.circular(12),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (list.storeName != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: theme.dividerColor.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Builder(
+                              builder: (context) {
+                                final logoPath = Store.getLogoForStore(list.storeName);
+                                if (logoPath == null) return const Icon(Icons.store_rounded, size: 24);
+                                return Image.asset(
+                                  logoPath,
+                                  height: 24,
+                                  width: 24,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+                                );
+                              },
+                            ),
                           ),
-                          child: Image.asset(
-                            Store.getLogoForStore(list.storeName) ?? '',
-                            height: 24,
-                            width: 24,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.store_rounded, size: 24),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                list.name,
+                                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                DateFormat('MMM dd, yyyy').format(list.createdAt),
+                                style: theme.textTheme.bodySmall,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(width: 12),
                       ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              list.name,
-                              style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                            ),
-                            Text(
-                              DateFormat('MMM dd, yyyy').format(list.createdAt),
-                              style: theme.textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                   if (list.isSettled)
                     Container(

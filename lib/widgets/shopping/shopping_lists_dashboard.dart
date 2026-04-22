@@ -360,8 +360,14 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                       ),
                       Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.2), margin: const EdgeInsets.symmetric(horizontal: 20)),
                       _buildSummaryStat(
-                        'Items to Buy',
+                        'Items',
                         (totalItems - boughtItems).toString(),
+                        Colors.white,
+                      ),
+                      Container(width: 1, height: 40, color: Colors.white.withValues(alpha: 0.2), margin: const EdgeInsets.symmetric(horizontal: 20)),
+                      _buildSummaryStat(
+                        'Total Value',
+                        '₱${lists.fold(0.0, (sum, l) => sum + ShoppingService.getShoppingItems(widget.accountKey, listId: l.id).fold(0.0, (s, i) => s + i.total)).toStringAsFixed(0)}',
                         Colors.white,
                       ),
                     ],
@@ -412,6 +418,8 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
     final boughtCount = items.where((i) => i.isBought).length;
     final totalCount = items.length;
     final progress = totalCount == 0 ? 0.0 : boughtCount / totalCount;
+    final totalAmount = items.fold(0.0, (sum, item) => sum + item.total);
+    final boughtAmount = items.where((i) => i.isBought).fold(0.0, (sum, item) => sum + item.total);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -602,9 +610,19 @@ class _ShoppingListsDashboardState extends State<ShoppingListsDashboard> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      totalCount == 0 ? 'No items' : '$boughtCount / $totalCount items',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          totalCount == 0 ? 'No items' : '$boughtCount / $totalCount items',
+                          style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600, fontSize: 12),
+                        ),
+                        if (totalCount > 0)
+                          Text(
+                            '₱${boughtAmount.toStringAsFixed(0)} / ₱${totalAmount.toStringAsFixed(0)}',
+                            style: TextStyle(fontSize: 10, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6), fontWeight: FontWeight.bold),
+                          ),
+                      ],
                     ),
                     if (totalCount > 0)
                       Text(

@@ -205,6 +205,7 @@ class ShoppingService {
       type: TransactionType.expense,
       accountKey: list.accountKey,
       walletKey: walletKey,
+      shoppingListId: list.id,
     );
 
     final txKey = await DatabaseService.saveTransaction(transaction);
@@ -221,7 +222,7 @@ class ShoppingService {
     await list.save();
   }
 
-  /// Safely reverses a settlement by deleting the associated transaction
+  /// Safely reverses the LATEST settlement by deleting the associated transaction
   /// and unlinking all items.
   static Future<void> unsettleList(ShoppingList list) async {
     if (!list.isSettled || list.linkedTransactionKey == null) return;
@@ -243,6 +244,13 @@ class ShoppingService {
     list.linkedTransactionKey = null;
     list.totalAmount = 0;
     await list.save();
+  }
+
+  static List<Transaction> getPurchaseHistory(String listId) {
+    return DatabaseService.getAllTransactions()
+        .where((t) => t.shoppingListId == listId)
+        .toList()
+      ..sort((a, b) => b.date.compareTo(a.date));
   }
 }
 

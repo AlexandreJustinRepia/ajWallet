@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import 'add_item_dialog.dart';
 import '../../models/store.dart';
 import 'package:intl/intl.dart';
+import '../../transaction_details_screen.dart';
 
 
 class ShoppingListScreen extends StatefulWidget {
@@ -78,27 +79,10 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         ),
         centerTitle: true,
         actions: [
-          if (widget.shoppingList.isSettled)
-            IconButton(
-              icon: const Icon(Icons.undo_rounded),
-              tooltip: 'Revoke Settlement',
-              onPressed: () async {
-                await ShoppingService.unsettleList(widget.shoppingList);
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settlement revoked. Items are now editable.')),
-                  );
-                  setState(() {});
-                }
-              },
-
-            )
-          else if (boughtItems.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.receipt_long_rounded),
-              tooltip: 'Settle to Transactions',
-              onPressed: _showSettleDialog,
-            ),
+          IconButton(
+            icon: const Icon(Icons.help_outline_rounded, size: 20),
+            onPressed: () => _showTutorial(),
+          ),
         ],
       ),
 
@@ -119,19 +103,150 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                               ...pendingItems.map((item) => _buildItemTile(item, theme)),
                               const SizedBox(height: 24),
                             ],
-                            if (boughtItems.isNotEmpty) ...[
-                              _buildSectionHeader('COMPLETED', boughtItems.length),
-                              ...boughtItems.map((item) => _buildItemTile(item, theme, isBought: true)),
+                              if (boughtItems.isNotEmpty) ...[
+                                _buildSectionHeader('COMPLETED', boughtItems.length),
+                                ...boughtItems.map((item) => _buildItemTile(item, theme, isBought: true)),
+                              ],
+                              _buildHistory(theme),
                             ],
-                          ],
-                        ),
+                  ),
                 ),
               ],
             ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _addItem,
-        label: const Text('Add Item'),
-        icon: const Icon(Icons.add_shopping_cart_rounded),
+      floatingActionButton: widget.shoppingList.isSettled 
+        ? null 
+        : FloatingActionButton.extended(
+            onPressed: _addItem,
+            label: const Text('Add Item'),
+            icon: const Icon(Icons.add_shopping_cart_rounded),
+          ),
+      bottomNavigationBar: _items.isEmpty ? null : Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+        decoration: BoxDecoration(
+          color: theme.cardColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          boxShadow: [
+            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, -5)),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Tutorial / Hint
+            if (!widget.shoppingList.isSettled && _items.any((i) => i.isBought))
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: theme.primaryColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.primaryColor.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: theme.primaryColor.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.auto_awesome_rounded, size: 14, color: theme.primaryColor),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'READY TO BUY?',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: theme.primaryColor, letterSpacing: 1),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Tap "Record Purchase" below to automatically log these items as a transaction.',
+                              style: theme.textTheme.bodySmall?.copyWith(fontSize: 10, height: 1.3),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('TOTAL ESTIMATE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.5), letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Text('₱${_items.fold(0.0, (sum, i) => sum + i.total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
+                  ],
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text('BOUGHT', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.green.withValues(alpha: 0.7), letterSpacing: 1.2)),
+                    const SizedBox(height: 4),
+                    Text('₱${_items.where((i) => i.isBought).fold(0.0, (sum, i) => sum + i.total).toStringAsFixed(0)}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.green)),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            
+            if (!widget.shoppingList.isSettled)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _items.any((i) => i.isBought) ? _showSettleDialog : null,
+                  icon: const Icon(Icons.receipt_long_rounded),
+                  label: const Text('Record Purchase', style: TextStyle(fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.primaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                ),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _shopAgain,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('Shop Again'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _unsettleList,
+                      icon: const Icon(Icons.undo_rounded),
+                      label: const Text('Undo'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        foregroundColor: Colors.red,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -311,7 +426,7 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        onTap: () => _editItem(item),
+        onTap: widget.shoppingList.isSettled ? null : () => _editItem(item),
         leading: InkWell(
           onTap: item.imagePath != null ? () => _viewFullImage(item) : () => _toggleItem(item),
           borderRadius: BorderRadius.circular(12),
@@ -537,7 +652,15 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   void _toggleItem(ShoppingItem item) async {
-
+    if (widget.shoppingList.isSettled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Purchase recorded! Tap "Shop Again" to start a new shopping session.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
      await ShoppingService.toggleBought(item);
      _loadItems();
   }
@@ -649,5 +772,153 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
         ],
       ),
     );
+  }
+  void _showTutorial() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: Colors.amber),
+            SizedBox(width: 12),
+            Text('How it works'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTutorialStep(Icons.check_box_outlined, 'Check items as you shop in the store.'),
+            const SizedBox(height: 16),
+            _buildTutorialStep(Icons.receipt_long_rounded, 'Tap "Record Purchase" to turn your list into a real transaction.'),
+            const SizedBox(height: 16),
+            _buildTutorialStep(Icons.refresh_rounded, 'Use "Shop Again" to reset the list for your next trip!'),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Got it!')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTutorialStep(IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: Colors.grey),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: const TextStyle(fontSize: 13))),
+      ],
+    );
+  }
+
+  Widget _buildHistory(ThemeData theme) {
+    final history = ShoppingService.getPurchaseHistory(widget.shoppingList.id);
+    if (history.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 32),
+        _buildSectionHeader('PURCHASE HISTORY', history.length),
+        const SizedBox(height: 12),
+        ...history.map((tx) => Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => TransactionDetailsScreen(transaction: tx),
+                ),
+              );
+              _loadItems(); // Refresh just in case
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.cardColor.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.dividerColor.withValues(alpha: 0.05)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.history_edu_rounded, color: Colors.green, size: 18),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('₱${tx.amount.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(DateFormat('MMM dd, yyyy • hh:mm a').format(tx.date), style: theme.textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: theme.dividerColor.withValues(alpha: 0.3)),
+                ],
+              ),
+            ),
+          ),
+        )),
+      ],
+    );
+  }
+
+  void _unsettleList() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Undo Purchase?'),
+        content: const Text('This will delete the latest transaction and let you edit the items again.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Undo', style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await ShoppingService.unsettleList(widget.shoppingList);
+      _loadItems();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Purchase undone.')));
+      }
+    }
+  }
+
+  void _shopAgain() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Shop Again?'),
+        content: const Text('This will reset your checkboxes for a new shopping trip. Your past purchase history will be preserved.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Start New Run')),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // 1. Mark as unsettled but DO NOT delete transaction
+      widget.shoppingList.isSettled = false;
+      widget.shoppingList.linkedTransactionKey = null; // Prepare for next settlement
+      await widget.shoppingList.save();
+      
+      // 2. Uncheck all items
+      for (var item in _items) {
+        item.isBought = false;
+        item.linkedTransactionKey = null;
+        await item.save();
+      }
+      
+      _loadItems();
+    }
   }
 }

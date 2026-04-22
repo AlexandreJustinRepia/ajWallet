@@ -70,6 +70,7 @@ class Transaction extends HiveObject {
     this.debtKey,
     this.squadTxKey,
     this.attachmentPaths,
+    this.shoppingListId,
   });
 
   @HiveField(14)
@@ -77,6 +78,9 @@ class Transaction extends HiveObject {
 
   @HiveField(13)
   int? squadTxKey;
+
+  @HiveField(15)
+  String? shoppingListId;
 
   Map<String, dynamic> toMap() {
     return {
@@ -95,6 +99,7 @@ class Transaction extends HiveObject {
       'debtKey': debtKey,
       'squadTxKey': squadTxKey,
       'attachmentPaths': attachmentPaths,
+      'shoppingListId': shoppingListId,
     };
   }
 

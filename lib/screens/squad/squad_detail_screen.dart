@@ -13,6 +13,8 @@ import 'dart:io';
 import 'package:flutter/rendering.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:gal/gal.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../widgets/onboarding_overlay.dart';
 import '../../models/wallet.dart';
 
@@ -36,8 +38,10 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
   final GlobalKey _activityTabKey = GlobalKey();
 
   bool _isSharingSummary = false;
+  bool _isSavingSummary = false;
   bool _isTutorialActive = false;
   SquadTransaction? _txToCapture;
+  SquadTransaction? _txToSave;
 
   @override
   void initState() {
@@ -75,23 +79,23 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
         ),
 
         // GHOST RECEIPT (Hidden but used for capture from anywhere)
-        if (_txToCapture != null)
+        if (_txToCapture != null || _txToSave != null)
           Positioned(
             left: -10000,
             child: RepaintBoundary(
               key: _receiptCaptureKey,
               child: _InvoiceWidget(
-                tx: _txToCapture!,
+                tx: (_txToCapture ?? _txToSave)!,
                 members: DatabaseService.getSquadMembers(squadKey),
                 payerName: DatabaseService.getSquadMembers(squadKey)
                     .firstWhere(
-                      (m) => m.key == _txToCapture!.payerMemberKey,
+                      (m) => m.key == (_txToCapture ?? _txToSave)!.payerMemberKey,
                       orElse: () =>
                           DatabaseService.getSquadMembers(squadKey).first,
                     )
                     .name,
                 billRemaining: SquadService.calculateBillRemaining(
-                  _txToCapture!,
+                  (_txToCapture ?? _txToSave)!,
                   DatabaseService.getSquadMembers(squadKey),
                   DatabaseService.getSquadTransactions(squadKey),
                 ),
@@ -204,6 +208,20 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                         icon: const Icon(Icons.edit_outlined),
                         onPressed: () => _editSquadName(),
                       ),
+                      if (_isSavingSummary)
+                        const IconButton(
+                          onPressed: null,
+                          icon: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      if (!_isSavingSummary)
+                        IconButton(
+                          icon: const Icon(Icons.download_rounded),
+                          onPressed: () => _saveSquadSummaryImage(),
+                        ),
                       if (_isSharingSummary)
                         const IconButton(
                           onPressed: null,
@@ -253,6 +271,7 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
                     squad: widget.squad,
                     onRefresh: _refresh,
                     onShare: _shareActivityImage,
+                    onSave: _saveActivityImage,
                   ),
                   _BalancesTab(squad: widget.squad, onRefresh: _refresh),
                 ],
@@ -456,6 +475,42 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     }
   }
 
+  void _saveSquadSummaryImage() async {
+    setState(() => _isSavingSummary = true);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Give it a frame to render
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    try {
+      final boundary = _summaryCaptureKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw 'Could not find summary boundary';
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw 'Could not get byte data';
+
+      final bytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/Squad_Summary_${widget.squad.name.replaceAll(' ', '_')}.png');
+      await file.writeAsBytes(bytes);
+
+      if (await Permission.storage.request().isGranted || Platform.isIOS || Platform.isAndroid) {
+        await Gal.putImage(file.path, album: 'RootEXP');
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Squad Summary saved to gallery!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving squad summary: $e');
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Failed to save summary: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _isSavingSummary = false);
+    }
+  }
+
   void _shareActivityImage(SquadTransaction tx) async {
     setState(() => _txToCapture = tx);
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -506,6 +561,44 @@ class _SquadDetailScreenState extends State<SquadDetailScreen>
     }
   }
 
+  void _saveActivityImage(SquadTransaction tx) async {
+    setState(() => _txToSave = tx);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    // Give it two frames to ensure the ghost is built
+    await Future.delayed(const Duration(milliseconds: 150));
+
+    try {
+      final boundary = _receiptCaptureKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) throw 'Could not find receipt boundary';
+
+      final ui.Image image = await boundary.toImage(pixelRatio: 4.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) throw 'Could not get byte data';
+
+      final bytes = byteData.buffer.asUint8List();
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/Receipt_${tx.title.replaceAll(' ', '_')}.png');
+      await file.writeAsBytes(bytes);
+
+      if (await Permission.storage.request().isGranted || Platform.isIOS || Platform.isAndroid) {
+        await Gal.putImage(file.path, album: 'RootEXP');
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(content: Text('Receipt saved to gallery!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error saving receipt: $e');
+      scaffoldMessenger.showSnackBar(
+        SnackBar(content: Text('Failed to save receipt: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _txToSave = null);
+      }
+    }
+  }
+
 }
 
 class _StatChip extends StatelessWidget {
@@ -543,12 +636,14 @@ class _ActivityTab extends StatelessWidget {
   final Squad squad;
   final VoidCallback onRefresh;
   final Function(SquadTransaction) onShare;
+  final Function(SquadTransaction) onSave;
 
   const _ActivityTab({
     super.key,
     required this.squad,
     required this.onRefresh,
     required this.onShare,
+    required this.onSave,
   });
 
   @override
@@ -614,6 +709,14 @@ class _ActivityTab extends StatelessWidget {
               children: [
                 IconButton(
                   icon: Icon(
+                    Icons.download_rounded,
+                    size: 20,
+                    color: theme.primaryColor,
+                  ),
+                  onPressed: () => onSave(tx),
+                ),
+                IconButton(
+                  icon: Icon(
                     Icons.share_outlined,
                     size: 20,
                     color: theme.primaryColor,
@@ -636,6 +739,7 @@ class _ActivityTab extends StatelessWidget {
                   members: members,
                   onRefresh: onRefresh,
                   onShare: onShare,
+                  onSave: onSave,
                 ),
               );
             },
@@ -1282,12 +1386,14 @@ class _ActivityDetailSheet extends StatefulWidget {
   final List<SquadMember> members;
   final VoidCallback onRefresh;
   final Function(SquadTransaction) onShare;
+  final Function(SquadTransaction) onSave;
 
   const _ActivityDetailSheet({
     required this.tx,
     required this.members,
     required this.onRefresh,
     required this.onShare,
+    required this.onSave,
   });
 
   @override
@@ -1298,6 +1404,7 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
   late List<SquadTransaction> _allTxs;
   late List<SquadTransaction> _relatedPayments;
   bool _isSharing = false;
+  bool _isSaving = false;
 
   void _loadData() {
     _allTxs = DatabaseService.getSquadTransactions(widget.tx.squadKey);
@@ -1497,6 +1604,12 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
     if (mounted) setState(() => _isSharing = false);
   }
 
+  void _onSaveRequested() async {
+    setState(() => _isSaving = true);
+    await widget.onSave(widget.tx);
+    if (mounted) setState(() => _isSaving = false);
+  }
+
   @override
   Widget build(BuildContext context) {
     _loadData(); // Re-load data whenever the sheet builds
@@ -1598,6 +1711,24 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
                   ],
                 ),
               ),
+              if (_isSaving)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              if (!_isSaving)
+                IconButton(
+                  icon: const Icon(Icons.download_rounded),
+                  color: theme.primaryColor,
+                  onPressed: _onSaveRequested,
+                ),
+              if (_isSharing)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
               if (!_isSharing)
                 IconButton(
                   icon: const Icon(Icons.share_rounded),

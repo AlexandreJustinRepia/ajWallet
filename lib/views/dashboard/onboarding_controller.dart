@@ -107,7 +107,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.squadsListKey,
         title: 'Squads',
-        description: 'Here you can manage expenses shared with your friends or family.',
+        description:
+            'Here you can manage expenses shared with your friends or family.',
         onStepEnter: () {
           viewModel.setOverlayState(DashboardOverlayState.none);
           viewModel.setActivityTutorialTabIndex(2);
@@ -116,7 +117,8 @@ class OnboardingController {
       OnboardingStep(
         targetKey: keys.squadsCreateBtnKey,
         title: 'Create a Squad',
-        description: 'Start by creating your first squad to keep track of shared bills and group debts.',
+        description:
+            'Start by creating your first squad to keep track of shared bills and group debts.',
       ),
     ];
   }
@@ -289,7 +291,7 @@ class OnboardingController {
 
   List<OnboardingStep> _getPlanSteps(BuildContext context) {
     final accountKey = SessionService.activeAccount?.key as int?;
-    
+
     final allSteps = [
       OnboardingStep(
         title: 'Financial Planning',
@@ -386,19 +388,21 @@ class OnboardingController {
       ),
       OnboardingStep(
         targetKey: keys.planShoppingSectionKey,
-        title: 'Smart Shopping List',
+        title: 'Shopping List',
         description: 'Organize your grocery runs and shopping trips with ease.',
         scrollAlignment: 0.3,
       ),
       OnboardingStep(
         targetKey: keys.planShoppingAddKey,
         title: 'Create a List',
-        description: 'Tap here to create a new shopping list. You can specify a store and even track your progress as you buy!',
+        description:
+            'Tap here to create a new shopping list. You can specify a store and even track your progress as you buy!',
       ),
       OnboardingStep(
         targetKey: keys.planShoppingSectionKey,
         title: 'Visual Items',
-        description: 'Inside each list, you can add items with photos to create a visual and intuitive planning environment.',
+        description:
+            'Inside each list, you can add items with photos to create a visual and intuitive planning environment.',
       ),
       OnboardingStep(
         title: 'Balance Reflections',
@@ -412,7 +416,13 @@ class OnboardingController {
     ];
 
     if (viewModel.planTutorialSection == 'shopping') {
-      return allSteps.where((s) => s.targetKey == keys.planShoppingSectionKey || s.targetKey == keys.planShoppingAddKey).toList();
+      return allSteps
+          .where(
+            (s) =>
+                s.targetKey == keys.planShoppingSectionKey ||
+                s.targetKey == keys.planShoppingAddKey,
+          )
+          .toList();
     }
 
     return allSteps;

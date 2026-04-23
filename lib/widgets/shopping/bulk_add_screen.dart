@@ -112,6 +112,27 @@ class _BulkAddItemsScreenState extends State<BulkAddItemsScreen> {
   }
 
   Future<void> _saveAll() async {
+    // Automatically add the current form item if the user started typing
+    if (_nameController.text.trim().isNotEmpty) {
+      if (_formKey.currentState!.validate()) {
+        final newItem = ShoppingItem(
+          id: const Uuid().v4(),
+          name: _nameController.text.trim(),
+          price: double.tryParse(_priceController.text) ?? 0.0,
+          quantity: int.tryParse(_quantityController.text) ?? 1,
+          category: _selectedCategory,
+          listId: widget.listId,
+          accountKey: widget.accountKey,
+          createdAt: DateTime.now(),
+          imagePath: _imagePath,
+        );
+        _sessionItems.insert(0, newItem);
+      } else {
+        // If there's an error in the current form, stop so the user can fix it
+        return;
+      }
+    }
+
     if (_sessionItems.isEmpty) {
       Navigator.pop(context);
       return;

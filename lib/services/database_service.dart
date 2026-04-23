@@ -116,7 +116,7 @@ class DatabaseService {
 
 
     // Seed categories if empty
-    await _initDefaultCategories();
+    await syncDefaultCategories();
   }
 
 
@@ -429,7 +429,10 @@ class DatabaseService {
     
     final lowerDesc = description.toLowerCase();
     final transactions = _transactionBox.values.where((t) => 
-      t.type == type && t.description.toLowerCase().contains(lowerDesc)
+      t.type == type && (
+        t.description.toLowerCase().contains(lowerDesc) || 
+        t.title.toLowerCase().contains(lowerDesc)
+      )
     );
 
     if (transactions.isEmpty) return null;
@@ -567,7 +570,7 @@ class DatabaseService {
   }
 
 
-  static Future<void> _initDefaultCategories() async {
+  static Future<void> syncDefaultCategories() async {
     // 1. Migration: Remove old 'Debt' category and incorrect Lend/Borrow placements
     final legacyCategories = _categoryBox.values.cast<Category>().where((c) => 
       c.name == 'Debt' || 

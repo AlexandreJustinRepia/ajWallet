@@ -33,12 +33,33 @@ RootEXP is a premium, offline-first personal finance application that transforms
 - **Payoff Optimization:** Suggests strategies to become debt-free faster based on spare cash.
 - **Adaptive Tone:** The AI shifts its personality (Calm, Strict, Encouraging) based on your financial health.
 
-### 🎯 Planning Hub & Goals
+### 🛒 Smart Shopping Lists
 
-- **Savings Strategy:** Track multiple goals with different strategies (Default vs. Aggressive).
-- **Debt Management:** Specialized tools for tracking money owed and money borrowed.
-- **Quick Shortcuts:** Instant transaction entry directly from the Planning Hub for goals and debts.
-- **Interactive Timeline:** A dedicated calendar view to visualize your spending habits across seasons.
+- **Multi-List Management:** Create and track separate lists for groceries, electronics, travel essentials, and more.
+- **Drafting & Autosave:** Start a list and save it as a draft. Your progress is preserved so you can pick up where you left off at the store.
+- **Integrated Settlement:** Settle your shopping lists directly with your wallets. The app automatically handles the transaction recording for you.
+- **Insufficient Funds Guard:** Smart logic prevents you from settling a list that exceeds your available wallet balance, ensuring your records stay accurate.
+
+### 🏷️ Customizable Category Engine
+
+- **Full Creative Control:** Add, edit, or delete categories to match your unique lifestyle.
+- **Visual Icon Library:** Choose from a curated set of professional icons for each category.
+- **Manual Sorting:** Arrange your categories in any order you prefer using a simple drag-and-drop interface to prioritize your most used labels.
+- **Smart Category Sync:** Core financial categories like **Lend**, **Borrow**, and **Repayments** are protected and automatically synced to ensure accounting integrity.
+
+### 🤝 Advanced Debts & Loans
+
+- **Integrated Workflow:** Debt management is now a part of your daily transaction flow. Selecting "Lend" or "Borrow" categories automatically triggers debt tracking.
+- **Quick Select Contacts:** Save time with intelligent suggestions for existing contacts, allowing for one-tap name entry.
+- **Repayment Specialization:** Dedicated categories for **Received Payment** and **Debt Payment** clearly distinguish initial loans from subsequent repayments.
+- **Overpayment Safeguard:** The app prevents you from recording payments that exceed the total outstanding balance, keeping your debt records 100% accurate.
+- **Status Badges:** Fully settled debts are instantly marked with a green **"PAID"** status and moved to a completed state.
+
+### 💾 Backup & Data Portability
+
+- **Encrypted Backups:** Export your entire financial history, including wallets, transactions, debts, and shopping lists, into a secure backup file.
+- **Seamless Restore:** Migrating to a new device? Use the Import feature to restore your data in seconds with a single click.
+- **Automated Loading Indicators:** Safe, non-dismissible loading states during data operations ensure your database remains corruption-free during imports.
 
 ### 👥 Squads & Group Expenses
 

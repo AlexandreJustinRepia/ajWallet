@@ -68,7 +68,7 @@ class QuickAddInputState extends State<QuickAddInput> {
         amount: result.amount,
         date: DateTime.now(),
         category: result.category,
-        description: 'Demo transaction',
+        description: result.title,
         type: result.type,
         accountKey: widget.accountKey,
         walletKey: 999, // Fake wallet key
@@ -139,7 +139,7 @@ class QuickAddInputState extends State<QuickAddInput> {
       amount: result.amount,
       date: DateTime.now(),
       category: result.category,
-      description: 'Quick added',
+      description: result.title,
       type: result.type,
       accountKey: widget.accountKey,
       walletKey: walletKey,

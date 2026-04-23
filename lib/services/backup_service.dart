@@ -41,6 +41,7 @@ class BackupService {
       final squadMembers = <SquadMember>[];
       final squadTransactions = <SquadTransaction>[];
       final shoppingItems = <ShoppingItem>[];
+      final shoppingDrafts = <ShoppingItem>[];
 
       for (var squad in squads) {
         final sk = squad.key as int;
@@ -51,6 +52,9 @@ class BackupService {
       for (var list in shoppingLists) {
         shoppingItems.addAll(ShoppingService.getShoppingItems(accountKey, listId: list.id));
       }
+
+      shoppingDrafts.addAll(DatabaseService.shoppingDraftBox.values
+          .where((item) => item.accountKey == accountKey));
 
       final dataMap = {
         'header': _magicHeader,
@@ -69,6 +73,7 @@ class BackupService {
         'categories': categories.map((e) => {...e.toMap(), 'key': e.key}).toList(),
         'shoppingLists': shoppingLists.map((e) => {...e.toMap(), 'key': e.key}).toList(),
         'shoppingItems': shoppingItems.map((e) => {...e.toMap(), 'key': e.key}).toList(),
+        'shoppingDrafts': shoppingDrafts.map((e) => {...e.toMap(), 'key': e.key}).toList(),
         'products': products.map((e) => {...e.toMap(), 'key': e.key}).toList(),
       };
 
@@ -183,6 +188,7 @@ class BackupService {
       final squadKeyMap = <int, int>{};
       final memberKeyMap = <int, int>{};
       final squadTxKeyMap = <int, int>{};
+      final transactionKeyMap = <int, int>{};
 
       // Stage 1: Account Mapping & Update
       final targetAccount = DatabaseService.getAccounts().firstWhere((a) => a.key == targetAccountKey);
@@ -342,6 +348,7 @@ class BackupService {
         final productsJson = dataMap['products'] as List;
         for (var pMap in productsJson) {
           final product = Product.fromMap(pMap);
+          product.accountKey = targetAccountKey;
           await ShoppingService.saveProduct(product);
         }
       }
@@ -352,6 +359,8 @@ class BackupService {
         for (var lMap in listsJson) {
           final list = ShoppingList.fromMap(lMap);
           list.accountKey = targetAccountKey;
+          // Temporarily nullify linkedTransactionKey; will remap in Stage 5
+          list.linkedTransactionKey = null; 
           await ShoppingService.saveShoppingList(list);
         }
       }
@@ -361,7 +370,9 @@ class BackupService {
         final itemsJson = dataMap['shoppingItems'] as List;
         for (var iMap in itemsJson) {
           final item = ShoppingItem.fromMap(iMap);
-          // Items are linked to lists by listId, which is preserved in fromMap/toMap
+          item.accountKey = targetAccountKey;
+          // Temporarily nullify linkedTransactionKey; will remap in Stage 5
+          item.linkedTransactionKey = null;
           await ShoppingService.saveShoppingItem(item);
         }
       }
@@ -392,7 +403,51 @@ class BackupService {
         }
         
         // Save silently to avoid re-applying effects to already correct balances
-        await DatabaseService.saveTransaction(transaction, silent: true);
+        final newTxKey = await DatabaseService.saveTransaction(transaction, silent: true);
+        transactionKeyMap[tMap['key'] as int] = newTxKey;
+      }
+
+      // Stage 5: Post-Transaction Link Remapping (Shopping Lists & Items)
+      if (dataMap.containsKey('shoppingLists')) {
+        final listsJson = dataMap['shoppingLists'] as List;
+        final lists = ShoppingService.getShoppingLists(targetAccountKey);
+        for (var lMap in listsJson) {
+          if (lMap['linkedTransactionKey'] != null) {
+            final oldTxKey = lMap['linkedTransactionKey'] as int;
+            final newTxKey = transactionKeyMap[oldTxKey];
+            if (newTxKey != null) {
+              final list = lists.firstWhere((l) => l.id == lMap['id']);
+              list.linkedTransactionKey = newTxKey;
+              await list.save();
+            }
+          }
+        }
+      }
+
+      if (dataMap.containsKey('shoppingItems')) {
+        final itemsJson = dataMap['shoppingItems'] as List;
+        final items = ShoppingService.getShoppingItems(targetAccountKey);
+        for (var iMap in itemsJson) {
+          if (iMap['linkedTransactionKey'] != null) {
+            final oldTxKey = iMap['linkedTransactionKey'] as int;
+            final newTxKey = transactionKeyMap[oldTxKey];
+            if (newTxKey != null) {
+              final item = items.firstWhere((i) => i.id == iMap['id']);
+              item.linkedTransactionKey = newTxKey;
+              await item.save();
+            }
+          }
+        }
+      }
+
+      // Stage 6: Shopping Drafts
+      if (dataMap.containsKey('shoppingDrafts')) {
+        final draftsJson = dataMap['shoppingDrafts'] as List;
+        for (var dMap in draftsJson) {
+          final draft = ShoppingItem.fromMap(dMap);
+          draft.accountKey = targetAccountKey;
+          await DatabaseService.shoppingDraftBox.add(draft);
+        }
       }
       await DatabaseService.saveBackupHistory(
         BackupHistory(
@@ -403,6 +458,9 @@ class BackupService {
           success: true,
         ),
       );
+
+      // Final Step: Sync Categories (Ensure new defaults exist and types are correct)
+      await DatabaseService.syncDefaultCategories();
 
       return true;
     } catch (e) {

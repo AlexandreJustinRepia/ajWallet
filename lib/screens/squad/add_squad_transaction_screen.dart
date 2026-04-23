@@ -10,6 +10,7 @@ import '../../services/attachment_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import '../../widgets/image_gallery_viewer.dart';
+import '../../widgets/calculator_input.dart';
 
 class AddSquadTransactionScreen extends StatefulWidget {
   final Squad squad;
@@ -207,13 +208,17 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    controller: _amountController,
-                    decoration: _inputDecoration(theme, 'Amount (₱0.00)').copyWith(
-                      prefixIcon: const Icon(Icons.payments_rounded, size: 20),
-                    ),
-                    keyboardType: TextInputType.number,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                  CalculatorInputField(
+                    label: 'Amount',
+                    initialValue: double.tryParse(_amountController.text),
+                    onChanged: (val) {
+                      setState(() {
+                        _amountController.text = val.toStringAsFixed(2);
+                        if (_amountController.text.endsWith('.00')) {
+                          _amountController.text = _amountController.text.substring(0, _amountController.text.length - 3);
+                        }
+                      });
+                    },
                   ),
                 ],
               ),
@@ -337,19 +342,43 @@ class _AddSquadTransactionScreenState extends State<AddSquadTransactionScreen> {
                       trailing: _splitType == SplitType.equal 
                         ? null 
                         : isIncluded 
-                          ? SizedBox(
-                              width: 100,
-                              child: TextField(
-                                decoration: InputDecoration(
-                                  hintText: _splitType == SplitType.amount ? '₱0' : '0%',
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ? GestureDetector(
+                              onTap: () {
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Colors.transparent,
+                                  builder: (context) => CalculatorKeyboard(
+                                    initialValue: (_splits[mKey] ?? 0).toString(),
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _splits[mKey] = double.tryParse(val) ?? 0;
+                                      });
+                                    },
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                width: 100,
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: theme.cardColor,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: theme.dividerColor.withValues(alpha: 0.2)),
                                 ),
-                                style: const TextStyle(fontSize: 14),
-                                keyboardType: TextInputType.number,
-                                onChanged: (val) {
-                                  _splits[mKey] = double.tryParse(val) ?? 0;
-                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _splitType == SplitType.amount 
+                                        ? '₱${(_splits[mKey] ?? 0).toStringAsFixed(_splits[mKey]! % 1 == 0 ? 0 : 2)}'
+                                        : '${(_splits[mKey] ?? 0).toStringAsFixed(0)}%',
+                                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(Icons.calculate_outlined, size: 14, color: theme.primaryColor.withValues(alpha: 0.5)),
+                                  ],
+                                ),
                               ),
                             )
                           : null,

@@ -9,6 +9,7 @@ import '../../models/product.dart';
 import '../../services/shopping_service.dart';
 import '../../services/database_service.dart';
 import '../../models/transaction_model.dart';
+import '../calculator_input.dart';
 
 class AddShoppingItemDialog extends StatefulWidget {
   final int accountKey;
@@ -296,14 +297,10 @@ class _AddShoppingItemDialogState extends State<AddShoppingItemDialog> {
                 children: [
                   Expanded(
                     flex: 2,
-                    child: TextFormField(
-                      controller: _priceController,
-                      decoration: InputDecoration(
-                        labelText: 'Price',
-                        prefixText: '₱',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    child: CalculatorInputField(
+                      label: 'Price',
+                      initialValue: double.tryParse(_priceController.text),
+                      onChanged: (val) => setState(() => _priceController.text = val.toStringAsFixed(2)),
                       validator: (value) => double.tryParse(value ?? '') == null ? 'Invalid' : null,
                     ),
                   ),

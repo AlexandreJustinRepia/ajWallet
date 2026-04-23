@@ -18,6 +18,7 @@ import 'package:gal/gal.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../widgets/onboarding_overlay.dart';
 import '../../models/wallet.dart';
+import '../../widgets/calculator_input.dart';
 
 class SquadDetailScreen extends StatefulWidget {
   final Squad squad;
@@ -1293,13 +1294,11 @@ class _MemberDetailSheet extends StatelessWidget {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              TextField(
-                controller: amountController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Amount (₱)',
-                  hintText: '0.00',
-                ),
+              CalculatorInputField(
+                label: 'Settlement Amount',
+                initialValue: double.tryParse(amountController.text),
+                onChanged: (val) =>
+                    amountController.text = val.toStringAsFixed(2),
               ),
               const SizedBox(height: 24),
               const Align(
@@ -1539,15 +1538,11 @@ class _ActivityDetailSheetState extends State<_ActivityDetailSheet> {
             children: [
               Text('Record payment from ${member.name} for this bill.'),
               const SizedBox(height: 16),
-              TextField(
-                controller: amountController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                decoration: const InputDecoration(
-                  labelText: 'Amount (₱)',
-                  hintText: '0.00',
-                ),
+              CalculatorInputField(
+                label: 'Payment Amount',
+                initialValue: double.tryParse(amountController.text),
+                onChanged: (val) =>
+                    amountController.text = val.toStringAsFixed(2),
               ),
               const SizedBox(height: 20),
               const Text(

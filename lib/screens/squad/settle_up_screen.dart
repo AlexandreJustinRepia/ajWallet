@@ -4,6 +4,7 @@ import '../../models/squad_member.dart';
 import '../../models/squad_transaction.dart';
 import '../../models/wallet.dart';
 import '../../services/database_service.dart';
+import '../../widgets/calculator_input.dart';
 
 class SettleUpScreen extends StatefulWidget {
   final Squad squad;
@@ -225,18 +226,17 @@ class _SettleUpScreenState extends State<SettleUpScreen> {
             const SizedBox(height: 32),
             
             // Amount
-            TextField(
-              controller: _amountController,
-              decoration: InputDecoration(
-                hintText: 'Amount ₱0.00',
-                filled: true,
-                fillColor: theme.cardColor,
-                prefixIcon: const Icon(Icons.payments_rounded),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-              ),
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+            CalculatorInputField(
+              label: 'SETTLEMENT AMOUNT',
+              initialValue: double.tryParse(_amountController.text),
+              onChanged: (val) {
+                setState(() {
+                  _amountController.text = val.toStringAsFixed(2);
+                  if (_amountController.text.endsWith('.00')) {
+                    _amountController.text = _amountController.text.substring(0, _amountController.text.length - 3);
+                  }
+                });
+              },
             ),
 
             const SizedBox(height: 24),

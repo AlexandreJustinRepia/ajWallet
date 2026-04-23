@@ -689,13 +689,14 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                     : theme.primaryColor,
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.more_vert_rounded, size: 18),
-              onPressed: () => _showItemActions(item),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              visualDensity: VisualDensity.compact,
-            ),
+            if (!widget.shoppingList.isSettled)
+              IconButton(
+                icon: const Icon(Icons.more_vert_rounded, size: 18),
+                onPressed: () => _showItemActions(item),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                visualDensity: VisualDensity.compact,
+              ),
           ],
         ),
       ),

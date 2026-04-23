@@ -2,6 +2,11 @@
 
 RootEXP is a premium, offline-first personal finance application that transforms budgeting into a living ecosystem. By combining a professional-grade accounting engine with nature-inspired gamification, RootEXP makes managing your wealth a visually stunning and rewarding experience.
 
+---
+
+### 📢 Latest Release: v0.3.0 "The Management & Calculation" Update
+Check out the [Full Release Notes here](RELEASE_NOTES.md) for details on the new Shopping List Evolution, Pro-Calculator Engine, and more!
+
 ## 🚀 Key Features
 
 ### 🌳 Nature-Inspired Gamification

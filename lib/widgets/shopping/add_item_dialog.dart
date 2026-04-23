@@ -484,9 +484,32 @@ class _AddShoppingItemDialogState extends State<AddShoppingItemDialog> {
 
   void _submit() {
     if (_formKey.currentState!.validate()) {
+      final name = _nameController.text.trim();
+      
+      // Check for duplicate name in the same list
+      final itemsInList = ShoppingService.getShoppingItems(widget.accountKey, listId: widget.listId);
+      final isDuplicate = itemsInList.any((item) {
+        if (widget.existingItem != null && item.id == widget.existingItem!.id) {
+          return false; // Don't check against itself
+        }
+        return item.name.toLowerCase() == name.toLowerCase();
+      });
+
+      if (isDuplicate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"$name" is already in this list!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+
       if (widget.existingItem != null) {
         // Update existing item fields to keep it connected to Hive box
-        widget.existingItem!.name = _nameController.text.trim();
+        widget.existingItem!.name = name;
         widget.existingItem!.price = double.parse(_priceController.text);
         widget.existingItem!.quantity = int.parse(_quantityController.text);
         widget.existingItem!.category = _selectedCategory;
@@ -497,7 +520,7 @@ class _AddShoppingItemDialogState extends State<AddShoppingItemDialog> {
         // Create new item
         final item = ShoppingItem(
           id: const Uuid().v4(),
-          name: _nameController.text.trim(),
+          name: name,
           price: double.parse(_priceController.text),
           quantity: int.parse(_quantityController.text),
           category: _selectedCategory,

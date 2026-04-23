@@ -79,9 +79,32 @@ class _BulkAddItemsScreenState extends State<BulkAddItemsScreen> {
 
   void _addItemToSession() {
     if (_formKey.currentState!.validate()) {
+      final name = _nameController.text.trim();
+
+      // Check for duplicate in current session or database
+      final isSessionDuplicate =
+          _sessionItems.any((item) => item.name.toLowerCase() == name.toLowerCase());
+      final existingItems = ShoppingService.getShoppingItems(widget.accountKey,
+          listId: widget.listId);
+      final isDbDuplicate =
+          existingItems.any((item) => item.name.toLowerCase() == name.toLowerCase());
+
+      if (isSessionDuplicate || isDbDuplicate) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('"$name" is already in this list!'),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+        return;
+      }
+
       final newItem = ShoppingItem(
         id: const Uuid().v4(),
-        name: _nameController.text.trim(),
+        name: name,
         price: double.tryParse(_priceController.text) ?? 0.0,
         quantity: int.tryParse(_quantityController.text) ?? 1,
         category: _selectedCategory,
@@ -99,7 +122,7 @@ class _BulkAddItemsScreenState extends State<BulkAddItemsScreen> {
         _quantityController.text = '1';
         _imagePath = null;
       });
-      
+
       _saveDrafts();
     }
   }
@@ -115,9 +138,33 @@ class _BulkAddItemsScreenState extends State<BulkAddItemsScreen> {
     // Automatically add the current form item if the user started typing
     if (_nameController.text.trim().isNotEmpty) {
       if (_formKey.currentState!.validate()) {
+        final name = _nameController.text.trim();
+
+        // Check for duplicate in current session or database
+        final isSessionDuplicate = _sessionItems
+            .any((item) => item.name.toLowerCase() == name.toLowerCase());
+        final existingItems = ShoppingService.getShoppingItems(
+            widget.accountKey,
+            listId: widget.listId);
+        final isDbDuplicate = existingItems
+            .any((item) => item.name.toLowerCase() == name.toLowerCase());
+
+        if (isSessionDuplicate || isDbDuplicate) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('"$name" is already in this list!'),
+              backgroundColor: Colors.redAccent,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+          );
+          return;
+        }
+
         final newItem = ShoppingItem(
           id: const Uuid().v4(),
-          name: _nameController.text.trim(),
+          name: name,
           price: double.tryParse(_priceController.text) ?? 0.0,
           quantity: int.tryParse(_quantityController.text) ?? 1,
           category: _selectedCategory,

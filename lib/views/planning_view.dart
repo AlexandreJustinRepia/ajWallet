@@ -501,14 +501,17 @@ class _PlanningViewState extends State<PlanningView> {
       subtitleParts.add('No due date');
     }
 
+    final isFullyPaid = remaining <= 0.01;
+
     return _PlanningItem(
       title: hasDesc ? d.description! : d.personName,
       subtitle: subtitleParts.join(' • '),
-      trailingText: '₱${remaining.toStringAsFixed(0)}',
+      trailingText: isFullyPaid ? 'PAID' : '₱${remaining.toStringAsFixed(0)}',
+      trailingTextColor: isFullyPaid ? Colors.green : null,
       progress: progress,
-      progressColor: Colors.amber[700]!,
-      primaryActionLabel: d.isOwedToMe ? 'Receive' : 'Pay',
-      onPrimaryAction: () async {
+      progressColor: isFullyPaid ? Colors.green : Colors.amber[700]!,
+      primaryActionLabel: isFullyPaid ? 'Settled' : (d.isOwedToMe ? 'Receive' : 'Pay'),
+      onPrimaryAction: isFullyPaid ? null : () async {
         final res = await Navigator.push(
           context,
           MaterialPageRoute(
@@ -517,7 +520,7 @@ class _PlanningViewState extends State<PlanningView> {
               initialType:
                   d.isOwedToMe ? TransactionType.income : TransactionType.expense,
               initialDebtKey: d.key as int,
-              initialCategory: d.isOwedToMe ? 'Lend' : 'Borrow',
+              initialCategory: d.isOwedToMe ? 'Received Payment' : 'Debt Payment',
               initialDescription: d.isOwedToMe
                   ? 'Payment from ${d.personName}'
                   : 'Payment to ${d.personName}',
@@ -634,7 +637,7 @@ class _PlanningViewState extends State<PlanningView> {
                             ? TransactionType.income
                             : TransactionType.expense,
                         initialDebtKey: debt.key as int,
-                        initialCategory: isOwedToMe ? 'Lend' : 'Borrow',
+                        initialCategory: isOwedToMe ? 'Received Payment' : 'Debt Payment',
                         initialDescription: isOwedToMe
                             ? 'Payment from ${debt.personName}'
                             : 'Payment to ${debt.personName}',
@@ -799,6 +802,7 @@ class _PlanningItem extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onTap;
   final bool isOverspent;
+  final Color? trailingTextColor;
 
   const _PlanningItem({
     required this.title,
@@ -816,6 +820,7 @@ class _PlanningItem extends StatelessWidget {
     required this.onDelete,
     this.onTap,
     this.isOverspent = false,
+    this.trailingTextColor,
   });
 
   @override
@@ -855,7 +860,10 @@ class _PlanningItem extends StatelessWidget {
                 ),
               ),
               Text(trailingText,
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      fontSize: 13,
+                      color: trailingTextColor)),
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
                 onPressed: onDelete,

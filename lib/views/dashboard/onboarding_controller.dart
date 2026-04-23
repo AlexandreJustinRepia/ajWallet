@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../widgets/onboarding_overlay.dart';
-// Removed unused import
 import '../../wallet_form_screen.dart';
 import '../../screens/add_budget_screen.dart';
 import '../../screens/add_goal_screen.dart';

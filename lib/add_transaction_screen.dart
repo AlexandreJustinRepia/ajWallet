@@ -214,6 +214,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           _selectedCategory != 'Others' && 
           _selectedCategory != 'Lend' &&
           _selectedCategory != 'Borrow' &&
+          _selectedCategory != 'Received Payment' &&
+          _selectedCategory != 'Debt Payment' &&
           !_availableCategories.any((c) => c.name == _selectedCategory)) {
         _availableCategories.add(Category(
           name: _selectedCategory,
@@ -227,7 +229,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       if (!_availableCategories.any((c) => c.name == _selectedCategory)) {
         if (_availableCategories.isNotEmpty) {
            // Default to Others for Lend/Borrow transitions, or a sensible default for others
-           if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') {
+           if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow' || 
+               _selectedCategory == 'Received Payment' || _selectedCategory == 'Debt Payment') {
              _selectedCategory = _availableCategories.any((c) => c.name == 'Others') 
                 ? 'Others' 
                 : _availableCategories.first.name;
@@ -390,10 +393,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
 
-      // Handle Debt Creation/Linking for Lend/Borrow categories
-      if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') {
+      // Handle Debt Creation/Linking for Debt-related categories
+      final bool isDebtRelated = _selectedCategory == 'Lend' || _selectedCategory == 'Borrow' || 
+                                 _selectedCategory == 'Received Payment' || _selectedCategory == 'Debt Payment';
+      if (isDebtRelated) {
         if (_selectedDebtKey == null && _personNameController.text.trim().isNotEmpty) {
-          final bool isOwedToMe = _selectedCategory == 'Lend';
+          final bool isOwedToMe = _selectedCategory == 'Lend' || _selectedCategory == 'Received Payment';
           final existingDebt = DatabaseService.getDebtByPersonName(
             widget.accountKey, 
             _personNameController.text.trim(),
@@ -411,6 +416,48 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               isOwedToMe: isOwedToMe,
             );
             _selectedDebtKey = await DatabaseService.saveDebt(newDebt);
+          }
+        }
+      }
+
+      if (!mounted) return;
+
+      // Overpayment Safeguard
+      if (_selectedDebtKey != null) {
+        final debt = DatabaseService.getDebtByKey(_selectedDebtKey!);
+        if (debt != null) {
+          final bool isPayment = (_selectedCategory == 'Received Payment') ||
+                                 (_selectedCategory == 'Debt Payment') ||
+                                 (_selectedCategory == 'Lend' && _selectedType == TransactionType.income) ||
+                                 (_selectedCategory == 'Borrow' && _selectedType == TransactionType.expense);
+          
+          if (isPayment) {
+            final double amount = double.tryParse(_amountController.text) ?? 0.0;
+            double remaining = debt.totalAmount - debt.paidAmount;
+            
+            // Adjust for editing: add back the current transaction's amount to see true remaining limit
+            if (widget.existingTransaction != null) {
+              final tx = widget.existingTransaction!;
+              if (tx.debtKey == _selectedDebtKey) {
+                final bool oldWasPayment = (tx.category == 'Received Payment') ||
+                                          (tx.category == 'Debt Payment') ||
+                                          (tx.category == 'Lend' && tx.type == TransactionType.income) ||
+                                          (tx.category == 'Borrow' && tx.type == TransactionType.expense);
+                if (oldWasPayment) {
+                  remaining += tx.amount;
+                }
+              }
+            }
+
+            if (amount > (remaining + 0.01)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Amount exceeds remaining balance (₱${remaining.toStringAsFixed(2)})'),
+                  backgroundColor: Colors.red[800],
+                ),
+              );
+              return;
+            }
           }
         }
       }
@@ -826,16 +873,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     const SizedBox(height: 24),
                   ],
 
-                  // Person Name Field for Lend/Borrow
-                  if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') ...[
+                  // Person Name Field for Debt-related categories
+                  if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow' || 
+                      _selectedCategory == 'Received Payment' || _selectedCategory == 'Debt Payment') ...[
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          _selectedCategory == 'Lend' ? 'Lending to' : 'Borrowing from', 
+                          (_selectedCategory == 'Lend' || _selectedCategory == 'Received Payment') 
+                             ? 'Person (Lending)' 
+                             : 'Person (Borrowing)', 
                           style: theme.textTheme.titleMedium
                         ),
-                        if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend')))
+                        if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend' || _selectedCategory == 'Received Payment')))
                           Text(
                             'Quick Select',
                             style: theme.textTheme.bodySmall?.copyWith(color: theme.primaryColor),
@@ -845,13 +895,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                     const SizedBox(height: 8),
 
                     // Quick Select Chips
-                    if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend'))) ...[
+                    if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend' || _selectedCategory == 'Received Payment'))) ...[
                       SizedBox(
                         height: 40,
                         child: ListView(
                           scrollDirection: Axis.horizontal,
                           children: _debts
-                              .where((d) => d.isOwedToMe == (_selectedCategory == 'Lend'))
+                              .where((d) => d.isOwedToMe == (_selectedCategory == 'Lend' || _selectedCategory == 'Received Payment'))
                               .map((d) => d.personName)
                               .toSet()
                               .map((name) => Padding(

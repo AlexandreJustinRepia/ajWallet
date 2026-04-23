@@ -568,9 +568,14 @@ class DatabaseService {
 
 
   static Future<void> _initDefaultCategories() async {
-    // 1. Migration: Remove old 'Debt' category if it exists
-    final oldDebts = _categoryBox.values.cast<Category>().where((c) => c.name == 'Debt').toList();
-    for (var c in oldDebts) {
+    // 1. Migration: Remove old 'Debt' category and incorrect Lend/Borrow placements
+    final legacyCategories = _categoryBox.values.cast<Category>().where((c) => 
+      c.name == 'Debt' || 
+      (c.name == 'Lend' && c.type == TransactionType.income) ||
+      (c.name == 'Borrow' && c.type == TransactionType.expense)
+    ).toList();
+    
+    for (var c in legacyCategories) {
       await c.delete();
     }
 
@@ -582,20 +587,22 @@ class DatabaseService {
       Category(name: 'Food & Drinks', iconCode: Icons.fastfood.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 2),
       Category(name: 'Health', iconCode: Icons.medical_services.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 3),
       Category(name: 'Lend', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 4),
-      Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
-      Category(name: 'Shopping', iconCode: Icons.shopping_bag.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
-      Category(name: 'Transportation', iconCode: Icons.directions_car.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
-      Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
-      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 9),
+      Category(name: 'Debt Payment', iconCode: Icons.payments_rounded.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
+      Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
+      Category(name: 'Shopping', iconCode: Icons.shopping_bag.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
+      Category(name: 'Transportation', iconCode: Icons.directions_car.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
+      Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 9),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 10),
       
       // Income Categories
       Category(name: 'Bonus', iconCode: Icons.card_giftcard.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 0),
       Category(name: 'Borrow', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 1),
-      Category(name: 'Dividend', iconCode: Icons.pie_chart.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 2),
-      Category(name: 'Gift', iconCode: Icons.redeem.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 3),
-      Category(name: 'Investment', iconCode: Icons.trending_up.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 4),
-      Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
-      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 6),
+      Category(name: 'Received Payment', iconCode: Icons.payments_rounded.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 2),
+      Category(name: 'Dividend', iconCode: Icons.pie_chart.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 3),
+      Category(name: 'Gift', iconCode: Icons.redeem.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 4),
+      Category(name: 'Investment', iconCode: Icons.trending_up.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
+      Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 6),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 7),
     ];
 
     // 3. Sync Logic: Ensure every default exists and has the correct order
@@ -625,6 +632,14 @@ class DatabaseService {
   }
 
   static Future<void> ensureCategoryExists(String name, TransactionType type, IconData icon) async {
+    // Prevent re-creating specialized categories in the wrong type during migrations or historical edits
+    if ((name == 'Lend' && type == TransactionType.income) ||
+        (name == 'Borrow' && type == TransactionType.expense) ||
+        (name == 'Received Payment' && type == TransactionType.expense) ||
+        (name == 'Debt Payment' && type == TransactionType.income)) {
+      return;
+    }
+
     final list = _categoryBox.values.cast<Category>().where((c) => c.type == type && c.name == name).toList();
     if (list.isEmpty) {
       final existing = getCategories(type);

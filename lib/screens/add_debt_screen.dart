@@ -235,7 +235,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'I gave money',
+                            'Lend Money',
                             style: TextStyle(
                               color: _isOwedToMe ? theme.scaffoldBackgroundColor : theme.textTheme.bodyMedium?.color,
                               fontWeight: FontWeight.bold,
@@ -258,7 +258,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'I borrowed money',
+                            'Borrow Money',
                             style: TextStyle(
                               color: !_isOwedToMe ? theme.scaffoldBackgroundColor : theme.textTheme.bodyMedium?.color,
                               fontWeight: FontWeight.bold,

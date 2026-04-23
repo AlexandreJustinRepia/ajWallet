@@ -580,7 +580,8 @@ class DatabaseService {
       Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
       Category(name: 'Education', iconCode: Icons.school.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
       Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
-      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
+      Category(name: 'Lend', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 9),
       
       // Income Categories (index 0-5)
       Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 0),
@@ -588,11 +589,26 @@ class DatabaseService {
       Category(name: 'Dividend', iconCode: Icons.pie_chart.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 2),
       Category(name: 'Gift', iconCode: Icons.redeem.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 3),
       Category(name: 'Investment', iconCode: Icons.trending_up.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 4),
-      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
+      Category(name: 'Borrow', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
+      Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 6),
     ];
 
 
     await _categoryBox.addAll(defaults);
+  }
+
+  static Future<void> ensureCategoryExists(String name, TransactionType type, IconData icon) async {
+    final list = _categoryBox.values.cast<Category>().where((c) => c.type == type && c.name == name).toList();
+    if (list.isEmpty) {
+      final existing = getCategories(type);
+      await _categoryBox.add(Category(
+        name: name,
+        iconCode: icon.codePoint,
+        type: type,
+        isDefault: true,
+        orderIndex: existing.length,
+      ));
+    }
   }
 
 

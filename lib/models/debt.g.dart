@@ -23,13 +23,14 @@ class DebtAdapter extends TypeAdapter<Debt> {
       accountKey: fields[3] as int,
       isOwedToMe: fields[4] as bool,
       dueDate: fields[5] as DateTime?,
+      description: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Debt obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.personName)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class DebtAdapter extends TypeAdapter<Debt> {
       ..writeByte(4)
       ..write(obj.isOwedToMe)
       ..writeByte(5)
-      ..write(obj.dueDate);
+      ..write(obj.dueDate)
+      ..writeByte(6)
+      ..write(obj.description);
   }
 
   @override

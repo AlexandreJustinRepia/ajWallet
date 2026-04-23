@@ -21,6 +21,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
   final _formKey = GlobalKey<FormState>();
   final _personController = TextEditingController();
   final _amountController = TextEditingController();
+  final _descriptionController = TextEditingController();
   bool _isOwedToMe = true;
   bool _affectWallet = true;
   DateTime? _dueDate;
@@ -102,6 +103,7 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
         accountKey: widget.accountKey,
         isOwedToMe: _isOwedToMe,
         dueDate: _dueDate,
+        description: _descriptionController.text.trim(),
       );
 
       final debtKey = await DatabaseService.saveDebt(debt);
@@ -109,10 +111,12 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
       if (_affectWallet) {
         // 2. Create the initial Transaction
         final transaction = Transaction(
-          title: _isOwedToMe ? 'Lent to ${debt.personName}' : 'Borrowed from ${debt.personName}',
+          title: _descriptionController.text.isNotEmpty 
+              ? '${_descriptionController.text.trim()} (${debt.personName})'
+              : (_isOwedToMe ? 'Lent to ${debt.personName}' : 'Borrowed from ${debt.personName}'),
           amount: amount,
           date: DateTime.now(),
-          category: _isOwedToMe ? 'Lent Money' : 'Borrowed Money',
+          category: _isOwedToMe ? 'Lend' : 'Borrow',
           description: 'Initial transaction for debt record',
           type: _isOwedToMe ? TransactionType.expense : TransactionType.income,
           accountKey: widget.accountKey,
@@ -278,6 +282,18 @@ class _AddDebtScreenState extends State<AddDebtScreen> {
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 validator: (val) => val == null || val.isEmpty ? 'Enter a name' : null,
+              ),
+              const SizedBox(height: 24),
+              Text('Agenda (Optional)', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              TextFormField(
+                controller: _descriptionController,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: InputDecoration(
+                  hintText: 'e.g. House Rent, Grocery, etc.',
+                  prefixIcon: const Icon(Icons.label_outline_rounded),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
               const SizedBox(height: 24),
               CalculatorInputField(

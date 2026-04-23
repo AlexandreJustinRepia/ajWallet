@@ -22,6 +22,9 @@ class Debt extends HiveObject {
   @HiveField(5)
   DateTime? dueDate;
 
+  @HiveField(6)
+  String? description;
+
   Debt({
     required this.personName,
     required this.totalAmount,
@@ -29,6 +32,7 @@ class Debt extends HiveObject {
     required this.accountKey,
     required this.isOwedToMe,
     this.dueDate,
+    this.description,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +43,7 @@ class Debt extends HiveObject {
       'accountKey': accountKey,
       'isOwedToMe': isOwedToMe,
       'dueDate': dueDate?.toIso8601String(),
+      'description': description,
     };
   }
 
@@ -50,6 +55,7 @@ class Debt extends HiveObject {
       accountKey: map['accountKey'],
       isOwedToMe: map['isOwedToMe'],
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
+      description: map['description'],
     );
   }
 }

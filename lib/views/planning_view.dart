@@ -492,11 +492,18 @@ class _PlanningViewState extends State<PlanningView> {
     final remaining = total - paid;
     final progress = total > 0 ? (paid / total).clamp(0.0, 1.0) : 0.0;
 
+    final hasDesc = d.description != null && d.description!.isNotEmpty;
+    final subtitleParts = <String>[];
+    if (hasDesc) subtitleParts.add(d.personName);
+    if (d.dueDate != null) {
+      subtitleParts.add('Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}');
+    } else {
+      subtitleParts.add('No due date');
+    }
+
     return _PlanningItem(
-      title: d.personName,
-      subtitle: d.dueDate != null
-          ? 'Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}'
-          : 'No due date',
+      title: hasDesc ? d.description! : d.personName,
+      subtitle: subtitleParts.join(' • '),
       trailingText: '₱${remaining.toStringAsFixed(0)}',
       progress: progress,
       progressColor: Colors.amber[700]!,
@@ -510,6 +517,10 @@ class _PlanningViewState extends State<PlanningView> {
               initialType:
                   d.isOwedToMe ? TransactionType.income : TransactionType.expense,
               initialDebtKey: d.key as int,
+              initialCategory: d.isOwedToMe ? 'Lend' : 'Borrow',
+              initialDescription: d.isOwedToMe
+                  ? 'Payment from ${d.personName}'
+                  : 'Payment to ${d.personName}',
             ),
           ),
         );
@@ -525,6 +536,133 @@ class _PlanningViewState extends State<PlanningView> {
         await DatabaseService.deleteDebt(d);
         _viewModel.refresh();
         widget.onRefresh();
+      },
+      onTap: () => _showDebtOptions(context, d, accountKey),
+    );
+  }
+
+  void _showDebtOptions(BuildContext context, Debt debt, int accountKey) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        final theme = Theme.of(context);
+        final isOwedToMe = debt.isOwedToMe;
+
+        return Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 24),
+                decoration: BoxDecoration(
+                  color: theme.dividerColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Text(
+                debt.description ?? debt.personName,
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              if (debt.description != null)
+                Text(
+                  debt.personName,
+                  style: TextStyle(
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                  ),
+                ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: theme.primaryColor.withValues(alpha: 0.1),
+                  child: Icon(Icons.add_rounded, color: theme.primaryColor),
+                ),
+                title: Text(isOwedToMe ? 'Lend More Money' : 'Borrow More Money'),
+                subtitle: Text(isOwedToMe
+                    ? 'Increases the total amount they owe you'
+                    : 'Increases the total amount you owe them'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddTransactionScreen(
+                        accountKey: accountKey,
+                        initialType: isOwedToMe
+                            ? TransactionType.expense
+                            : TransactionType.income,
+                        initialDebtKey: debt.key as int,
+                        initialCategory: isOwedToMe ? 'Lend' : 'Borrow',
+                        initialDescription: isOwedToMe
+                            ? 'Lent more for ${debt.description ?? debt.personName}'
+                            : 'Borrowed more for ${debt.description ?? debt.personName}',
+                      ),
+                    ),
+                  );
+                  if (res == true) {
+                    _viewModel.refresh();
+                    widget.onRefresh();
+                  }
+                },
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: (isOwedToMe ? Colors.green : Colors.red)
+                      .withValues(alpha: 0.1),
+                  child: Icon(
+                    isOwedToMe ? Icons.call_received_rounded : Icons.payment_rounded,
+                    color: isOwedToMe ? Colors.green : Colors.red,
+                  ),
+                ),
+                title: Text(isOwedToMe ? 'Receive Payment' : 'Make a Payment'),
+                subtitle: Text(isOwedToMe
+                    ? 'Records a payment they made to you'
+                    : 'Records a payment you made to them'),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final res = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => AddTransactionScreen(
+                        accountKey: accountKey,
+                        initialType: isOwedToMe
+                            ? TransactionType.income
+                            : TransactionType.expense,
+                        initialDebtKey: debt.key as int,
+                        initialCategory: isOwedToMe ? 'Lend' : 'Borrow',
+                        initialDescription: isOwedToMe
+                            ? 'Payment from ${debt.personName}'
+                            : 'Payment to ${debt.personName}',
+                      ),
+                    ),
+                  );
+                  if (res == true) {
+                    _viewModel.refresh();
+                    widget.onRefresh();
+                  }
+                },
+              ),
+              ListTile(
+                leading: const CircleAvatar(
+                  backgroundColor: Colors.blueGrey,
+                  child: Icon(Icons.history_rounded, color: Colors.white),
+                ),
+                title: const Text('View History'),
+                subtitle: const Text('See all transactions for this record'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showDebtHistory(context, debt, accountKey);
+                },
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
       },
     );
   }
@@ -659,6 +797,7 @@ class _PlanningItem extends StatelessWidget {
   final VoidCallback? onSecondaryAction;
   final IconData? secondaryActionIcon;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
   final bool isOverspent;
 
   const _PlanningItem({
@@ -675,15 +814,19 @@ class _PlanningItem extends StatelessWidget {
     this.onSecondaryAction,
     this.secondaryActionIcon,
     required this.onDelete,
+    this.onTap,
     this.isOverspent = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final itemWidget = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Column(
+    final itemWidget = InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
@@ -796,7 +939,8 @@ class _PlanningItem extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
 
     return isOverspent ? _ShakeWidget(animate: true, child: itemWidget) : itemWidget;
   }

@@ -37,8 +37,13 @@ class AddTransactionScreen extends StatefulWidget {
     this.initialBudgetKey,
     this.initialDebtKey,
     this.initialType,
+    this.initialDescription,
+    this.initialCategory,
     this.isTutorialMode = false,
   });
+
+  final String? initialDescription;
+  final String? initialCategory;
 
   @override
   State<AddTransactionScreen> createState() => _AddTransactionScreenState();
@@ -130,6 +135,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       _selectedBudgetKey = tx.budgetKey;
       _selectedDebtKey = tx.debtKey;
       _attachmentPaths = List<String>.from(tx.attachmentPaths ?? []);
+
+      // Safety: Ensure the category exists in the dropdown list and persists
+      DatabaseService.ensureCategoryExists(
+        _selectedCategory,
+        _selectedType,
+        Icons.category_rounded,
+      ).then((_) {
+        if (mounted) _refreshCategories();
+      });
     } else {
       final wallets = DatabaseService.getWallets(widget.accountKey);
       try {
@@ -151,9 +165,27 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
 
+      _selectedDebtKey = widget.initialDebtKey;
+
+      if (widget.initialCategory != null) {
+        _userManuallySelectedCategory = true;
+        _selectedCategory = widget.initialCategory!;
+        // Ensure it's persisted for the future
+        DatabaseService.ensureCategoryExists(
+          widget.initialCategory!,
+          _selectedType,
+          Icons.handshake_rounded,
+        ).then((_) {
+          if (mounted) _refreshCategories();
+        });
+      }
+
+      if (widget.initialDescription != null) {
+        _descriptionController.text = widget.initialDescription!;
+      }
+
       _selectedGoalKey = widget.initialGoalKey;
       _selectedBudgetKey = widget.initialBudgetKey;
-      _selectedDebtKey = widget.initialDebtKey;
     }
   }
 
@@ -161,6 +193,19 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     setState(() {
       _availableCategories = DatabaseService.getCategories(_selectedType);
       
+      // Safety: If the selected category is missing from the database (e.g. app update/renaming)
+      // add a temporary placeholder to prevent DropdownButton crash.
+      if (_selectedType != TransactionType.transfer && 
+          _selectedCategory != 'Others' && 
+          !_availableCategories.any((c) => c.name == _selectedCategory)) {
+        _availableCategories.add(Category(
+          name: _selectedCategory,
+          iconCode: Icons.category_rounded.codePoint,
+          type: _selectedType,
+          isDefault: true,
+        ));
+      }
+
       // Ensure selected category is valid for the current type
       if (!_availableCategories.any((c) => c.name == _selectedCategory)) {
         if (_availableCategories.isNotEmpty) {
@@ -470,9 +515,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-            title: Text(widget.existingTransaction == null
-                ? 'Add Transaction'
-                : 'Edit Transaction'),
+            title: Text(widget.existingTransaction != null
+                ? 'Edit Transaction'
+                : widget.initialDebtKey != null
+                    ? 'Update Debt Record'
+                    : 'Add Transaction'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.help_outline),
@@ -489,6 +536,50 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                if (_selectedDebtKey != null) ...[
+                  Builder(builder: (context) {
+                    try {
+                      final debt = _debts.firstWhere((d) => d.key == _selectedDebtKey);
+                      final isIncreasing = (_selectedType == TransactionType.expense && debt.isOwedToMe) ||
+                                           (_selectedType == TransactionType.income && !debt.isOwedToMe);
+                      final color = isIncreasing ? Colors.orange[800]! : Colors.green[700]!;
+                      
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16),
+                        margin: const EdgeInsets.only(bottom: 24),
+                        decoration: BoxDecoration(
+                          color: color.withValues(alpha: 0.1),
+                          border: Border.all(color: color.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(isIncreasing ? Icons.add_chart_rounded : Icons.check_circle_outline_rounded, color: color),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    isIncreasing ? 'Increasing Debt Record' : 'Recording Payment',
+                                    style: TextStyle(fontWeight: FontWeight.bold, color: color),
+                                  ),
+                                  Text(
+                                    '${isIncreasing ? "Adding amount to" : "Paying off"} ${debt.description ?? debt.personName}',
+                                    style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    } catch (_) {
+                      return const SizedBox.shrink();
+                    }
+                  }),
+                ],
                   if (_getSafetyAlerts().isNotEmpty) ...[
                     Container(
                       width: double.infinity,

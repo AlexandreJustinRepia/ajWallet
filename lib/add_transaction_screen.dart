@@ -54,6 +54,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _chargeController = TextEditingController();
+  final _personNameController = TextEditingController();
 
   // Tutorial Keys
   final _typeKey = GlobalKey();
@@ -144,6 +145,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       ).then((_) {
         if (mounted) _refreshCategories();
       });
+
+      if (_selectedDebtKey != null) {
+        final debt = DatabaseService.getDebtByKey(_selectedDebtKey!);
+        if (debt != null) {
+          _personNameController.text = debt.personName;
+        }
+      }
     } else {
       final wallets = DatabaseService.getWallets(widget.accountKey);
       try {
@@ -165,7 +173,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
         }
       }
 
-      _selectedDebtKey = widget.initialDebtKey;
+      if (widget.initialDebtKey != null) {
+        _selectedDebtKey = widget.initialDebtKey;
+        final debt = DatabaseService.getDebtByKey(_selectedDebtKey!);
+        if (debt != null) {
+          _personNameController.text = debt.personName;
+        }
+      }
 
       if (widget.initialCategory != null) {
         _userManuallySelectedCategory = true;
@@ -195,8 +209,11 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       
       // Safety: If the selected category is missing from the database (e.g. app update/renaming)
       // add a temporary placeholder to prevent DropdownButton crash.
+      // Exception: Don't do this for Lend/Borrow as they are strictly bound to Type.
       if (_selectedType != TransactionType.transfer && 
           _selectedCategory != 'Others' && 
+          _selectedCategory != 'Lend' &&
+          _selectedCategory != 'Borrow' &&
           !_availableCategories.any((c) => c.name == _selectedCategory)) {
         _availableCategories.add(Category(
           name: _selectedCategory,
@@ -209,8 +226,12 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       // Ensure selected category is valid for the current type
       if (!_availableCategories.any((c) => c.name == _selectedCategory)) {
         if (_availableCategories.isNotEmpty) {
-           // Try to find a sensible default
-           if (_selectedType == TransactionType.income && _availableCategories.any((c) => c.name == 'Salary')) {
+           // Default to Others for Lend/Borrow transitions, or a sensible default for others
+           if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') {
+             _selectedCategory = _availableCategories.any((c) => c.name == 'Others') 
+                ? 'Others' 
+                : _availableCategories.first.name;
+           } else if (_selectedType == TransactionType.income && _availableCategories.any((c) => c.name == 'Salary')) {
              _selectedCategory = 'Salary';
            } else if (_selectedType == TransactionType.expense && _availableCategories.any((c) => c.name == 'Food & Drinks')) {
              _selectedCategory = 'Food & Drinks';
@@ -327,9 +348,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void _saveTransaction() async {
     if (_formKey.currentState!.validate()) {
       if (_selectedWalletKey == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Please select a wallet')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please select a wallet')),
+        );
         return;
       }
 
@@ -342,9 +363,9 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       }
 
       if (_selectedType == TransactionType.expense || _selectedType == TransactionType.transfer) {
-        final amount = double.parse(_amountController.text);
-        final charge = double.tryParse(_chargeController.text) ?? 0.0;
-        final totalNeeded = amount + charge;
+        final amountValue = double.tryParse(_amountController.text) ?? 0.0;
+        final chargeValue = double.tryParse(_chargeController.text) ?? 0.0;
+        final totalNeeded = amountValue + chargeValue;
         
         final wallets = DatabaseService.getWallets(widget.accountKey);
         final wallet = wallets.firstWhere((w) => w.key == _selectedWalletKey);
@@ -368,6 +389,33 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
           return;
         }
       }
+
+      // Handle Debt Creation/Linking for Lend/Borrow categories
+      if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') {
+        if (_selectedDebtKey == null && _personNameController.text.trim().isNotEmpty) {
+          final bool isOwedToMe = _selectedCategory == 'Lend';
+          final existingDebt = DatabaseService.getDebtByPersonName(
+            widget.accountKey, 
+            _personNameController.text.trim(),
+            isOwedToMe
+          );
+          
+          if (existingDebt != null) {
+            _selectedDebtKey = existingDebt.key as int;
+          } else {
+            // Create new debt
+            final newDebt = Debt(
+              personName: _personNameController.text.trim(),
+              totalAmount: 0,
+              accountKey: widget.accountKey,
+              isOwedToMe: isOwedToMe,
+            );
+            _selectedDebtKey = await DatabaseService.saveDebt(newDebt);
+          }
+        }
+      }
+
+      if (!mounted) return;
 
       // Mark tutorial as seen if saved
       if (_showTutorial) _dismissTutorial();
@@ -446,6 +494,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
     _amountController.dispose();
     _descriptionController.dispose();
     _chargeController.dispose();
+    _personNameController.dispose();
     super.dispose();
   }
 
@@ -773,6 +822,74 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                           },
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Person Name Field for Lend/Borrow
+                  if (_selectedCategory == 'Lend' || _selectedCategory == 'Borrow') ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _selectedCategory == 'Lend' ? 'Lending to' : 'Borrowing from', 
+                          style: theme.textTheme.titleMedium
+                        ),
+                        if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend')))
+                          Text(
+                            'Quick Select',
+                            style: theme.textTheme.bodySmall?.copyWith(color: theme.primaryColor),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Quick Select Chips
+                    if (_selectedDebtKey == null && _debts.any((d) => d.isOwedToMe == (_selectedCategory == 'Lend'))) ...[
+                      SizedBox(
+                        height: 40,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: _debts
+                              .where((d) => d.isOwedToMe == (_selectedCategory == 'Lend'))
+                              .map((d) => d.personName)
+                              .toSet()
+                              .map((name) => Padding(
+                                    padding: const EdgeInsets.only(right: 8),
+                                    child: ActionChip(
+                                      avatar: const Icon(Icons.person_add_alt_1_rounded, size: 16),
+                                      label: Text(name),
+                                      backgroundColor: theme.cardColor,
+                                      onPressed: () {
+                                        setState(() {
+                                          _personNameController.text = name;
+                                        });
+                                      },
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+
+                    TextFormField(
+                      controller: _personNameController,
+                      decoration: InputDecoration(
+                        hintText: 'Enter name...',
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        filled: true,
+                        fillColor: theme.cardColor,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: theme.dividerColor),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'Please enter a name';
+                        return null;
+                      },
+                      enabled: _selectedDebtKey == null, // Lock if already linked
                     ),
                     const SizedBox(height: 24),
                   ],

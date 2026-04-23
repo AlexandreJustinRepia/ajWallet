@@ -568,33 +568,60 @@ class DatabaseService {
 
 
   static Future<void> _initDefaultCategories() async {
-    if (_categoryBox.isNotEmpty) return;
+    // 1. Migration: Remove old 'Debt' category if it exists
+    final oldDebts = _categoryBox.values.cast<Category>().where((c) => c.name == 'Debt').toList();
+    for (var c in oldDebts) {
+      await c.delete();
+    }
 
+    // 2. Define the desired state of default categories (Alphabetical)
     final defaults = [
-      // Expense Categories (index 0-8)
-      Category(name: 'Food & Drinks', iconCode: Icons.fastfood.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 0),
-      Category(name: 'Transportation', iconCode: Icons.directions_car.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 1),
-      Category(name: 'Shopping', iconCode: Icons.shopping_bag.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 2),
-      Category(name: 'Entertainment', iconCode: Icons.movie.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 3),
-      Category(name: 'Health', iconCode: Icons.medical_services.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 4),
-      Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
-      Category(name: 'Education', iconCode: Icons.school.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
-      Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
-      Category(name: 'Lend', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
+      // Expense Categories
+      Category(name: 'Education', iconCode: Icons.school.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 0),
+      Category(name: 'Entertainment', iconCode: Icons.movie.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 1),
+      Category(name: 'Food & Drinks', iconCode: Icons.fastfood.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 2),
+      Category(name: 'Health', iconCode: Icons.medical_services.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 3),
+      Category(name: 'Lend', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 4),
+      Category(name: 'Pet Food', iconCode: Icons.pets.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 5),
+      Category(name: 'Shopping', iconCode: Icons.shopping_bag.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 6),
+      Category(name: 'Transportation', iconCode: Icons.directions_car.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 7),
+      Category(name: 'Utilities', iconCode: Icons.home.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 8),
       Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.expense, isDefault: true, orderIndex: 9),
       
-      // Income Categories (index 0-5)
-      Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 0),
-      Category(name: 'Bonus', iconCode: Icons.card_giftcard.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 1),
+      // Income Categories
+      Category(name: 'Bonus', iconCode: Icons.card_giftcard.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 0),
+      Category(name: 'Borrow', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 1),
       Category(name: 'Dividend', iconCode: Icons.pie_chart.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 2),
       Category(name: 'Gift', iconCode: Icons.redeem.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 3),
       Category(name: 'Investment', iconCode: Icons.trending_up.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 4),
-      Category(name: 'Borrow', iconCode: Icons.handshake_rounded.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
+      Category(name: 'Salary', iconCode: Icons.work.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 5),
       Category(name: 'Others', iconCode: Icons.more_horiz.codePoint, type: TransactionType.income, isDefault: true, orderIndex: 6),
     ];
 
+    // 3. Sync Logic: Ensure every default exists and has the correct order
+    for (var def in defaults) {
+      final existingMatches = _categoryBox.values.cast<Category>().where(
+        (c) => c.name == def.name && c.type == def.type
+      ).toList();
 
-    await _categoryBox.addAll(defaults);
+      if (existingMatches.isEmpty) {
+        // Missing category - Add it
+        await _categoryBox.add(def);
+      } else {
+        // Exists - Ensure it's marked as default and has the correct alphabetical orderIndex
+        final existing = existingMatches.first;
+        bool changed = false;
+        if (!existing.isDefault) {
+          existing.isDefault = true;
+          changed = true;
+        }
+        if (existing.orderIndex != def.orderIndex) {
+          existing.orderIndex = def.orderIndex;
+          changed = true;
+        }
+        if (changed) await existing.save();
+      }
+    }
   }
 
   static Future<void> ensureCategoryExists(String name, TransactionType type, IconData icon) async {
@@ -610,7 +637,6 @@ class DatabaseService {
       ));
     }
   }
-
 
   // Debt Operations
   static Future<int> saveDebt(Debt debt) async {
@@ -635,6 +661,22 @@ class DatabaseService {
 
     // 2. Delete the debt itself
     await debt.delete();
+  }
+
+  static Debt? getDebtByKey(int key) {
+    return _debtBox.get(key);
+  }
+
+  static Debt? getDebtByPersonName(int accountKey, String name, bool isOwedToMe) {
+    try {
+      return _debtBox.values.firstWhere(
+        (d) => d.accountKey == accountKey && 
+               d.personName.toLowerCase() == name.toLowerCase() && 
+               d.isOwedToMe == isOwedToMe
+      );
+    } catch (_) {
+      return null;
+    }
   }
 
   static List<Debt> getDebts(int accountKey) {

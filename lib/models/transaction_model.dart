@@ -120,6 +120,7 @@ class Transaction extends HiveObject {
       debtKey: map['debtKey'],
       squadTxKey: map['squadTxKey'],
       attachmentPaths: (map['attachmentPaths'] as List?)?.cast<String>(),
+      shoppingListId: map['shoppingListId'],
     );
   }
 

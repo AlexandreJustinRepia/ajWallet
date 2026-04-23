@@ -13,6 +13,7 @@ import '../models/debt.dart';
 import '../widgets/financial_health_strip.dart';
 import '../widgets/card_decorator.dart';
 import '../widgets/shopping/shopping_lists_dashboard.dart';
+import '../widgets/shopping/shopping_list_screen.dart';
 
 import '../services/shopping_service.dart';
 import 'planning_view_model.dart';
@@ -231,51 +232,74 @@ class _PlanningViewState extends State<PlanningView> {
                 },
                 child: Builder(
                   builder: (context) {
-                    final activeLists = ShoppingService.getShoppingLists(accountKey).where((l) => !l.isSettled).toList();
+                    final allLists = ShoppingService.getShoppingLists(accountKey);
                     
-                    if (activeLists.isEmpty) {
+                    if (allLists.isEmpty) {
                       return const _EmptyState(
                         icon: Icons.shopping_basket_outlined,
-                        message: 'No active shopping lists',
+                        message: 'No shopping lists',
                       );
                     }
 
+                    // Prefer showing active lists, fallback to most recent settled list
+                    final activeLists = allLists.where((l) => !l.isSettled).toList();
+                    final list = activeLists.isNotEmpty ? activeLists.first : allLists.first;
+
                     return Column(
                       children: [
-                        ...activeLists.take(3).map((list) {
-                          final items = ShoppingService.getShoppingItems(accountKey, listId: list.id);
-                          final boughtCount = items.where((i) => i.isBought).length;
-                          final totalItems = items.length;
-                          final progress = totalItems > 0 ? boughtCount / totalItems : 0.0;
-                          
-                          return _PlanningItem(
-                            title: list.name.isEmpty ? 'Shopping List' : list.name,
-                            subtitle: list.storeName ?? 'Any Store',
-                            trailingText: '$boughtCount/$totalItems items',
-                            progress: progress,
-                            progressColor: theme.primaryColor,
-                            onPrimaryAction: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ShoppingListsDashboard(accountKey: accountKey),
-                                ),
-                              );
-                              _viewModel.refresh();
-                              setState(() {});
-                            },
-                            primaryActionLabel: 'Open',
-                            onDelete: () async {
-                              await ShoppingService.deleteShoppingList(list);
-                              _viewModel.refresh();
-                              setState(() {});
-                            },
-                          );
-                        }),
-                        if (activeLists.length > 3)
+                        if (allLists.isNotEmpty) ...[
+                          Builder(builder: (context) {
+                            final items = ShoppingService.getShoppingItems(accountKey, listId: list.id);
+                            final boughtCount = items.where((i) => i.isBought).length;
+                            final totalItems = items.length;
+                            final progress = totalItems > 0 ? boughtCount / totalItems : 0.0;
+
+                            return _PlanningItem(
+                              title: list.name.isEmpty ? 'Shopping List' : list.name,
+                              subtitle: list.isSettled 
+                                  ? '${list.storeName ?? 'Any Store'} • Settled'
+                                  : (list.storeName ?? 'Any Store'),
+                              trailingText: list.isSettled ? 'SETTLED' : '$boughtCount/$totalItems items',
+                              trailingTextColor: list.isSettled ? Colors.green : null,
+                              progress: list.isSettled ? 1.0 : progress,
+                              progressColor: list.isSettled ? Colors.green : theme.primaryColor,
+                              onTap: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ShoppingListScreen(
+                                      accountKey: accountKey,
+                                      shoppingList: list,
+                                    ),
+                                  ),
+                                );
+                                _viewModel.refresh();
+                                setState(() {});
+                              },
+                              primaryActionLabel: 'Open List',
+                              onPrimaryAction: () async {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => ShoppingListScreen(
+                                      accountKey: accountKey,
+                                      shoppingList: list,
+                                    ),
+                                  ),
+                                );
+                                _viewModel.refresh();
+                                setState(() {});
+                              },
+                              onDelete: () async {
+                                await ShoppingService.deleteShoppingList(list);
+                                _viewModel.refresh();
+                                setState(() {});
+                              },
+                            );
+                          }),
                           Padding(
                             padding: const EdgeInsets.only(top: 8),
-                            child: TextButton(
+                            child: TextButton.icon(
                               onPressed: () async {
                                 await Navigator.push(
                                   context,
@@ -286,9 +310,12 @@ class _PlanningViewState extends State<PlanningView> {
                                 _viewModel.refresh();
                                 setState(() {});
                               },
-                              child: Text('View all ${activeLists.length} lists', style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
+                              icon: const Icon(Icons.visibility_outlined, size: 16),
+                              label: Text('View all ${allLists.length} lists', 
+                                style: TextStyle(color: theme.primaryColor, fontWeight: FontWeight.bold, fontSize: 12)),
                             ),
                           ),
+                        ],
                       ],
                     );
                   },
@@ -799,7 +826,7 @@ class _PlanningItem extends StatelessWidget {
   final GlobalKey? secondaryActionKey;
   final VoidCallback? onSecondaryAction;
   final IconData? secondaryActionIcon;
-  final VoidCallback onDelete;
+  final VoidCallback? onDelete;
   final VoidCallback? onTap;
   final bool isOverspent;
   final Color? trailingTextColor;
@@ -817,7 +844,7 @@ class _PlanningItem extends StatelessWidget {
     this.secondaryActionKey,
     this.onSecondaryAction,
     this.secondaryActionIcon,
-    required this.onDelete,
+    this.onDelete,
     this.onTap,
     this.isOverspent = false,
     this.trailingTextColor,
@@ -864,10 +891,11 @@ class _PlanningItem extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                       fontSize: 13,
                       color: trailingTextColor)),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, size: 20),
-                onPressed: onDelete,
-              ),
+              if (onDelete != null)
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, size: 20),
+                  onPressed: onDelete,
+                ),
             ],
           ),
           const SizedBox(height: 8),

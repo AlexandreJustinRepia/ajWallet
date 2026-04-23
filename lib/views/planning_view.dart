@@ -521,7 +521,7 @@ class _PlanningViewState extends State<PlanningView> {
 
     final hasDesc = d.description != null && d.description!.isNotEmpty;
     final subtitleParts = <String>[];
-    if (hasDesc) subtitleParts.add(d.personName);
+    if (hasDesc) subtitleParts.add(d.description!);
     if (d.dueDate != null) {
       subtitleParts.add('Due: ${DateFormat('MMM dd, yyyy').format(d.dueDate!)}');
     } else {
@@ -531,7 +531,7 @@ class _PlanningViewState extends State<PlanningView> {
     final isFullyPaid = remaining <= 0.01;
 
     return _PlanningItem(
-      title: hasDesc ? d.description! : d.personName,
+      title: d.personName,
       subtitle: subtitleParts.join(' • '),
       trailingText: isFullyPaid ? 'PAID' : '₱${remaining.toStringAsFixed(0)}',
       trailingTextColor: isFullyPaid ? Colors.green : null,
@@ -596,12 +596,12 @@ class _PlanningViewState extends State<PlanningView> {
                 ),
               ),
               Text(
-                debt.description ?? debt.personName,
+                debt.personName,
                 style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              if (debt.description != null)
+              if (debt.description != null && debt.description!.isNotEmpty)
                 Text(
-                  debt.personName,
+                  debt.description!,
                   style: TextStyle(
                     color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
                   ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'transaction_model.dart';
+import '../utils/icon_mapper.dart';
 
 part 'category.g.dart';
 
@@ -34,7 +35,7 @@ class Category extends HiveObject {
     this.orderIndex = 0,
   });
 
-  IconData get icon => IconData(iconCode, fontFamily: 'MaterialIcons');
+  IconData get icon => IconMapper.getIcon(iconCode);
 
   Map<String, dynamic> toMap() {
     return {

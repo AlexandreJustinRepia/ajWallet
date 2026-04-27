@@ -209,14 +209,16 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       
       // Safety: If the selected category is missing from the database (e.g. app update/renaming)
       // add a temporary placeholder to prevent DropdownButton crash.
-      // Exception: Don't do this for Lend/Borrow as they are strictly bound to Type.
+      // We ONLY do this if the category is not found in the database AT ALL (legacy/deleted).
+      // If it exists but for a different type, we allow the reset logic below to handle it.
       if (_selectedType != TransactionType.transfer && 
           _selectedCategory != 'Others' && 
           _selectedCategory != 'Lend' &&
           _selectedCategory != 'Borrow' &&
           _selectedCategory != 'Received Payment' &&
           _selectedCategory != 'Debt Payment' &&
-          !_availableCategories.any((c) => c.name == _selectedCategory)) {
+          !_availableCategories.any((c) => c.name == _selectedCategory) &&
+          DatabaseService.getCategoryByName(_selectedCategory) == null) {
         _availableCategories.add(Category(
           name: _selectedCategory,
           iconCode: Icons.category_rounded.codePoint,

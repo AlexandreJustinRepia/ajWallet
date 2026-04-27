@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../transaction_details_screen.dart';
+import '../services/database_service.dart';
 import 'card_decorator.dart';
 
 /// A tappable card that displays a single transaction row.
@@ -42,6 +43,7 @@ class TransactionCard extends StatelessWidget {
             child: Row(
               children: [
                 _TypeIcon(
+                  tx: tx,
                   isTransfer: isTransfer,
                   isIncome: isIncome,
                   color: displayColor,
@@ -72,11 +74,13 @@ class TransactionCard extends StatelessWidget {
 }
 
 class _TypeIcon extends StatelessWidget {
+  final Transaction tx;
   final bool isTransfer;
   final bool isIncome;
   final Color color;
 
   const _TypeIcon({
+    required this.tx,
     required this.isTransfer,
     required this.isIncome,
     required this.color,
@@ -84,6 +88,11 @@ class _TypeIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cat = DatabaseService.getCategoryByName(tx.category);
+    final iconData = isTransfer 
+        ? Icons.swap_horiz_rounded 
+        : (cat?.icon ?? (isIncome ? Icons.south_west_rounded : Icons.north_east_rounded));
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -91,11 +100,7 @@ class _TypeIcon extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
       ),
       child: Icon(
-        isTransfer
-            ? Icons.swap_horiz_rounded
-            : (isIncome
-                ? Icons.south_west_rounded
-                : Icons.north_east_rounded),
+        iconData,
         color: color,
         size: 18,
       ),

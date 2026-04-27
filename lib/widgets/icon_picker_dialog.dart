@@ -9,6 +9,7 @@ class IconPickerDialog extends StatelessWidget {
     // General
     Icons.account_balance_wallet,
     Icons.payments,
+    Icons.payments_rounded,
     Icons.shopping_cart,
     Icons.receipt_long,
     Icons.credit_card,
@@ -16,6 +17,7 @@ class IconPickerDialog extends StatelessWidget {
     Icons.monetization_on,
     Icons.trending_up,
     Icons.trending_down,
+    Icons.handshake_rounded,
     
     // Expenses
     Icons.fastfood,
@@ -28,6 +30,8 @@ class IconPickerDialog extends StatelessWidget {
     Icons.home,
     Icons.lightbulb,
     Icons.water_drop,
+    Icons.electric_bolt,
+    Icons.wifi,
     Icons.router,
     Icons.phone_android,
     Icons.medical_services,
@@ -66,6 +70,16 @@ class IconPickerDialog extends StatelessWidget {
     Icons.cloud,
     Icons.security,
     Icons.key,
+    Icons.category_rounded,
+    Icons.subscriptions,
+    Icons.directions_run,
+    Icons.local_shipping,
+    Icons.celebration,
+    Icons.child_care,
+    Icons.spa,
+    Icons.car_repair,
+    Icons.cottage,
+    Icons.volunteer_activism,
   ];
 
   @override

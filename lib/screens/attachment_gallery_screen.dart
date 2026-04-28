@@ -131,8 +131,8 @@ class AttachmentGalleryScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              // Staggered grid: 2 columns with varying heights based on aspect ratio
-              ..._buildStaggeredGrid(entries, theme, context),
+              // Grid layout for attachments
+              _buildGrid(entries, theme, context),
               const SizedBox(height: 20),
             ],
           );
@@ -141,12 +141,20 @@ class AttachmentGalleryScreen extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildStaggeredGrid(List<AttachmentEntry> entries, ThemeData theme, BuildContext context) {
-    final List<Widget> widgets = [];
-    for (int i = 0; i < entries.length; i++) {
-      widgets.add(_AttachmentCard(entry: entries[i], theme: theme, context: context));
-    }
-    return widgets;
+  Widget _buildGrid(List<AttachmentEntry> entries, ThemeData theme, BuildContext context) {
+    return GridView.builder(
+      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: true,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        crossAxisSpacing: 8,
+        mainAxisSpacing: 8,
+      ),
+      itemCount: entries.length,
+      itemBuilder: (context, index) {
+        return _AttachmentCard(entry: entries[index], theme: theme, context: context);
+      },
+    );
   }
 }
 
@@ -178,202 +186,132 @@ class _AttachmentCard extends StatelessWidget {
     final file = File(entry.imagePath);
     final exists = file.existsSync();
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            // Show the gallery starting from this attachment
-            final account = DatabaseService.getLatestAccount();
-            if (account == null) return;
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Show the gallery starting from this attachment
+          final account = DatabaseService.getLatestAccount();
+          if (account == null) return;
 
-            final transactions = DatabaseService.getTransactions(account.key as int)
-                .where((tx) => tx.attachmentPaths != null && tx.attachmentPaths!.isNotEmpty)
-                .toList();
+          final transactions = DatabaseService.getTransactions(account.key as int)
+              .where((tx) => tx.attachmentPaths != null && tx.attachmentPaths!.isNotEmpty)
+              .toList();
 
-            final List<String> allPaths = [];
-            for (final tx in transactions) {
-              allPaths.addAll(tx.attachmentPaths!);
-            }
+          final List<String> allPaths = [];
+          for (final tx in transactions) {
+            allPaths.addAll(tx.attachmentPaths!);
+          }
 
-            final currentIndex = allPaths.indexOf(entry.imagePath);
-            if (currentIndex >= 0) {
-              ImageGalleryViewer.show(context, allPaths, currentIndex);
-            }
-          },
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.cardColor,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: theme.dividerColor, width: 0.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Image preview
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: AspectRatio(
-                    aspectRatio: 4 / 3,
-                    child: exists
-                        ? Image.file(
-                            file,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
-                          )
-                        : _buildPlaceholder(context),
+          final currentIndex = allPaths.indexOf(entry.imagePath);
+          if (currentIndex >= 0) {
+            ImageGalleryViewer.show(context, allPaths, currentIndex);
+          }
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            color: theme.cardColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: theme.dividerColor, width: 0.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Image preview
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: exists
+                    ? Image.file(
+                        file,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => _buildPlaceholder(context),
+                      )
+                    : _buildPlaceholder(context),
+              ),
+              // Gradient overlay for better text readability
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  height: 48,
+                  decoration: BoxDecoration(
+                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.8),
+                      ],
+                    ),
                   ),
                 ),
-                // Transaction info header
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Transaction title and type badge
-                      Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              entry.transaction.title,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: entry.transaction.typeColor.withValues(alpha: 0.12),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              entry.transaction.type.name[0].toUpperCase() +
-                                  entry.transaction.type.name.substring(1),
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w700,
-                                color: entry.transaction.typeColor,
-                              ),
-                            ),
-                          ),
-                        ],
+              ),
+              // Transaction amount and icon
+              Positioned(
+                bottom: 6,
+                left: 6,
+                right: 6,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: entry.transaction.typeColor,
+                        shape: BoxShape.circle,
                       ),
-                      const SizedBox(height: 8),
-                      // Amount and category
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: theme.dividerColor.withValues(alpha: 0.08),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Icon(Icons.category_rounded, size: 14, color: theme.primaryColor.withValues(alpha: 0.7)),
-                                const SizedBox(width: 4),
-                                Text(
-                                  entry.transaction.category,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Spacer(),
-                          Text(
-                            '${entry.transaction.type == TransactionType.expense ? '-' : entry.transaction.type == TransactionType.income ? '+' : ''}₱${entry.transaction.amount.toStringAsFixed(2)}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: entry.transaction.typeColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      // Date and description
-                      Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, size: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat('MMM dd, yyyy').format(entry.transaction.date),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.access_time_rounded, size: 14, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.4)),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormat('hh:mm a').format(entry.transaction.date),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (entry.transaction.description.isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            entry.transaction.description,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        '${entry.transaction.type == TransactionType.expense ? '-' : entry.transaction.type == TransactionType.income ? '+' : ''}₱${entry.transaction.amount.toStringAsFixed(0)}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
-                      const SizedBox(height: 8),
-                      // View transaction button
-                      SizedBox(
-                        width: double.infinity,
-                        child: OutlinedButton.icon(
-                          icon: const Icon(Icons.receipt_rounded, size: 16),
-                          label: const Text('View Transaction'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: theme.primaryColor,
-                            side: BorderSide(color: theme.primaryColor.withValues(alpha: 0.3)),
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (ctx) => TransactionDetailsScreen(transaction: entry.transaction),
-                              ),
-                            );
-                          },
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+              ),
+              // View transaction button (top right)
+              Positioned(
+                top: 4,
+                right: 4,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (ctx) => TransactionDetailsScreen(transaction: entry.transaction),
+                        ),
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(Icons.receipt_long_rounded, size: 14, color: Colors.white),
+                    ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -384,7 +322,7 @@ class _AttachmentCard extends StatelessWidget {
     return Container(
       color: theme.dividerColor.withValues(alpha: 0.1),
       child: Center(
-        child: Icon(Icons.broken_image_rounded, color: theme.dividerColor.withValues(alpha: 0.3), size: 40),
+        child: Icon(Icons.broken_image_rounded, color: theme.dividerColor.withValues(alpha: 0.3), size: 24),
       ),
     );
   }

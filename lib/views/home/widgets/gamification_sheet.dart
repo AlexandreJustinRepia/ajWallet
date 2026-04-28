@@ -287,8 +287,7 @@ class _GamificationSheetState extends State<GamificationSheet> {
                 ),
                 const SizedBox(height: 12),
                 ...profile.challenges.map((challenge) => _buildChallengeCard(challenge, theme)),
-                const SizedBox(height: 24),
-                _buildShopButton(context),
+
                 const SizedBox(height: 32),
                 const Text(
                   'Achievements',
@@ -421,38 +420,6 @@ class _GamificationSheetState extends State<GamificationSheet> {
     );
   }
 
-  Widget _buildShopButton(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      height: 60,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.amber[600]!, Colors.orange[600]!]),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.amber.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () {
-            Navigator.push(context, MaterialPageRoute(builder: (context) => const ShopView()));
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: const Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.store_rounded, color: Colors.white),
-                SizedBox(width: 12),
-                Text('OPEN REWARDS SHOP', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1)),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildAchievementCard(Achievement achievement, ThemeData theme) {
     return Container(

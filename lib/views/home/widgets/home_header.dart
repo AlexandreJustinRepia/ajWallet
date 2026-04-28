@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../../services/gamification_service.dart';
 import '../../../widgets/gamification_counter.dart';
 import './gamification_sheet.dart';
+import '../../shop_view.dart';
+
 
 class HomeHeader extends StatelessWidget {
   final String name;
@@ -47,11 +49,50 @@ class HomeHeader extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        GamingBadge(
-          profile: profile,
-          onTap: () => _showGamificationSheet(context, profile, theme),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildShopIconButton(context, theme),
+            const SizedBox(width: 8),
+            GamingBadge(
+              profile: profile,
+              onTap: () => _showGamificationSheet(context, profile, theme),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildShopIconButton(BuildContext context, ThemeData theme) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.1),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.amber.withValues(alpha: 0.3),
+          width: 1.5,
+        ),
+      ),
+      child: IconButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ShopView()),
+          );
+        },
+        icon: const Icon(
+          Icons.store_rounded,
+          color: Colors.amber,
+          size: 20,
+        ),
+        tooltip: 'Rewards Shop',
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: 40,
+          minHeight: 40,
+        ),
+      ),
     );
   }
 

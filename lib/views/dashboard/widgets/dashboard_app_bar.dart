@@ -6,6 +6,7 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback onRefresh;
   final VoidCallback onLogout;
   final VoidCallback onHelp;
+  final VoidCallback? onGallery;
 
   const DashboardAppBar({
     super.key,
@@ -13,6 +14,7 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.onRefresh,
     required this.onLogout,
     required this.onHelp,
+    this.onGallery,
   });
 
   @override
@@ -35,6 +37,12 @@ class DashboardAppBar extends StatelessWidget implements PreferredSizeWidget {
           : Text(_appBarTitle, style: theme.textTheme.titleLarge),
       automaticallyImplyLeading: false,
       actions: [
+        if (selectedIndex == 1 && onGallery != null)
+          IconButton(
+            icon: const Icon(Icons.photo_library_rounded),
+            tooltip: 'Attachment Gallery',
+            onPressed: onGallery,
+          ),
         if (selectedIndex != 4)
           IconButton(
             icon: const Icon(Icons.help_outline),

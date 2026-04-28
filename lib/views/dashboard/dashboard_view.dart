@@ -108,6 +108,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onRefresh: _viewModel.refresh,
             onLogout: () => _handleLogout(context),
             onHelp: () => _viewModel.setShowTutorial(true),
+            onGallery: _viewModel.selectedIndex == 1
+                ? () => Navigator.pushNamed(context, '/attachment_gallery')
+                : null,
           ),
           body: OnboardingOverlay(
             visible: _viewModel.showTutorial,

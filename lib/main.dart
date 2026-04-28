@@ -10,7 +10,7 @@ import 'splash_screen.dart';
 import 'views/dashboard/dashboard_view.dart';
 import 'add_transaction_screen.dart';
 import 'screens/category_settings_screen.dart';
-
+import 'screens/attachment_gallery_screen.dart';
 import 'widgets/security_wrapper.dart';
 
 void main() async {
@@ -79,8 +79,9 @@ class _MyAppState extends State<MyApp> {
               final accountKey = SessionService.activeAccount?.key as int? ?? 0;
               return AddTransactionScreen(accountKey: accountKey);
             },
-            '/category_settings': (context) => const CategorySettingsScreen(),
-          },
+              '/category_settings': (context) => const CategorySettingsScreen(),
+              '/attachment_gallery': (context) => const AttachmentGalleryScreen(),
+            },
 
         );
       },

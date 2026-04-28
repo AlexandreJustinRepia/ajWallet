@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../services/gamification_service.dart';
 import '../../../widgets/gamification_counter.dart';
-import '../../shop_view.dart';
 
 class GamificationSheet extends StatefulWidget {
   final GamificationProfile profile;
@@ -244,10 +243,16 @@ class _GamificationSheetState extends State<GamificationSheet> {
                   children: [
                     const Text(
                       'Today\'s Quests',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 5,
+                      ),
                       decoration: BoxDecoration(
                         color: theme.primaryColor.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(20),
@@ -270,7 +275,9 @@ class _GamificationSheetState extends State<GamificationSheet> {
                               fontSize: 11,
                               fontWeight: FontWeight.bold,
                               color: theme.primaryColor.withValues(alpha: 0.8),
-                              fontFeatures: const [FontFeature.tabularFigures()],
+                              fontFeatures: const [
+                                FontFeature.tabularFigures(),
+                              ],
                             ),
                           ),
                         ],
@@ -279,14 +286,18 @@ class _GamificationSheetState extends State<GamificationSheet> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                ...profile.dailyQuests.map((quest) => _buildQuestCard(quest, theme)),
+                ...profile.dailyQuests.map(
+                  (quest) => _buildQuestCard(quest, theme),
+                ),
                 const SizedBox(height: 32),
                 const Text(
                   'Weekly & Monthly Challenges',
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
-                ...profile.challenges.map((challenge) => _buildChallengeCard(challenge, theme)),
+                ...profile.challenges.map(
+                  (challenge) => _buildChallengeCard(challenge, theme),
+                ),
 
                 const SizedBox(height: 32),
                 const Text(
@@ -294,7 +305,9 @@ class _GamificationSheetState extends State<GamificationSheet> {
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
                 const SizedBox(height: 12),
-                ...profile.achievements.map((achievement) => _buildAchievementCard(achievement, theme)),
+                ...profile.achievements.map(
+                  (achievement) => _buildAchievementCard(achievement, theme),
+                ),
               ],
             ),
           ),
@@ -310,14 +323,18 @@ class _GamificationSheetState extends State<GamificationSheet> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: quest.isCompleted ? Colors.green.withValues(alpha: 0.5) : theme.dividerColor,
+          color: quest.isCompleted
+              ? Colors.green.withValues(alpha: 0.5)
+              : theme.dividerColor,
           width: 1,
         ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: quest.isCompleted ? Colors.green.withValues(alpha: 0.2) : theme.primaryColor.withValues(alpha: 0.1),
+          backgroundColor: quest.isCompleted
+              ? Colors.green.withValues(alpha: 0.2)
+              : theme.primaryColor.withValues(alpha: 0.1),
           child: Icon(
             quest.isCompleted ? Icons.check_circle_rounded : Icons.star_rounded,
             color: quest.isCompleted ? Colors.green : theme.primaryColor,
@@ -328,7 +345,10 @@ class _GamificationSheetState extends State<GamificationSheet> {
             Expanded(
               child: Text(
                 quest.title,
-                style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
               ),
             ),
             _buildRewardBadge(quest.xpReward, quest.coinReward),
@@ -336,7 +356,10 @@ class _GamificationSheetState extends State<GamificationSheet> {
         ),
         subtitle: Text(
           quest.description,
-          style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+          style: TextStyle(
+            fontSize: 12,
+            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+          ),
         ),
       ),
     );
@@ -349,16 +372,22 @@ class _GamificationSheetState extends State<GamificationSheet> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: challenge.isCompleted ? Colors.green.withValues(alpha: 0.5) : theme.dividerColor,
+          color: challenge.isCompleted
+              ? Colors.green.withValues(alpha: 0.5)
+              : theme.dividerColor,
           width: 1,
         ),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: challenge.isCompleted ? Colors.green.withValues(alpha: 0.2) : theme.primaryColor.withValues(alpha: 0.1),
+          backgroundColor: challenge.isCompleted
+              ? Colors.green.withValues(alpha: 0.2)
+              : theme.primaryColor.withValues(alpha: 0.1),
           child: Icon(
-            challenge.isCompleted ? Icons.check_circle_rounded : Icons.flag_rounded,
+            challenge.isCompleted
+                ? Icons.check_circle_rounded
+                : Icons.flag_rounded,
             color: challenge.isCompleted ? Colors.green : theme.primaryColor,
           ),
         ),
@@ -367,7 +396,10 @@ class _GamificationSheetState extends State<GamificationSheet> {
             Expanded(
               child: Text(
                 challenge.title,
-                style: TextStyle(fontWeight: FontWeight.bold, color: theme.textTheme.bodyMedium?.color),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: theme.textTheme.bodyMedium?.color,
+                ),
               ),
             ),
             _buildXPBadge(challenge.xpReward),
@@ -378,12 +410,22 @@ class _GamificationSheetState extends State<GamificationSheet> {
           children: [
             Text(
               challenge.description,
-              style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6)),
+              style: TextStyle(
+                fontSize: 12,
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.6,
+                ),
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               challenge.progress,
-              style: TextStyle(fontSize: 11, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5)),
+              style: TextStyle(
+                fontSize: 11,
+                color: theme.textTheme.bodyMedium?.color?.withValues(
+                  alpha: 0.5,
+                ),
+              ),
             ),
           ],
         ),
@@ -400,10 +442,28 @@ class _GamificationSheetState extends State<GamificationSheet> {
       ),
       child: Row(
         children: [
-          Text('+$xp XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 10)),
+          Text(
+            '+$xp XP',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.amber,
+              fontSize: 10,
+            ),
+          ),
           const SizedBox(width: 4),
-          const Icon(Icons.monetization_on_rounded, size: 10, color: Colors.amber),
-          Text(' $coins', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 10)),
+          const Icon(
+            Icons.monetization_on_rounded,
+            size: 10,
+            color: Colors.amber,
+          ),
+          Text(
+            ' $coins',
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.amber,
+              fontSize: 10,
+            ),
+          ),
         ],
       ),
     );
@@ -416,10 +476,16 @@ class _GamificationSheetState extends State<GamificationSheet> {
         color: Colors.amber.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Text('+$xp XP', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.amber, fontSize: 12)),
+      child: Text(
+        '+$xp XP',
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.amber,
+          fontSize: 12,
+        ),
+      ),
     );
   }
-
 
   Widget _buildAchievementCard(Achievement achievement, ThemeData theme) {
     return Container(
@@ -429,14 +495,18 @@ class _GamificationSheetState extends State<GamificationSheet> {
         color: theme.cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: achievement.isUnlocked ? Colors.amber.withValues(alpha: 0.5) : theme.dividerColor,
+          color: achievement.isUnlocked
+              ? Colors.amber.withValues(alpha: 0.5)
+              : theme.dividerColor,
           width: 0.5,
         ),
       ),
       child: Row(
         children: [
           CircleAvatar(
-            backgroundColor: achievement.isUnlocked ? Colors.amber.withValues(alpha: 0.2) : Colors.grey.withValues(alpha: 0.1),
+            backgroundColor: achievement.isUnlocked
+                ? Colors.amber.withValues(alpha: 0.2)
+                : Colors.grey.withValues(alpha: 0.1),
             radius: 24,
             child: Text(achievement.icon, style: const TextStyle(fontSize: 24)),
           ),
@@ -448,12 +518,33 @@ class _GamificationSheetState extends State<GamificationSheet> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(achievement.title, style: TextStyle(fontWeight: FontWeight.bold, color: achievement.isUnlocked ? theme.textTheme.bodyMedium?.color : Colors.grey)),
-                    if (achievement.isUnlocked) const Icon(Icons.workspace_premium_rounded, color: Colors.amber, size: 16),
+                    Text(
+                      achievement.title,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: achievement.isUnlocked
+                            ? theme.textTheme.bodyMedium?.color
+                            : Colors.grey,
+                      ),
+                    ),
+                    if (achievement.isUnlocked)
+                      const Icon(
+                        Icons.workspace_premium_rounded,
+                        color: Colors.amber,
+                        size: 16,
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(achievement.description, style: TextStyle(fontSize: 12, color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6))),
+                Text(
+                  achievement.description,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.textTheme.bodyMedium?.color?.withValues(
+                      alpha: 0.6,
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4),
@@ -461,7 +552,11 @@ class _GamificationSheetState extends State<GamificationSheet> {
                     value: achievement.progressPercentage,
                     minHeight: 6,
                     backgroundColor: theme.dividerColor.withValues(alpha: 0.1),
-                    valueColor: AlwaysStoppedAnimation<Color>(achievement.isUnlocked ? Colors.amber : theme.primaryColor),
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      achievement.isUnlocked
+                          ? Colors.amber
+                          : theme.primaryColor,
+                    ),
                   ),
                 ),
               ],
@@ -485,14 +580,28 @@ class _GamificationSheetState extends State<GamificationSheet> {
         ),
         child: Column(
           children: [
-            Container(margin: const EdgeInsets.symmetric(vertical: 12), width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(2))),
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Earnings Guide', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900)),
-                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.close_rounded)),
+                  const Text(
+                    'Earnings Guide',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
                 ],
               ),
             ),
@@ -501,7 +610,7 @@ class _GamificationSheetState extends State<GamificationSheet> {
               child: ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                   _buildGuideSection('Base Rewards', [
+                  _buildGuideSection('Base Rewards', [
                     _GuideItem('Log Transaction', '+10 XP', '+2 Coins'),
                     _GuideItem('Set a Budget', '+50 XP', '-'),
                     _GuideItem('Goal Completed', '+100 XP', '+50 Coins'),
@@ -534,17 +643,28 @@ class _GamificationSheetState extends State<GamificationSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.blue)),
-        const SizedBox(height: 12),
-        ...items.map((item) => Padding(
-          padding: const EdgeInsets.only(bottom: 8),
-          child: Row(
-            children: [
-              Expanded(child: Text(item.label, style: const TextStyle(fontSize: 14))),
-              _buildGuideRewardBadge(item.xp, item.coins),
-            ],
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.blue,
           ),
-        )),
+        ),
+        const SizedBox(height: 12),
+        ...items.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(item.label, style: const TextStyle(fontSize: 14)),
+                ),
+                _buildGuideRewardBadge(item.xp, item.coins),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -554,18 +674,44 @@ class _GamificationSheetState extends State<GamificationSheet> {
       children: [
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-          child: Text(xp, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            xp,
+            style: const TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.amber,
+            ),
+          ),
         ),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(color: Colors.amber.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
-          child: Row(children: [
-            const Icon(Icons.monetization_on_rounded, size: 10, color: Colors.amber),
-            const SizedBox(width: 4),
-            Text(coins, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.amber)),
-          ]),
+          decoration: BoxDecoration(
+            color: Colors.amber.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.monetization_on_rounded,
+                size: 10,
+                color: Colors.amber,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                coins,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.amber,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );

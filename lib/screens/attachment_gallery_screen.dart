@@ -364,71 +364,91 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
     );
   }
 
-  void _showPreviewDialog(BuildContext context, String title, List<String> filePaths, bool isGif) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Preview: $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                if (filePaths.length == 1)
-                  Flexible(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.file(File(filePaths.first), fit: BoxFit.contain),
-                    ),
-                  )
-                else
-                  Flexible(
-                    child: SizedBox(
-                      height: 200,
-                      child: ListView.builder(
-                        scrollDirection: Axis.horizontal,
+  void _showFullscreenPreview(BuildContext context, String title, List<String> filePaths, bool isGif) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: filePaths.length == 1
+                    ? Center(
+                        child: InteractiveViewer(
+                          minScale: 0.5,
+                          maxScale: 4.0,
+                          child: Image.file(File(filePaths.first), fit: BoxFit.contain),
+                        ),
+                      )
+                    : PageView.builder(
                         itemCount: filePaths.length,
-                        itemBuilder: (c, i) => Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: Image.file(File(filePaths[i]), height: 200, fit: BoxFit.cover),
+                        itemBuilder: (context, index) => Center(
+                          child: InteractiveViewer(
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            child: Image.file(File(filePaths[index]), fit: BoxFit.contain),
                           ),
                         ),
                       ),
-                    ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(24.0),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Colors.black.withValues(alpha: 0.8), Colors.transparent],
                   ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(ctx);
-                        final xFiles = filePaths.map((p) => XFile(p)).toList();
-                        Share.shareXFiles(xFiles, text: '$title Dump from ajWallet');
-                      },
-                      icon: const Icon(Icons.share_rounded),
-                      label: const Text('Share'),
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                      ),
-                    ),
-                  ],
                 ),
-              ],
-            ),
+                child: SafeArea(
+                  top: false,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (filePaths.length > 1)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            'Swipe to preview all ${filePaths.length} images',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final xFiles = filePaths.map((p) => XFile(p)).toList();
+                            Share.shareXFiles(xFiles, text: '$title Dump from RootEXP');
+                          },
+                          icon: const Icon(Icons.share_rounded),
+                          label: const Text('Share Dump', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            elevation: 8,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -436,7 +456,7 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
     final paths = entries.map((e) => e.imagePath).take(15).toList(); // IG allows max 10-15 usually
     if (paths.isEmpty) return;
     
-    _showPreviewDialog(context, title, paths, false);
+    _showFullscreenPreview(context, title, paths, false);
   }
 
   Future<void> _exportDump(BuildContext context, List<AttachmentEntry> entries, String title, {required bool isVideo}) async {
@@ -457,7 +477,7 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
       
       if (context.mounted) {
         Navigator.pop(context); // close loading
-        _showPreviewDialog(context, title, [file.path], isVideo);
+        _showFullscreenPreview(context, title, [file.path], isVideo);
       }
     } catch (e) {
       if (context.mounted) {

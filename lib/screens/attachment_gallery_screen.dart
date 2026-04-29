@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../models/transaction_model.dart';
 import '../services/database_service.dart';
+import '../services/month_dump_service.dart';
 import '../widgets/image_gallery_viewer.dart';
 import '../transaction_details_screen.dart';
 import 'dart:io';
+import 'package:share_plus/share_plus.dart';
 
 enum GalleryZoomLevel {
   days,
@@ -240,14 +242,22 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Text(
-                        headerTitle,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: theme.textTheme.bodyLarge?.color,
+                      Expanded(
+                        child: Text(
+                          headerTitle,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
                         ),
                       ),
+                      if (_zoomLevel != GalleryZoomLevel.days)
+                        IconButton(
+                          icon: Icon(Icons.ios_share_rounded, color: theme.primaryColor),
+                          tooltip: 'Export Dump',
+                          onPressed: () => _showExportDialog(context, entries, headerTitle),
+                        ),
                     ],
                   ),
                 ),
@@ -260,6 +270,112 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
         ),
       ),
     );
+  }
+
+  void _showExportDialog(BuildContext context, List<AttachmentEntry> entries, String title) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Export $title Dump',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Share your recent attachments to Instagram or Facebook Stories!',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
+                ),
+                const SizedBox(height: 24),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.grid_on_rounded, color: Colors.blue),
+                  ),
+                  title: const Text('Picture Collage'),
+                  subtitle: const Text('Creates a beautiful single image collage'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportDump(context, entries, title, isVideo: false);
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.gif_box_rounded, color: Colors.purple),
+                  ),
+                  title: const Text('Video Slideshow'),
+                  subtitle: const Text('Generates an animated GIF slideshow'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportDump(context, entries, title, isVideo: true);
+                  },
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.photo_library_rounded, color: Colors.orange),
+                  ),
+                  title: const Text('Multiple Images'),
+                  subtitle: const Text('Share all pictures directly to Stories'),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _exportMultiple(context, entries, title);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _exportMultiple(BuildContext context, List<AttachmentEntry> entries, String title) async {
+    final paths = entries.map((e) => e.imagePath).take(15).toList(); // IG allows max 10-15 usually
+    if (paths.isEmpty) return;
+    
+    final xFiles = paths.map((p) => XFile(p)).toList();
+    await Share.shareXFiles(xFiles, text: '$title Dump from ajWallet');
+  }
+
+  Future<void> _exportDump(BuildContext context, List<AttachmentEntry> entries, String title, {required bool isVideo}) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final paths = entries.map((e) => e.imagePath).toList();
+      File file;
+      if (isVideo) {
+        file = await MonthDumpService.generateVideoSlideshow(paths, title);
+      } else {
+        file = await MonthDumpService.generatePictureCollage(paths, title);
+      }
+      
+      if (context.mounted) Navigator.pop(context); // close loading
+      
+      await Share.shareXFiles([XFile(file.path)], text: '$title Dump from ajWallet');
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // close loading
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error generating export: $e')));
+      }
+    }
   }
 
   Widget _buildGrid(List<AttachmentEntry> entries, ThemeData theme, BuildContext context) {

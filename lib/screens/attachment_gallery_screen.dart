@@ -272,70 +272,91 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
     );
   }
 
-  void _showExportDialog(BuildContext context, List<AttachmentEntry> entries, String title) {
+  void _showExportDialog(BuildContext context, List<AttachmentEntry> entries, String defaultTitle) {
+    final TextEditingController nameController = TextEditingController(text: defaultTitle);
+
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (ctx) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Export $title Dump',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Share your recent attachments to Instagram or Facebook Stories!',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.grid_on_rounded, color: Colors.blue),
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Export Dump',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
-                  title: const Text('Picture Collage'),
-                  subtitle: const Text('Creates a beautiful single image collage'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _exportDump(context, entries, title, isVideo: false);
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.gif_box_rounded, color: Colors.purple),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Dump Name',
+                      hintText: 'e.g., Summer Trip',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      prefixIcon: const Icon(Icons.edit_note_rounded),
+                    ),
                   ),
-                  title: const Text('Video Slideshow'),
-                  subtitle: const Text('Generates an animated GIF slideshow'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _exportDump(context, entries, title, isVideo: true);
-                  },
-                ),
-                const SizedBox(height: 8),
-                ListTile(
-                  leading: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.photo_library_rounded, color: Colors.orange),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Select Export Format:',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey[600]),
                   ),
-                  title: const Text('Multiple Images'),
-                  subtitle: const Text('Share all pictures directly to Stories'),
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _exportMultiple(context, entries, title);
-                  },
-                ),
-              ],
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.blue.withValues(alpha: 0.1), shape: BoxShape.circle),
+                      child: const Icon(Icons.grid_on_rounded, color: Colors.blue),
+                    ),
+                    title: const Text('Picture Collage'),
+                    subtitle: const Text('Creates a beautiful single image collage'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      final finalTitle = nameController.text.trim().isEmpty ? defaultTitle : nameController.text.trim();
+                      _exportDump(context, entries, finalTitle, isVideo: false);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.purple.withValues(alpha: 0.1), shape: BoxShape.circle),
+                      child: const Icon(Icons.gif_box_rounded, color: Colors.purple),
+                    ),
+                    title: const Text('Video Slideshow'),
+                    subtitle: const Text('Generates an animated GIF slideshow'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      final finalTitle = nameController.text.trim().isEmpty ? defaultTitle : nameController.text.trim();
+                      _exportDump(context, entries, finalTitle, isVideo: true);
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(color: Colors.orange.withValues(alpha: 0.1), shape: BoxShape.circle),
+                      child: const Icon(Icons.photo_library_rounded, color: Colors.orange),
+                    ),
+                    title: const Text('Multiple Images'),
+                    subtitle: const Text('Share all pictures directly to Stories'),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      final finalTitle = nameController.text.trim().isEmpty ? defaultTitle : nameController.text.trim();
+                      _exportMultiple(context, entries, finalTitle);
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         );

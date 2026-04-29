@@ -491,9 +491,9 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
               bottomRight: Radius.circular(4),
             ),
           ),
-          child: Text(
+          child: _buildMarkdownText(
             message.text,
-            style: TextStyle(
+            TextStyle(
               color: theme.colorScheme.onPrimary,
               fontWeight: FontWeight.w500,
             ),
@@ -519,21 +519,18 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
               ),
               border: Border.all(color: theme.dividerColor),
             ),
-            child: Text(
+            child: _buildMarkdownText(
               message.text,
-              style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+              theme.textTheme.bodyMedium?.copyWith(height: 1.4),
             ),
           ),
         );
       }
 
-      final emerald = const Color(0xFF2E7D32);
-      final crimson = const Color(0xFFB71C1C);
-      final cobalt = const Color(0xFF1976D2);
-      
-      Color accentColor = response.isPositive ? emerald : crimson;
-      if (response.tone == AITone.strict) accentColor = crimson;
-      if (response.tone == AITone.encouraging) accentColor = cobalt;
+      Color accentColor = theme.primaryColor;
+      if (response.tone == AITone.strict || !response.isPositive) {
+        accentColor = theme.colorScheme.error;
+      }
 
       return Align(
         alignment: Alignment.centerLeft,
@@ -588,9 +585,9 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
                 _buildQuickAddPreview(theme, accentColor, response),
                 const SizedBox(height: 12),
               ],
-              Text(
+              _buildMarkdownText(
                 response.insight,
-                style: theme.textTheme.bodyMedium?.copyWith(
+                theme.textTheme.bodyMedium?.copyWith(
                   fontSize: 14,
                   height: 1.5,
                 ),
@@ -699,6 +696,34 @@ class _AIAssistantViewState extends State<AIAssistantView> with SingleTickerProv
         description: 'Ask questions like "How was my spending this week?" or use Quick Add like "500 food and drinks mcdo" to record expenses instantly.',
       ),
     ];
+  }
+
+  Widget _buildMarkdownText(String text, TextStyle? style) {
+    final List<TextSpan> spans = [];
+    final RegExp exp = RegExp(r'\*\*(.*?)\*\*');
+    int lastIndex = 0;
+
+    for (final match in exp.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(1),
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ));
+      lastIndex = match.end;
+    }
+
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(lastIndex)));
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: style ?? Theme.of(context).textTheme.bodyMedium,
+        children: spans,
+      ),
+    );
   }
 }
 

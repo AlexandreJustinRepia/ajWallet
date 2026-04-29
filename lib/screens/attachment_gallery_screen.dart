@@ -343,12 +343,79 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
     );
   }
 
+  void _showPreviewDialog(BuildContext context, String title, List<String> filePaths, bool isGif) {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Preview: $title', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                if (filePaths.length == 1)
+                  Flexible(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.file(File(filePaths.first), fit: BoxFit.contain),
+                    ),
+                  )
+                else
+                  Flexible(
+                    child: SizedBox(
+                      height: 200,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: filePaths.length,
+                        itemBuilder: (c, i) => Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(File(filePaths[i]), height: 200, fit: BoxFit.cover),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        final xFiles = filePaths.map((p) => XFile(p)).toList();
+                        Share.shareXFiles(xFiles, text: '$title Dump from ajWallet');
+                      },
+                      icon: const Icon(Icons.share_rounded),
+                      label: const Text('Share'),
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _exportMultiple(BuildContext context, List<AttachmentEntry> entries, String title) async {
     final paths = entries.map((e) => e.imagePath).take(15).toList(); // IG allows max 10-15 usually
     if (paths.isEmpty) return;
     
-    final xFiles = paths.map((p) => XFile(p)).toList();
-    await Share.shareXFiles(xFiles, text: '$title Dump from ajWallet');
+    _showPreviewDialog(context, title, paths, false);
   }
 
   Future<void> _exportDump(BuildContext context, List<AttachmentEntry> entries, String title, {required bool isVideo}) async {
@@ -367,9 +434,10 @@ class _AttachmentGalleryScreenState extends State<AttachmentGalleryScreen> {
         file = await MonthDumpService.generatePictureCollage(paths, title);
       }
       
-      if (context.mounted) Navigator.pop(context); // close loading
-      
-      await Share.shareXFiles([XFile(file.path)], text: '$title Dump from ajWallet');
+      if (context.mounted) {
+        Navigator.pop(context); // close loading
+        _showPreviewDialog(context, title, [file.path], isVideo);
+      }
     } catch (e) {
       if (context.mounted) {
         Navigator.pop(context); // close loading

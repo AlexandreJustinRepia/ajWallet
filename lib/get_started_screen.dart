@@ -80,16 +80,11 @@ class _GetStartedScreenState extends State<GetStartedScreen> {
                     child: Container(
                       height: MediaQuery.of(context).size.height * 0.35,
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      child: _currentPage == 1 
-                        ? const Center(
-                            child: AnimatedTree(
-                              balance: 1000, // Show a healthy growing tree for onboarding
-                            ),
-                          )
-                        : Image.asset(
-                            'assets/images/onboarding/hero.png',
-                            fit: BoxFit.contain,
-                          ),
+                      child: const Center(
+                        child: AnimatedTree(
+                          balance: 1000, // Show a healthy growing tree for onboarding
+                        ),
+                      ),
                     ),
                   ),
                 ),

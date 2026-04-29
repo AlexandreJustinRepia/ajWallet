@@ -29,6 +29,14 @@ We've brought the heart of the dashboard to the very beginning.
 - **Dynamic Growth**: Watch the tree reflect your future financial health as you learn about the app's features.
 - **Visual Consistency**: A smoother transition from "Get Started" to your first dashboard view.
 
+## 🎨 Personalized Style & Typography
+
+Express your style across the entire application.
+
+- **Colorful Wallets**: Add custom background colors with premium gradients to your wallets for a unique look.
+- **Custom Logos**: Upload your own pictures to act as logos or icons for your wallets.
+- **Adaptive Design**: Icons and text automatically adjust their contrast based on your theme colors to ensure perfect readability.
+
 ---
 
 # 🚀 Release Notes - v0.3.0 "The Management & Calculation" Update

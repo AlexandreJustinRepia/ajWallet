@@ -220,14 +220,17 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                     height: 72,
                     padding: widget.wallet.customImagePath != null ? EdgeInsets.zero : const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: hasCustomColor 
+                          ? foregroundColor.withValues(alpha: 0.25) 
+                          : theme.cardColor,
                       borderRadius: BorderRadius.circular(22),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                        ),
+                        if (!hasCustomColor)
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
                       ],
                     ),
                     clipBehavior: Clip.antiAlias,

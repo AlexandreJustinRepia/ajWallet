@@ -34,11 +34,13 @@ class ThemeService {
   static const String _savedThemesKey = 'saved_themes';
 
   static final ValueNotifier<ThemeState> themeNotifier =
-      ValueNotifier<ThemeState>(ThemeState(
-    lightTheme: AppTheme.light(),
-    darkTheme: AppTheme.dark(),
-    themeMode: ThemeMode.system,
-  ));
+      ValueNotifier<ThemeState>(
+        ThemeState(
+          lightTheme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: ThemeMode.system,
+        ),
+      );
 
   // Expose saved custom themes
   static final ValueNotifier<List<AppTheme>> savedThemesNotifier =
@@ -100,12 +102,15 @@ class ThemeService {
       await Hive.deleteBoxFromDisk(_boxName);
       box = await Hive.openBox(_boxName);
     }
-    
+
     // Load active themes
     final lightTheme = box.get(_lightThemeKey) as AppTheme? ?? AppTheme.light();
     final darkTheme = box.get(_darkThemeKey) as AppTheme? ?? AppTheme.dark();
-    
-    final modeIndex = box.get(_themeModeKey, defaultValue: ThemeMode.system.index);
+
+    final modeIndex = box.get(
+      _themeModeKey,
+      defaultValue: ThemeMode.system.index,
+    );
     final themeMode = ThemeMode.values[modeIndex];
 
     themeNotifier.value = ThemeState(
@@ -146,7 +151,7 @@ class ThemeService {
   static Future<void> saveCustomTheme(AppTheme theme) async {
     final box = Hive.box(_boxName);
     final currentList = List<AppTheme>.from(savedThemesNotifier.value);
-    
+
     // Replace if same ID, or add new
     int existingIdx = currentList.indexWhere((t) => t.id == theme.id);
     if (existingIdx >= 0) {
@@ -154,19 +159,19 @@ class ThemeService {
     } else {
       currentList.add(theme);
     }
-    
+
     savedThemesNotifier.value = currentList;
     await box.put(_savedThemesKey, currentList);
   }
-  
+
   static Future<void> deleteCustomTheme(AppTheme theme) async {
     // Don't delete defaults
     if (theme.id == 'default_light' || theme.id == 'default_dark') return;
-    
+
     final box = Hive.box(_boxName);
     final currentList = List<AppTheme>.from(savedThemesNotifier.value);
     currentList.removeWhere((t) => t.id == theme.id);
-    
+
     savedThemesNotifier.value = currentList;
     await box.put(_savedThemesKey, currentList);
   }

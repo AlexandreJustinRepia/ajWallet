@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../services/database_service.dart';
 import '../models/goal.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import '../widgets/calculator_input.dart';
 import '../widgets/onboarding_overlay.dart';
 import 'package:hive/hive.dart';
@@ -80,16 +79,48 @@ class _AddGoalScreenState extends State<AddGoalScreen> {
   }
 
   void _pickColor() {
+    const palette = [
+      Colors.red, Colors.pink, Colors.purple, Colors.deepPurple,
+      Colors.indigo, Colors.blue, Colors.lightBlue, Colors.cyan,
+      Colors.teal, Colors.green, Colors.lightGreen, Colors.lime,
+      Colors.yellow, Colors.amber, Colors.orange, Colors.deepOrange,
+      Colors.brown, Colors.blueGrey, Colors.grey,
+    ];
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Pick a color'),
-        content: BlockPicker(
-          pickerColor: _selectedColor,
-          onColorChanged: (color) => setState(() => _selectedColor = color),
+        content: Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: palette.map((color) {
+            final isSelected = color.toARGB32() == _selectedColor.toARGB32();
+            return GestureDetector(
+              onTap: () {
+                setState(() => _selectedColor = color);
+                Navigator.pop(context);
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected ? Colors.white : Colors.transparent,
+                    width: 3,
+                  ),
+                  boxShadow: isSelected
+                      ? [BoxShadow(color: color.withValues(alpha: 0.6), blurRadius: 6)]
+                      : null,
+                ),
+              ),
+            );
+          }).toList(),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
         ],
       ),
     );

@@ -2,7 +2,7 @@ name: root_exp
 description: "A offline budget application for android"
 publish_to: "none"
 
-version: 0.3.0+1
+version: 0.4.0+1
 
 environment:
   sdk: ^3.11.1
@@ -14,7 +14,6 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   local_auth: ^2.1.6
-  flutter_colorpicker: ^1.1.0
   intl: ^0.19.0
   table_calendar: ^3.1.2
   fl_chart: ^0.69.0
@@ -22,8 +21,6 @@ dependencies:
   file_picker: ^8.0.0
   path_provider: ^2.1.5
   uuid: ^4.5.3
-  http: ^1.6.0
-  connectivity_plus: ^7.0.0
   package_info_plus: ^9.0.0
   url_launcher: ^6.3.2
   crypto: ^3.0.7
@@ -55,11 +52,8 @@ flutter:
     - assets/images/banks/
     - assets/images/e-wallets/
     - assets/images/onboarding/
-    - assets/images/trees/
     - assets/images/stores/
     - assets/logo/logo.png
-    - assets/fonts/Roboto-Regular.ttf
-    - assets/fonts/Roboto-Bold.ttf
 
 flutter_launcher_icons:
   android: "launcher_icon"

@@ -1,8 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class UpdateInfo {
@@ -29,43 +28,43 @@ class UpdateInfo {
 }
 
 class UpdateService {
-  static const String _versionUrl = 'https://raw.githubusercontent.com/AlexandreJustinRepia/RootEXP/main/version.json';
-  
-  static final ValueNotifier<UpdateInfo?> updateNotifier = ValueNotifier<UpdateInfo?>(null);
-  static final Connectivity _connectivity = Connectivity();
+  static const String _versionUrl =
+      'https://raw.githubusercontent.com/AlexandreJustinRepia/RootEXP/main/version.json';
+
+  static final ValueNotifier<UpdateInfo?> updateNotifier =
+      ValueNotifier<UpdateInfo?>(null);
 
   static Future<void> init() async {
-    // Check initially
     _checkUpdate();
-
-    // Listen for connectivity changes
-    _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) {
-      if (results.isNotEmpty && !results.contains(ConnectivityResult.none)) {
-        _checkUpdate();
-      }
-    });
   }
 
   static Future<void> _checkUpdate() async {
     try {
-      final results = await _connectivity.checkConnectivity();
-      if (results.isEmpty || results.contains(ConnectivityResult.none)) return;
+      final client = HttpClient();
+      client.connectionTimeout = const Duration(seconds: 5);
 
-      final response = await http.get(Uri.parse(_versionUrl));
+      final request = await client.getUrl(Uri.parse(_versionUrl));
+      final response = await request.close();
+
       if (response.statusCode == 200) {
-        final updateInfo = UpdateInfo.fromJson(jsonDecode(response.body));
+        final body = await response.transform(utf8.decoder).join();
+        final updateInfo = UpdateInfo.fromJson(jsonDecode(body));
         final packageInfo = await PackageInfo.fromPlatform();
-        
+
         final currentVersion = packageInfo.version;
         final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
 
-        bool hasUpdate = isVersionNewer(updateInfo.latestVersion, currentVersion) || 
-                         (updateInfo.latestVersion == currentVersion && updateInfo.buildNumber > currentBuild);
+        final hasUpdate =
+            isVersionNewer(updateInfo.latestVersion, currentVersion) ||
+                (updateInfo.latestVersion == currentVersion &&
+                    updateInfo.buildNumber > currentBuild);
 
         if (hasUpdate) {
           updateNotifier.value = updateInfo;
         }
       }
+
+      client.close();
     } catch (e) {
       debugPrint('Update check failed: $e');
     }
@@ -75,7 +74,9 @@ class UpdateService {
     List<int> latestParts = latest.split('.').map(int.parse).toList();
     List<int> currentParts = current.split('.').map(int.parse).toList();
 
-    for (int i = 0; i < latestParts.length && i < currentParts.length; i++) {
+    for (int i = 0;
+        i < latestParts.length && i < currentParts.length;
+        i++) {
       if (latestParts[i] > currentParts[i]) return true;
       if (latestParts[i] < currentParts[i]) return false;
     }

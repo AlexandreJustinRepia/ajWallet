@@ -22,6 +22,12 @@ class Wallet extends HiveObject {
   @HiveField(5)
   String? iconPath; // Path to the institution's logo
 
+  @HiveField(6)
+  int? colorValue;
+
+  @HiveField(7)
+  String? customImagePath;
+
   Wallet({
     required this.name,
     this.balance = 0.0,
@@ -29,6 +35,8 @@ class Wallet extends HiveObject {
     required this.accountKey,
     this.isExcluded = false,
     this.iconPath,
+    this.colorValue,
+    this.customImagePath,
   });
 
   Map<String, dynamic> toMap() {
@@ -39,6 +47,8 @@ class Wallet extends HiveObject {
       'accountKey': accountKey,
       'isExcluded': isExcluded,
       'iconPath': iconPath,
+      'colorValue': colorValue,
+      'customImagePath': customImagePath,
     };
   }
 
@@ -50,6 +60,8 @@ class Wallet extends HiveObject {
       accountKey: map['accountKey'],
       isExcluded: map['isExcluded'],
       iconPath: map['iconPath'],
+      colorValue: map['colorValue'],
+      customImagePath: map['customImagePath'],
     );
   }
 }

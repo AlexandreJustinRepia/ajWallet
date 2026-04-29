@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:io';
 import '../services/balance_visibility_service.dart';
 import '../services/financial_insights_service.dart';
 import '../models/wallet.dart';
@@ -382,11 +383,15 @@ class _WalletCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    // Determine color based on exclusion state
     final isExcluded = wallet.isExcluded;
-    final accentColor = isExcluded
-        ? theme.colorScheme.error
-        : theme.primaryColor;
+    final customColor = wallet.colorValue != null ? Color(wallet.colorValue!) : null;
+    final accentColor = customColor ?? (isExcluded ? theme.colorScheme.error : theme.primaryColor);
+    
+    // Determine contrasting text color
+    final bool hasCustomColor = customColor != null;
+    final Color foregroundColor = hasCustomColor
+        ? (customColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white)
+        : (theme.textTheme.bodyLarge?.color ?? Colors.black);
 
     return Material(
       color: Colors.transparent,
@@ -404,44 +409,73 @@ class _WalletCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: theme.cardColor,
+            color: customColor ?? theme.cardColor,
+            gradient: customColor != null
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      customColor,
+                      customColor.withValues(alpha: 0.8),
+                    ],
+                  )
+                : null,
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: isExcluded
                   ? theme.colorScheme.error.withValues(alpha: 0.5)
-                  : theme.dividerColor,
-              width: isExcluded ? 1.5 : 0.5,
+                  : (customColor != null 
+                      ? customColor.withValues(alpha: 0.8) 
+                      : theme.dividerColor),
+              width: (isExcluded || customColor != null) ? 1.5 : 0.5,
             ),
+            boxShadow: [
+              if (customColor != null)
+                BoxShadow(
+                  color: customColor.withValues(alpha: 0.2),
+                  blurRadius: 15,
+                  offset: const Offset(0, 6),
+                ),
+            ],
           ),
           child: Row(
             children: [
               Container(
-                width: 44,
-                height: 44,
+                width: 48,
+                height: 48,
                 decoration: BoxDecoration(
-                  color: accentColor.withValues(alpha: 0.07),
+                  color: hasCustomColor
+                      ? foregroundColor.withValues(alpha: 0.2)
+                      : accentColor.withValues(alpha: 0.07),
                   shape: BoxShape.circle,
                 ),
                 clipBehavior: Clip.antiAlias,
                 alignment: Alignment.center,
-                child: wallet.iconPath != null
-                    ? Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.asset(
-                            wallet.iconPath!,
-                            fit: BoxFit.contain,
-                            width: 20,
-                            height: 20,
-                          ),
-                        ),
+                child: wallet.customImagePath != null
+                    ? Image.file(
+                        File(wallet.customImagePath!),
+                        fit: BoxFit.cover,
+                        width: 48,
+                        height: 48,
                       )
-                    : Icon(
-                        _walletIcon(wallet.type),
-                        color: accentColor,
-                        size: 20,
-                      ),
+                    : (wallet.iconPath != null
+                        ? Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Image.asset(
+                                wallet.iconPath!,
+                                fit: BoxFit.contain,
+                                width: 22,
+                                height: 22,
+                              ),
+                            ),
+                          )
+                        : Icon(
+                            _walletIcon(wallet.type),
+                            color: foregroundColor,
+                            size: 22,
+                          )),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -454,9 +488,7 @@ class _WalletCard extends StatelessWidget {
                           wallet.name,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: isExcluded
-                                ? theme.colorScheme.error.withValues(alpha: 0.7)
-                                : null,
+                            color: foregroundColor,
                           ),
                         ),
                         if (isExcluded) ...[
@@ -464,9 +496,7 @@ class _WalletCard extends StatelessWidget {
                           Icon(
                             Icons.visibility_off_rounded,
                             size: 14,
-                            color: theme.colorScheme.error.withValues(
-                              alpha: 0.7,
-                            ),
+                            color: foregroundColor.withValues(alpha: 0.7),
                           ),
                         ],
                       ],
@@ -474,11 +504,7 @@ class _WalletCard extends StatelessWidget {
                     Text(
                       isExcluded ? 'Excluded from Liquidity' : wallet.type,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: isExcluded
-                            ? theme.colorScheme.error.withValues(alpha: 0.5)
-                            : theme.textTheme.bodyMedium?.color?.withValues(
-                                alpha: 0.5,
-                              ),
+                        color: foregroundColor.withValues(alpha: 0.6),
                       ),
                     ),
                   ],
@@ -500,9 +526,7 @@ class _WalletCard extends StatelessWidget {
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                             letterSpacing: isHidden ? 3 : 0,
-                            color: isExcluded
-                                ? theme.colorScheme.error.withValues(alpha: 0.5)
-                                : null,
+                            color: foregroundColor,
                           ),
                         ),
                       );
@@ -511,9 +535,7 @@ class _WalletCard extends StatelessWidget {
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 16,
-                    color: theme.textTheme.bodyMedium?.color?.withValues(
-                      alpha: 0.3,
-                    ),
+                    color: foregroundColor.withValues(alpha: 0.4),
                   ),
                 ],
               ),

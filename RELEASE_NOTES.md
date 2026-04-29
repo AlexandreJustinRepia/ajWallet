@@ -1,3 +1,36 @@
+# 🚀 Release Notes - v0.4.0 "The Visual & Interactive" Update
+
+Welcome to RootEXP v0.4.0! This update focuses on visual storytelling, centralized media management, and a more interactive onboarding experience.
+
+---
+
+## 🖼️ Centralized Attachment Gallery
+
+Your financial evidence is now easier to manage than ever.
+
+- **Global View**: A new dedicated gallery screen that aggregates every receipt, invoice, and document attached to your transactions.
+- **Contextual Navigation**: Tap any attachment in the gallery to jump directly to the associated transaction.
+- **Media Management**: Quickly browse through months of spending by looking at your physical records.
+
+## 🎨 Modernized Collage Experience (Month Dump)
+
+The "Month Dump" feature has been completely redesigned for a more premium feel.
+
+- **New Design Styles**: Choose between **Classic**, **Mosaic**, and **Polaroid** layouts for your monthly summaries.
+- **Interactive Preview**: Live-switch between styles with a smooth, bottom-aligned selection bar before exporting.
+- **Performance Engine**: Robustly handles up to 16 images simultaneously with improved memory efficiency and stability.
+- **Premium Aesthetics**: High-quality rendering ensures your financial milestones look great when shared or saved.
+
+## 🌳 The Living Tree Onboarding
+
+We've brought the heart of the dashboard to the very beginning.
+
+- **Interactive Greeting**: The "Living Tree" now replaces static hero images in the onboarding flow.
+- **Dynamic Growth**: Watch the tree reflect your future financial health as you learn about the app's features.
+- **Visual Consistency**: A smoother transition from "Get Started" to your first dashboard view.
+
+---
+
 # 🚀 Release Notes - v0.3.0 "The Management & Calculation" Update
 
 Welcome to RootEXP v0.3.0! This "Mega Update" focuses on giving you total control over your financial data while making data entry faster and smarter than ever before.

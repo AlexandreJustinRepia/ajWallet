@@ -5,6 +5,8 @@ import 'widgets/calculator_input.dart';
 import 'widgets/onboarding_overlay.dart';
 import 'widgets/institution_selector.dart';
 import 'package:hive/hive.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
 
 class WalletFormScreen extends StatefulWidget {
   final int accountKey;
@@ -38,6 +40,8 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
   late String _selectedType;
   late bool _isExcluded;
   String? _selectedIconPath;
+  Color? _selectedColor;
+  String? _customImagePath;
 
   final List<String> _walletTypes = ['Wallet', 'Cash', 'Credit Card', 'Debit Card', 'ATM', 'E-Wallet', 'Bank', 'Savings', 'Others'];
 
@@ -56,6 +60,8 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
       _selectedType = widget.wallet?.type ?? 'Wallet';
       _isExcluded = widget.wallet?.isExcluded ?? false;
       _selectedIconPath = widget.wallet?.iconPath;
+      _selectedColor = widget.wallet?.colorValue != null ? Color(widget.wallet!.colorValue!) : null;
+      _customImagePath = widget.wallet?.customImagePath;
     }
     _checkTutorial();
   }
@@ -83,6 +89,8 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
         widget.wallet!.type = _selectedType;
         widget.wallet!.isExcluded = _isExcluded;
         widget.wallet!.iconPath = _selectedIconPath;
+        widget.wallet!.colorValue = _selectedColor?.toARGB32();
+        widget.wallet!.customImagePath = _customImagePath;
         await DatabaseService.updateWallet(widget.wallet!);
       } else {
         // Create new
@@ -93,6 +101,8 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
           accountKey: widget.accountKey,
           isExcluded: _isExcluded,
           iconPath: _selectedIconPath,
+          colorValue: _selectedColor?.toARGB32(),
+          customImagePath: _customImagePath,
         );
         await DatabaseService.saveWallet(wallet);
       }
@@ -114,10 +124,22 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
     if (result != null) {
       setState(() {
         _selectedIconPath = result.logoPath;
+        _customImagePath = null; // Clear custom image if institution is selected
         if (_nameController.text.isEmpty) {
           _nameController.text = result.name;
         }
         _selectedType = result.category;
+      });
+    }
+  }
+
+  void _pickCustomImage() async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      setState(() {
+        _customImagePath = image.path;
+        _selectedIconPath = null; // Clear institutional icon if custom image is picked
       });
     }
   }
@@ -302,6 +324,129 @@ class _WalletFormScreenState extends State<WalletFormScreen> {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              const SizedBox(height: 32),
+              
+              // NEW: Wallet Styling Section
+              Text('Wallet Styling', style: theme.textTheme.titleMedium),
+              const SizedBox(height: 16),
+              
+              // Color Picker
+              const Text('Theme Color', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 44,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: Colors.primaries.length + 1,
+                  separatorBuilder: (context, index) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      // Default / None
+                      return InkWell(
+                        onTap: () => setState(() => _selectedColor = null),
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: theme.cardColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: _selectedColor == null ? theme.primaryColor : theme.dividerColor,
+                              width: _selectedColor == null ? 3 : 1,
+                            ),
+                          ),
+                          child: Icon(Icons.close_rounded, size: 20, color: _selectedColor == null ? theme.primaryColor : theme.dividerColor),
+                        ),
+                      );
+                    }
+                    final color = Colors.primaries[index - 1];
+                    final isSelected = _selectedColor?.toARGB32() == color.toARGB32();
+                    return InkWell(
+                      onTap: () => setState(() => _selectedColor = color),
+                      child: Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: isSelected ? theme.primaryColor : Colors.transparent,
+                            width: 3,
+                          ),
+                          boxShadow: [
+                            if (isSelected)
+                              BoxShadow(
+                                color: color.withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                          ],
+                        ),
+                        child: isSelected ? const Icon(Icons.check_rounded, color: Colors.white, size: 20) : null,
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Custom Image Picker
+              const Text('Custom Background / Icon', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: _pickCustomImage,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  height: 100,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: theme.cardColor,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.dividerColor, width: 0.5),
+                    image: _customImagePath != null
+                        ? DecorationImage(
+                            image: FileImage(File(_customImagePath!)),
+                            fit: BoxFit.cover,
+                            colorFilter: ColorFilter.mode(
+                              Colors.black.withValues(alpha: 0.3),
+                              BlendMode.darken,
+                            ),
+                          )
+                        : null,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _customImagePath != null ? Icons.edit_rounded : Icons.add_photo_alternate_rounded,
+                          color: _customImagePath != null ? Colors.white : theme.primaryColor,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _customImagePath != null ? 'Change Picture' : 'Pick from Gallery',
+                          style: TextStyle(
+                            color: _customImagePath != null ? Colors.white : theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.5),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              if (_customImagePath != null) ...[
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => setState(() => _customImagePath = null),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Remove custom picture'),
+                  style: TextButton.styleFrom(foregroundColor: theme.colorScheme.error),
+                ),
+              ],
+              
               const SizedBox(height: 40),
               SizedBox(
                 key: _saveKey,

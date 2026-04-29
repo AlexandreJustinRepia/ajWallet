@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'dart:io';
 import 'models/wallet.dart';
 import 'models/transaction_model.dart';
 import 'services/database_service.dart';
@@ -86,6 +87,14 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final customColor = widget.wallet.colorValue != null ? Color(widget.wallet.colorValue!) : null;
+    
+    // Determine contrasting text color
+    final bool hasCustomColor = customColor != null;
+    final Color foregroundColor = hasCustomColor
+        ? (customColor.computeLuminance() > 0.5 ? Colors.black87 : Colors.white)
+        : (theme.textTheme.bodyLarge?.color ?? Colors.black);
+
     final transactions = DatabaseService.getWalletTransactions(
       widget.wallet.key as int,
     );
@@ -130,26 +139,34 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(widget.wallet.name),
+            Text(
+              widget.wallet.name,
+              style: TextStyle(color: foregroundColor),
+            ),
             if (_isExcluded) ...[
               const SizedBox(width: 8),
               Icon(
                 Icons.visibility_off_rounded,
                 size: 16,
-                color: theme.colorScheme.error.withValues(alpha:0.7),
+                color: foregroundColor.withValues(alpha: 0.7),
               ),
             ],
           ],
         ),
+        iconTheme: IconThemeData(color: foregroundColor),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
             onPressed: _editWallet,
             tooltip: 'Edit Wallet',
+            color: foregroundColor,
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: Colors.red),
@@ -159,7 +176,9 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           IconButton(
             icon: Icon(
               _isExcluded ? Icons.visibility_off : Icons.visibility,
-              color: _isExcluded ? Colors.red : theme.primaryColor,
+              color: _isExcluded 
+                  ? Colors.red 
+                  : (hasCustomColor ? foregroundColor : theme.primaryColor),
             ),
             onPressed: _toggleExclusion,
             tooltip: _isExcluded ? 'Excluded from total' : 'Included in total',
@@ -173,43 +192,63 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
           SliverToBoxAdapter(
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 100, 24, 40),
               decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
+                color: customColor ?? theme.scaffoldBackgroundColor,
+                gradient: customColor != null
+                    ? LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          customColor,
+                          customColor.withValues(alpha: 0.85),
+                        ],
+                      )
+                    : null,
                 border: Border(
                   bottom: BorderSide(
-                    color: theme.dividerColor.withValues(alpha:0.1),
+                    color: (customColor != null)
+                        ? Colors.transparent
+                        : theme.dividerColor.withValues(alpha: 0.1),
                   ),
                 ),
               ),
               child: Column(
                 children: [
-                  if (widget.wallet.iconPath != null) ...[
-                    Container(
-                      width: 60,
-                      height: 60,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.cardColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: theme.dividerColor, width: 0.5),
-                        boxShadow: [
-                           BoxShadow(color: Colors.black.withValues(alpha:0.05), blurRadius: 10, offset: const Offset(0, 4)),
-                        ]
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.asset(widget.wallet.iconPath!, fit: BoxFit.contain),
-                      ),
+                  Container(
+                    width: 72,
+                    height: 72,
+                    padding: widget.wallet.customImagePath != null ? EdgeInsets.zero : const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 16),
-                  ],
+                    clipBehavior: Clip.antiAlias,
+                    child: widget.wallet.customImagePath != null
+                        ? Image.file(
+                            File(widget.wallet.customImagePath!),
+                            fit: BoxFit.cover,
+                          )
+                        : (widget.wallet.iconPath != null
+                            ? Image.asset(widget.wallet.iconPath!, fit: BoxFit.contain)
+                            : Icon(
+                                Icons.account_balance_wallet_rounded,
+                                color: foregroundColor,
+                                size: 32,
+                              )),
+                  ),
+                  const SizedBox(height: 24),
                   Text(
                     'CURRENT BALANCE',
                     style: TextStyle(
-                      color: theme.textTheme.bodyMedium?.color?.withValues(alpha:
-                        0.5,
-                      ),
+                      color: foregroundColor.withValues(alpha: 0.7),
                       fontSize: 10,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 2.0,
@@ -218,30 +257,31 @@ class _WalletDetailsScreenState extends State<WalletDetailsScreen> {
                   const SizedBox(height: 8),
                   Text(
                     '₱${widget.wallet.balance.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w900,
                       letterSpacing: -1,
+                      color: foregroundColor,
                     ),
                   ),
                   if (_isExcluded)
                     Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
+                      padding: const EdgeInsets.only(top: 12.0),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
+                          horizontal: 14,
                           vertical: 6,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.red.withValues(alpha:0.1),
+                          color: Colors.red.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Text(
                           'EXCLUDED FROM TOTAL',
                           style: TextStyle(
-                            color: Colors.red,
+                            color: Colors.white,
                             fontSize: 10,
-                            fontWeight: FontWeight.w800,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: 0.5,
                           ),
                         ),
